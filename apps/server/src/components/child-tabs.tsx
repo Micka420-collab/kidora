@@ -10,6 +10,7 @@ import {
   MapPin,
   Activity,
   Smartphone,
+  FileText,
 } from "lucide-react";
 
 export function ChildTabs({ childId }: { childId: string }) {
@@ -22,6 +23,7 @@ export function ChildTabs({ childId }: { childId: string }) {
     { href: `${base}/screentime`, label: "Temps d'écran", icon: Clock },
     { href: `${base}/location`, label: "Localisation", icon: MapPin },
     { href: `${base}/activity`, label: "Activité", icon: Activity },
+    { href: `${base}/reports`, label: "Rapports", icon: FileText },
     { href: `${base}/devices`, label: "Appareils", icon: Smartphone },
   ];
 

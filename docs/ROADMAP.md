@@ -14,7 +14,8 @@
 ## 🔜 Prochaines étapes
 
 ### Serveur / dashboard
-- [ ] Rapports hebdomadaires par email (cron + résumé d'usage)
+- [x] Vue **Rapports** par enfant (période 7/14/30 j, KPIs, top apps/catégories/domaines, export CSV)
+- [ ] Envoi par email des rapports (cron + résumé d'usage) — *vue prête, reste l'envoi*
 - [x] Demandes de temps supplémentaire (enfant → parent approuve) + octroi manuel de bonus, étend la limite du jour (policy + agent)
 - [x] Édition des géofences depuis le dashboard (ajout/suppression, pré-rempli par la position) — *carte cliquable = polish futur*
 - [x] Surveillance de mots-clés sensibles (recherches + titres de pages) → alertes, liste intégrée + mots-clés personnalisés par enfant
