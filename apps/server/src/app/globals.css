@@ -214,3 +214,18 @@ summary:focus-visible,
 .dark .bg-amber-50 { background-color: #3a2a06; }
 .dark .bg-red-50 { background-color: #3a1212; }
 .dark .bg-indigo-100 { background-color: #312e81; }
+
+/* Badge tints (-100) + their text colors → readable dark equivalents */
+.dark .bg-emerald-100 { background-color: #0b3b2e; }
+.dark .bg-amber-100 { background-color: #422c08; }
+.dark .bg-red-100 { background-color: #4a1818; }
+.dark .bg-brand-100 { background-color: #1e1b4b; }
+.dark .text-emerald-600,
+.dark .text-emerald-700 { color: #6ee7b7; }
+.dark .text-amber-600,
+.dark .text-amber-700 { color: #fcd34d; }
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700 { color: #fca5a5; }
+.dark .text-brand-600,
+.dark .text-brand-700 { color: #a5b4fc; }
