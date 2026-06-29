@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send } from "lucide-react";
 
 type Device = {
   id: string;
@@ -27,6 +27,9 @@ export default function DevicesTab() {
   const [form, setForm] = useState({ name: "", platform: "windows" });
   const [justAdded, setJustAdded] = useState<Device | null>(null);
   const [copied, setCopied] = useState(false);
+  const [msgFor, setMsgFor] = useState<string | null>(null);
+  const [msgText, setMsgText] = useState("");
+  const [sentFor, setSentFor] = useState<string | null>(null);
 
   async function load() {
     const res = await api.get<{ devices: Device[] }>(`/api/children/${childId}/devices`);
@@ -49,6 +52,18 @@ export default function DevicesTab() {
     navigator.clipboard.writeText(t);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function sendCommand(deviceId: string, type: string, payload?: object) {
+    await api.post(`/api/children/${childId}/commands`, { type, deviceId, payload });
+    setSentFor(deviceId + type);
+    setTimeout(() => setSentFor(null), 1800);
+  }
+  async function sendMessage(deviceId: string) {
+    if (!msgText.trim()) return;
+    await sendCommand(deviceId, "message", { text: msgText.trim() });
+    setMsgText("");
+    setMsgFor(null);
   }
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
@@ -126,6 +141,28 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
               {!d.enrolled && (
                 <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
                   En attente de connexion · Jeton : <code>{d.enrollToken.slice(0, 12)}…</code>
+                </div>
+              )}
+
+              {d.enrolled && (
+                <div className="mt-3 space-y-2">
+                  <div className="flex gap-2">
+                    <button className="btn btn-outline flex-1 py-1.5 text-sm" onClick={() => sendCommand(d.id, "lock")}>
+                      {sentFor === d.id + "lock" ? <Check size={15} /> : <Lock size={15} />} Verrouiller
+                    </button>
+                    <button className="btn btn-outline flex-1 py-1.5 text-sm" onClick={() => { setMsgFor(msgFor === d.id ? null : d.id); setMsgText(""); }}>
+                      <MessageSquare size={15} /> Message
+                    </button>
+                  </div>
+                  {msgFor === d.id && (
+                    <div className="flex gap-2">
+                      <input className="input py-1.5 text-sm" placeholder="Votre message…" value={msgText} onChange={(e) => setMsgText(e.target.value)} autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") sendMessage(d.id); }} />
+                      <button className="btn btn-primary py-1.5 text-sm" onClick={() => sendMessage(d.id)}>
+                        {sentFor === d.id + "message" ? <Check size={15} /> : <Send size={15} />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
