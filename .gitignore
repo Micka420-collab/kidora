@@ -34,6 +34,9 @@ Thumbs.db
 # agent runtime config (contains enroll token)
 config.json
 apps/agent-windows/config.json
+# agent runtime artifacts (generated at install/run)
+apps/agent-windows/heartbeat.json
+apps/agent-windows/KidoraAgent.xml
 
 # Web Push VAPID keys (dev)
 .vapid.json
