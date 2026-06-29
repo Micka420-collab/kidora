@@ -5,6 +5,7 @@ import { accessibleChildWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { I18nProvider } from "@/components/i18n-provider";
+import { ToastProvider } from "@/components/toast";
 
 export default async function DashboardLayout({
   children,
@@ -28,13 +29,15 @@ export default async function DashboardLayout({
 
   return (
     <I18nProvider dict={dict} locale={locale}>
-      <DashboardShell
-        parent={{ name: parent.name, email: parent.email }}
-        kids={kids}
-        unread={unread}
-      >
-        {children}
-      </DashboardShell>
+      <ToastProvider>
+        <DashboardShell
+          parent={{ name: parent.name, email: parent.email }}
+          kids={kids}
+          unread={unread}
+        >
+          {children}
+        </DashboardShell>
+      </ToastProvider>
     </I18nProvider>
   );
 }

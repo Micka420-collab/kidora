@@ -20,7 +20,7 @@
 ## 🏅 Niveau pro / expert (directive 2026-06-29)
 - [x] **CI GitHub Actions** : typecheck + tests + build à chaque push/PR (badge dans le README)
 - [x] Mode sombre **web** (dashboard) — variables CSS + overrides ciblés, bascule persistée par cookie, SSR sans flash
-- [~] États de chargement (skeleton dashboard) + error boundary + page 404 soignée ; *toasts à ajouter*
+- [x] États de chargement (skeleton) + error boundary + 404 soignée + **toasts** (succès/erreur, animés) branchés sur les actions clés
 - [ ] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`)
 - [~] Tests d'intégration du moteur de politique (base de test réelle, 42 tests) ; *e2e Playwright à venir*
 - [x] Observabilité : `proxy.ts` (Next 16) — log d'accès structuré JSON + en-tête `x-request-id` ; erreurs API loguées en JSON

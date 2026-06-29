@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { WEEKDAYS, formatMinutes } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { useToast } from "@/components/toast";
 import { Loader2, Moon, Plus, Trash2, Save, Check } from "lucide-react";
 import { RoutinesCard } from "@/components/routines-card";
 
@@ -15,6 +16,7 @@ export default function ScreenTimeTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t: tr } = useT();
   const t = tr.screen;
+  const toast = useToast();
   const [st, setSt] = useState<ST | null>(null);
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -39,6 +41,7 @@ export default function ScreenTimeTab() {
     await api.put(`/api/children/${childId}/screentime`, st);
     setSaving(false);
     setSaved(true);
+    toast(t.saved, "success");
     setTimeout(() => setSaved(false), 2000);
   }
 
