@@ -27,6 +27,7 @@
 - [x] Observabilité : `proxy.ts` (Next 16) — log d'accès structuré JSON + en-tête `x-request-id` ; erreurs API loguées en JSON
 - [x] En-têtes de sécurité HTTP : **Content-Security-Policy** (default-src 'self', frame-ancestors 'none', object-src 'none', img-src : miniatures YouTube + tuiles OSM, frame-src : carte OpenStreetMap), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy (+ interest-cohort), **HSTS preload**, Cross-Origin-Opener-Policy ; cookie de session httpOnly+secure+sameSite vérifié
 - [x] **Accessibilité & micro-interactions** : anneaux `:focus-visible` clavier cohérents (boutons/liens/inputs), `:active` scale sur les boutons, respect `prefers-reduced-motion`, titre descriptif + lazy-load sur l'iframe carte
+- [x] **Landing page premium** : logo Kidora réel, hero dégradé + titre accentué, grille de 8 fonctionnalités (dont détection de risque IA, vidéos/messages, 2FA) avec hover, section « 3 étapes », bande sécurité, CTA dégradé, footer ; mode sombre soigné
 - [x] Professionnalisation du dépôt : Dependabot, templates issue/PR, CONTRIBUTING, SECURITY
 - [x] **Audit de sécurité** : correction IDOR (update de routine cross-famille), rate-limit inscription + enrôlement, garde-fou `AUTH_SECRET` en prod ; toutes les routes enfant scopées à la propriété (vérifié)
 - [x] **Politique de mot de passe** : scorer de force (zxcvbn-like, `lib/password-strength.ts`) + indicateur live à l'inscription ; **vérification de fuite Have I Been Pwned** (k-anonymity — seuls 5 car. du SHA-1 sortent, fail-open) ; 7 tests verts
