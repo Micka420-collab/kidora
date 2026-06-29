@@ -45,6 +45,31 @@ const syncSchema = z.object({
     )
     .max(500)
     .optional(),
+  videos: z
+    .array(
+      z.object({
+        title: z.string().max(300),
+        channel: z.string().max(200).optional(),
+        url: z.string().max(500).optional(),
+        source: z.string().max(40).optional(),
+        platform: z.enum(["pc", "phone"]).optional(),
+        ts: z.string().optional(),
+      }),
+    )
+    .max(200)
+    .optional(),
+  messages: z
+    .array(
+      z.object({
+        direction: z.enum(["in", "out"]),
+        contact: z.string().max(200).optional(),
+        body: z.string().max(2000),
+        app: z.string().max(40).optional(),
+        ts: z.string().optional(),
+      }),
+    )
+    .max(200)
+    .optional(),
   location: z
     .object({
       lat: z.number(),
@@ -186,6 +211,37 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+  }
+
+  // 4b. watched videos (e.g. YouTube titles)
+  if (body.videos?.length) {
+    await prisma.watchedVideo.createMany({
+      data: body.videos.map((v) => ({
+        childId,
+        deviceId: device.id,
+        source: v.source ?? "youtube",
+        platform: v.platform ?? "pc",
+        title: v.title,
+        channel: v.channel,
+        url: v.url,
+        ts: v.ts ? new Date(v.ts) : new Date(),
+      })),
+    });
+  }
+
+  // 4c. messages (SMS / chat sent & received)
+  if (body.messages?.length) {
+    await prisma.message.createMany({
+      data: body.messages.map((m) => ({
+        childId,
+        deviceId: device.id,
+        app: m.app ?? "sms",
+        direction: m.direction,
+        contact: m.contact,
+        body: m.body,
+        ts: m.ts ? new Date(m.ts) : new Date(),
+      })),
+    });
   }
 
   // 5. location + geofence transitions

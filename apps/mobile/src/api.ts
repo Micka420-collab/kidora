@@ -55,6 +55,12 @@ export const parent = {
   async report(id: string, days = 7) {
     return req<Report>(`/api/children/${id}/report?days=${days}`, { headers: await this.authHeader() });
   },
+  async videos(id: string) {
+    return req<{ videos: Video[] }>(`/api/children/${id}/videos`, { headers: await this.authHeader() });
+  },
+  async messages(id: string) {
+    return req<{ messages: Message[] }>(`/api/children/${id}/messages`, { headers: await this.authHeader() });
+  },
   async alerts() {
     return req<{ alerts: Alert[]; unread: number }>("/api/alerts", { headers: await this.authHeader() });
   },
@@ -134,6 +140,8 @@ export type Report = {
   web: { totalVisits: number; blockedVisits: number };
   alerts: { total: number };
 };
+export type Video = { id: string; title: string; channel: string | null; url: string | null; source: string; platform: string; ts: string };
+export type Message = { id: string; app: string; direction: "in" | "out"; contact: string | null; body: string; ts: string };
 export type Alert = { id: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = { paused: boolean; blockedDomains: string[]; appRules: unknown[] };

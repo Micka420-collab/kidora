@@ -108,6 +108,11 @@ modules natifs et des entitlements :
   et/ou `DeviceAdmin` / Device Owner pour un verrouillage robuste.
 - **Filtrage web** : VPN local (`VpnService`) qui filtre le DNS/HTTP.
 - **Localisation en arrière-plan** : `ACCESS_BACKGROUND_LOCATION` + `expo-task-manager`.
+- **Messages (SMS) reçus/envoyés** : permissions `READ_SMS`/`RECEIVE_SMS` (déclarées
+  dans `app.config.ts`) + un module natif qui lit `content://sms` et remonte via
+  `childAgent.sync({ messages })` (contrat serveur déjà en place). Restreint par
+  Google Play (cas d'usage contrôle parental). Les **vidéos YouTube** se remontent
+  via `childAgent.sync({ videos })`.
 
 ### iOS
 - **Temps d'écran / blocage d'apps** : framework **FamilyControls + ManagedSettings +
