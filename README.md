@@ -21,13 +21,6 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 
 ---
 
-## 🎨 Présentation & marque
-
-Une **page de présentation** (site vitrine local, non publié) est disponible :
-ouvrez `presentation/index.html` dans un navigateur pour découvrir le projet avec
-son identité de marque complète (logo, palette, animations). Le logo officiel se
-trouve dans [`assets/`](assets/) (`kidora-logo.svg`, `kidora-mark.svg`).
-
 ## ✨ Fonctionnalités
 
 | Domaine | Détail |
