@@ -19,10 +19,13 @@ const nextConfig: NextConfig = {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com",
+      // img: YouTube thumbnails + OpenStreetMap tiles (location map).
+      "img-src 'self' data: blob: https://img.youtube.com https://i.ytimg.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org",
       "font-src 'self' data:",
       "connect-src 'self'",
       "media-src 'self'",
+      // frame: the OpenStreetMap embed used on the location tab.
+      "frame-src 'self' https://www.openstreetmap.org",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

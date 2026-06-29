@@ -88,6 +88,28 @@ body {
   opacity: 0.55;
   cursor: not-allowed;
 }
+.btn:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Keyboard-only focus rings (accessibility). */
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-brand-200, #c7d2fe);
+  border-radius: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:not(:disabled):active {
+    transition: none;
+    transform: none;
+  }
+}
 
 .input {
   width: 100%;
