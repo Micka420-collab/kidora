@@ -69,8 +69,27 @@ model Child {
   timeGrants     TimeGrant[]
   watchedKeywords WatchedKeyword[]
   screenshots    Screenshot[]
+  routines       Routine[]
 
   @@index([parentId])
+}
+
+// Time-window profile that blocks selected apps (e.g. school hours).
+model Routine {
+  id            String   @id @default(cuid())
+  childId       String
+  name          String
+  enabled       Boolean  @default(true)
+  days          String   @default("[]") // JSON weekday keys ["mon",...]
+  start         String   @default("08:00")
+  end           String   @default("16:00")
+  blockedAppIds String   @default("[]") // JSON ["steam.exe","com.roblox.client"]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
 }
 
 model Device {

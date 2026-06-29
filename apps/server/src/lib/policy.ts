@@ -25,6 +25,7 @@ export type EffectivePolicy = {
     action: "allow" | "block" | "limit";
     dailyLimitMinutes: number | null;
   }[];
+  activeRoutines: string[];
 };
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -47,6 +48,7 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
       webFilter: true,
       appRules: true,
       webRules: true,
+      routines: true,
     },
   });
   if (!child) throw new Error("child not found");
@@ -71,6 +73,35 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   // explicit allow wins over default blocklist
   for (const a of allowedDomains) blockedDomains.delete(a);
 
+  // Build app rules, then overlay active routines (block selected apps now).
+  const appRuleMap = new Map(
+    child.appRules.map((r) => [
+      r.appId,
+      {
+        appId: r.appId,
+        appName: r.appName,
+        action: r.action as "allow" | "block" | "limit",
+        dailyLimitMinutes: r.dailyLimitMinutes,
+      },
+    ]),
+  );
+  const activeRoutines: string[] = [];
+  for (const routine of child.routines) {
+    if (!routine.enabled) continue;
+    const days = safeParse<string[]>(routine.days, []);
+    if (!isBedtimeNow([{ days, start: routine.start, end: routine.end }])) continue;
+    activeRoutines.push(routine.name);
+    for (const appId of safeParse<string[]>(routine.blockedAppIds, [])) {
+      const existing = appRuleMap.get(appId);
+      appRuleMap.set(appId, {
+        appId,
+        appName: existing?.appName ?? appId,
+        action: "block",
+        dailyLimitMinutes: null,
+      });
+    }
+  }
+
   return {
     childId: child.id,
     childName: child.name,
@@ -89,12 +120,8 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
     },
     blockedDomains: [...blockedDomains],
     allowedDomains: [...allowedDomains],
-    appRules: child.appRules.map((r) => ({
-      appId: r.appId,
-      appName: r.appName,
-      action: r.action as "allow" | "block" | "limit",
-      dailyLimitMinutes: r.dailyLimitMinutes,
-    })),
+    appRules: [...appRuleMap.values()],
+    activeRoutines,
   };
 }
 

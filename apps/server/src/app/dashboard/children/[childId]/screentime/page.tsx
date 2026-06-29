@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { WEEKDAYS, formatMinutes } from "@/lib/format";
 import { Loader2, Moon, Plus, Trash2, Save, Check } from "lucide-react";
+import { RoutinesCard } from "@/components/routines-card";
 
 type Bedtime = { days: string[]; start: string; end: string };
 type ST = { enabled: boolean; dailyLimits: Record<string, number>; bedtimes: Bedtime[] };
@@ -137,6 +138,8 @@ export default function ScreenTimeTab() {
         {saving ? <Loader2 size={16} className="spinner" /> : saved ? <Check size={16} /> : <Save size={16} />}
         {saved ? "Enregistré" : "Enregistrer"}
       </button>
+
+      <RoutinesCard childId={childId} />
     </div>
   );
 

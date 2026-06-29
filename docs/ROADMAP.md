@@ -22,7 +22,7 @@
 - [x] Surveillance de mots-clés sensibles (recherches + titres de pages) → alertes, liste intégrée + mots-clés personnalisés par enfant
 - [ ] Multi-tuteurs (inviter un 2ᵉ parent), rôles
 - [ ] Notifications push (web push + Expo push) pour les alertes critiques
-- [ ] Mode « jumeau » horaires (école/devoirs) avec profils de règles
+- [x] Routines / profils horaires (école/devoirs) — bloquent des apps sur une plage ; appliqué dynamiquement par le moteur de policy
 
 ### Agent Windows
 - [ ] Filtrage web par catégorie au niveau DNS (proxy local) plutôt que hosts
