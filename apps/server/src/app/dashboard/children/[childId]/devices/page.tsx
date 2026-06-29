@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera, Pencil, Trash2, X } from "lucide-react";
 
 type Device = {
@@ -22,6 +23,8 @@ type Device = {
 
 export default function DevicesTab() {
   const { childId } = useParams<{ childId: string }>();
+  const { t: tr } = useT();
+  const t = tr.devices;
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -104,18 +107,18 @@ export default function DevicesTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">Appareils surveillés par Kidora.</p>
-        <button className="btn btn-outline" onClick={() => setAdding((v) => !v)}><Plus size={16} /> Ajouter un appareil</button>
+        <p className="text-sm text-muted">{t.intro}</p>
+        <button className="btn btn-outline" onClick={() => setAdding((v) => !v)}><Plus size={16} /> {t.add}</button>
       </div>
 
       {adding && (
         <form onSubmit={add} className="card flex flex-wrap items-end gap-3 p-4">
           <div className="flex-1">
-            <label className="label">Nom de l'appareil</label>
+            <label className="label">{t.name}</label>
             <input className="input" placeholder="PC de la chambre" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} autoFocus />
           </div>
           <div>
-            <label className="label">Plateforme</label>
+            <label className="label">{t.platform}</label>
             <select className="input" value={form.platform} onChange={(e) => setForm((s) => ({ ...s, platform: e.target.value }))}>
               <option value="windows">Windows</option>
               <option value="android">Android</option>
@@ -123,29 +126,26 @@ export default function DevicesTab() {
               <option value="macos">macOS</option>
             </select>
           </div>
-          <button className="btn btn-primary">Créer</button>
+          <button className="btn btn-primary">{t.create}</button>
         </form>
       )}
 
       {justAdded && (
         <div className="card border-brand-200 bg-brand-50 p-5">
-          <h3 className="font-semibold">🔗 Connectez « {justAdded.name} »</h3>
+          <h3 className="font-semibold">🔗 {t.connect} « {justAdded.name} »</h3>
 
           {qrUrl && (
             <div className="mt-3 flex items-center gap-4 rounded-lg border bg-white p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrUrl} alt="QR d'appairage" className="h-40 w-40" />
               <div className="text-sm text-muted">
-                <p className="font-medium text-ink">📱 Appairage rapide</p>
-                <p className="mt-1">Ouvrez <b>Kidora Kids</b> sur l'appareil de l'enfant et <b>scannez ce QR code</b> pour le connecter automatiquement.</p>
-                <p className="mt-1 text-xs">Ou saisissez le jeton ci-dessous manuellement.</p>
+                <p className="font-medium text-ink">{t.quickPair}</p>
+                <p className="mt-1">{t.quickPairDesc}</p>
               </div>
             </div>
           )}
 
-          <p className="mt-3 text-sm text-muted">
-            Sinon, saisissez ce jeton d'enrôlement dans l'app Kidora :
-          </p>
+          <p className="mt-3 text-sm text-muted">{t.orToken}</p>
           <div className="mt-2 flex items-center gap-2">
             <code className="flex-1 overflow-x-auto rounded-lg border bg-white px-3 py-2 text-sm">{justAdded.enrollToken}</code>
             <button className="btn btn-outline" onClick={() => copyToken(justAdded.enrollToken)}>
@@ -159,12 +159,12 @@ cd kidora-agent
 node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}`}
             </pre>
           )}
-          <button className="mt-3 text-sm font-semibold text-brand-600" onClick={() => setJustAdded(null)}>J'ai terminé</button>
+          <button className="mt-3 text-sm font-semibold text-brand-600" onClick={() => setJustAdded(null)}>{t.done}</button>
         </div>
       )}
 
       {devices.length === 0 ? (
-        <div className="card p-10 text-center text-muted">Aucun appareil. Ajoutez-en un pour commencer la surveillance.</div>
+        <div className="card p-10 text-center text-muted">{t.empty}</div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {devices.map((d) => (
@@ -190,16 +190,16 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
                   <div className="text-xs capitalize text-muted">{d.platform}{d.model ? ` · ${d.model}` : ""}</div>
                 </div>
                 <Circle size={9} className={d.online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300"} />
-                <button className="text-slate-300 hover:text-red-500" title="Retirer" onClick={() => removeDevice(d.id, d.name)}><Trash2 size={15} /></button>
+                <button className="text-slate-300 hover:text-red-500" title={tr.common.delete} onClick={() => removeDevice(d.id, d.name)}><Trash2 size={15} /></button>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-                <Stat label="Statut" value={d.enrolled ? (d.online ? "En ligne" : "Hors ligne") : "En attente"} />
-                <Stat label="Batterie" value={d.battery != null ? `${d.battery}%` : "—"} />
-                <Stat label="Vu" value={relativeTime(d.lastSeen)} />
+                <Stat label={t.statusLabel} value={d.enrolled ? (d.online ? t.online : t.offline) : t.pending} />
+                <Stat label={t.batteryLabel} value={d.battery != null ? `${d.battery}%` : "—"} />
+                <Stat label={t.seenLabel} value={relativeTime(d.lastSeen)} />
               </div>
               {!d.enrolled && (
                 <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
-                  En attente de connexion · Jeton : <code>{d.enrollToken.slice(0, 12)}…</code>
+                  {t.waiting} <code>{d.enrollToken.slice(0, 12)}…</code>
                 </div>
               )}
 
@@ -207,10 +207,10 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
                 <div className="mt-3 space-y-2">
                   <div className="flex gap-2">
                     <button className="btn btn-outline flex-1 py-1.5 text-sm" onClick={() => sendCommand(d.id, "lock")}>
-                      {sentFor === d.id + "lock" ? <Check size={15} /> : <Lock size={15} />} Verrouiller
+                      {sentFor === d.id + "lock" ? <Check size={15} /> : <Lock size={15} />} {t.lock}
                     </button>
                     <button className="btn btn-outline flex-1 py-1.5 text-sm" onClick={() => { setMsgFor(msgFor === d.id ? null : d.id); setMsgText(""); }}>
-                      <MessageSquare size={15} /> Message
+                      <MessageSquare size={15} /> {t.message}
                     </button>
                     {(d.platform === "windows" || d.platform === "macos") && (
                       <button className="btn btn-outline py-1.5 text-sm" title="Capture d'écran" onClick={() => sendCommand(d.id, "screenshot")}>
@@ -220,7 +220,7 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
                   </div>
                   {msgFor === d.id && (
                     <div className="flex gap-2">
-                      <input className="input py-1.5 text-sm" placeholder="Votre message…" value={msgText} onChange={(e) => setMsgText(e.target.value)} autoFocus
+                      <input className="input py-1.5 text-sm" placeholder={t.msgPlaceholder} value={msgText} onChange={(e) => setMsgText(e.target.value)} autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter") sendMessage(d.id); }} />
                       <button className="btn btn-primary py-1.5 text-sm" onClick={() => sendMessage(d.id)}>
                         {sentFor === d.id + "message" ? <Check size={15} /> : <Send size={15} />}
@@ -236,7 +236,7 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
 
       {shots.length > 0 && (
         <div className="card p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold"><Camera size={18} /> Captures d'écran récentes</h3>
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold"><Camera size={18} /> {t.screenshots}</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {shots.map((sc) => (
               <a key={sc.id} href={sc.dataUrl} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border">
