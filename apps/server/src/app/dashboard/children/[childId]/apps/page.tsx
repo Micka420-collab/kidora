@@ -1,0 +1,155 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { api } from "@/lib/client";
+import { CATEGORY_META, type Category } from "@/lib/categories";
+import { formatMinutes } from "@/lib/format";
+import { Loader2, Plus, Trash2, Check, Ban, Hourglass } from "lucide-react";
+
+type Rule = {
+  id: string;
+  appId: string;
+  appName: string;
+  category: string | null;
+  action: "allow" | "block" | "limit";
+  dailyLimitMinutes: number | null;
+};
+
+export default function AppsTab() {
+  const { childId } = useParams<{ childId: string }>();
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [newApp, setNewApp] = useState({ appName: "", appId: "" });
+
+  async function load() {
+    const res = await api.get<{ rules: Rule[] }>(`/api/children/${childId}/rules/apps`);
+    setRules(res.rules);
+    setLoading(false);
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+
+  async function setAction(r: Rule, action: Rule["action"]) {
+    setRules((rs) => rs.map((x) => (x.appId === r.appId ? { ...x, action } : x)));
+    await api.put(`/api/children/${childId}/rules/apps`, {
+      appId: r.appId, appName: r.appName, action,
+      dailyLimitMinutes: action === "limit" ? r.dailyLimitMinutes ?? 60 : null,
+    });
+  }
+  async function setLimit(r: Rule, minutes: number) {
+    setRules((rs) => rs.map((x) => (x.appId === r.appId ? { ...x, dailyLimitMinutes: minutes } : x)));
+    await api.put(`/api/children/${childId}/rules/apps`, {
+      appId: r.appId, appName: r.appName, action: "limit", dailyLimitMinutes: minutes,
+    });
+  }
+  async function remove(r: Rule) {
+    setRules((rs) => rs.filter((x) => x.appId !== r.appId));
+    await api.del(`/api/children/${childId}/rules/apps?appId=${encodeURIComponent(r.appId)}`);
+  }
+  async function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newApp.appName) return;
+    const appId = newApp.appId || newApp.appName.toLowerCase().replace(/\s+/g, "") + ".exe";
+    await api.put(`/api/children/${childId}/rules/apps`, {
+      appId, appName: newApp.appName, action: "allow", dailyLimitMinutes: null,
+    });
+    setNewApp({ appName: "", appId: "" });
+    setAdding(false);
+    load();
+  }
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted">
+          Définissez ce que {rules.length ? "" : ""}votre enfant peut utiliser. Les nouvelles apps détectées apparaissent ici automatiquement.
+        </p>
+        <button className="btn btn-outline" onClick={() => setAdding((v) => !v)}>
+          <Plus size={16} /> Ajouter
+        </button>
+      </div>
+
+      {adding && (
+        <form onSubmit={add} className="card flex flex-wrap items-end gap-3 p-4">
+          <div className="flex-1">
+            <label className="label">Nom de l'application</label>
+            <input className="input" placeholder="Ex : Fortnite" value={newApp.appName} onChange={(e) => setNewApp((s) => ({ ...s, appName: e.target.value }))} autoFocus />
+          </div>
+          <div className="flex-1">
+            <label className="label">Identifiant (exe / package) — optionnel</label>
+            <input className="input" placeholder="fortnite.exe" value={newApp.appId} onChange={(e) => setNewApp((s) => ({ ...s, appId: e.target.value }))} />
+          </div>
+          <button className="btn btn-primary">Ajouter</button>
+        </form>
+      )}
+
+      {rules.length === 0 ? (
+        <div className="card p-10 text-center text-muted">
+          Aucune règle d'application pour l'instant.
+        </div>
+      ) : (
+        <div className="card divide-y">
+          {rules.map((r) => {
+            const meta = CATEGORY_META[(r.category as Category) ?? "unknown"] ?? CATEGORY_META.unknown;
+            return (
+              <div key={r.appId} className="flex flex-wrap items-center gap-3 p-4">
+                <span className="grid h-10 w-10 place-items-center rounded-lg bg-slate-50 text-xl">{meta.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{r.appName}</div>
+                  <div className="text-xs text-muted">{meta.label} · {r.appId}</div>
+                </div>
+
+                {r.action === "limit" && (
+                  <select
+                    className="input w-auto py-1.5 text-sm"
+                    value={r.dailyLimitMinutes ?? 60}
+                    onChange={(e) => setLimit(r, Number(e.target.value))}
+                  >
+                    {[15, 30, 45, 60, 90, 120, 180, 240].map((m) => (
+                      <option key={m} value={m}>{formatMinutes(m)}/jour</option>
+                    ))}
+                  </select>
+                )}
+
+                <div className="flex overflow-hidden rounded-lg border">
+                  <Seg active={r.action === "allow"} color="emerald" onClick={() => setAction(r, "allow")}><Check size={14} /> Autoriser</Seg>
+                  <Seg active={r.action === "limit"} color="amber" onClick={() => setAction(r, "limit")}><Hourglass size={14} /> Limiter</Seg>
+                  <Seg active={r.action === "block"} color="red" onClick={() => setAction(r, "block")}><Ban size={14} /> Bloquer</Seg>
+                </div>
+
+                <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r)}><Trash2 size={16} /></button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Seg({ active, color, onClick, children }: { active: boolean; color: string; onClick: () => void; children: React.ReactNode }) {
+  const tints: Record<string, string> = {
+    emerald: "bg-emerald-500 text-white",
+    amber: "bg-amber-500 text-white",
+    red: "bg-red-500 text-white",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold transition ${active ? tints[color] : "bg-white text-slate-500 hover:bg-slate-50"}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Spinner() {
+  return (
+    <div className="grid place-items-center py-16 text-muted">
+      <Loader2 className="spinner" />
+    </div>
+  );
+}
