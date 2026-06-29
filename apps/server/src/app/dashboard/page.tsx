@@ -5,6 +5,7 @@ import { accessibleChildWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { FamilyPause } from "@/components/family-pause";
+import { Onboarding } from "@/components/onboarding";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import {
   Smartphone,
@@ -78,10 +79,7 @@ export default async function OverviewPage() {
       <div>
         <h2 className="mb-3 text-lg font-semibold">{tt.nav.myChildren}</h2>
         {kids.length === 0 ? (
-          <Link href="/dashboard/children/new" className="card grid place-items-center gap-2 border-dashed p-10 text-center text-muted hover:border-brand-300">
-            <Plus size={28} />
-            <span className="font-medium">Ajoutez votre premier enfant pour commencer</span>
-          </Link>
+          <Onboarding t={tt.onboarding} />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {kids.map((k) => {

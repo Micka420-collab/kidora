@@ -141,6 +141,17 @@ const fr = {
     visits: "visites",
     blockedShort: "bloquées",
   },
+  onboarding: {
+    title: "Bienvenue sur Kidora 🛡️",
+    subtitle: "Protégez votre famille en 3 étapes.",
+    step1Title: "Créer le profil de votre enfant",
+    step1Desc: "Ajoutez un enfant pour personnaliser ses règles.",
+    step1Cta: "Ajouter un enfant",
+    step2Title: "Installer Kidora sur son appareil",
+    step2Desc: "Agent Windows sur PC, ou l'app Kidora Kids (scan du QR) sur mobile.",
+    step3Title: "Définir les règles",
+    step3Desc: "Temps d'écran, filtrage web, applications, localisation.",
+  },
 };
 
 const en: typeof fr = {
@@ -278,6 +289,17 @@ const en: typeof fr = {
     noData: "No data.",
     visits: "visits",
     blockedShort: "blocked",
+  },
+  onboarding: {
+    title: "Welcome to Kidora 🛡️",
+    subtitle: "Protect your family in 3 steps.",
+    step1Title: "Create your child's profile",
+    step1Desc: "Add a child to tailor their rules.",
+    step1Cta: "Add a child",
+    step2Title: "Install Kidora on their device",
+    step2Desc: "Windows agent on PC, or the Kidora Kids app (scan the QR) on mobile.",
+    step3Title: "Set the rules",
+    step3Desc: "Screen time, web filtering, apps, location.",
   },
 };
 
