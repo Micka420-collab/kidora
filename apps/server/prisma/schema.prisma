@@ -21,6 +21,8 @@ model Parent {
   passwordHash String
   role         String   @default("owner") // owner | guardian
   weeklyReportEmail Boolean @default(true) // receive the weekly usage summary by email
+  totpSecret   String?  // base32 TOTP secret (set during 2FA enrolment)
+  totpEnabled  Boolean  @default(false) // 2FA active
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
