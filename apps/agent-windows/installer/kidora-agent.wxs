@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Kidora Agent — Windows Installer (WiX v4/v5).
+  Build:  wix build kidora-agent.wxs -arch x64 -ext WixToolset.Util.wixext \
+            -d Version=1.0.0 -d AgentSrc=<path to apps\agent-windows> -o kidora-agent.msi
+  Install (silent, turnkey):
+    msiexec /i kidora-agent.msi /qn TOKEN=<jeton> SERVER=https://serveur [CHILDUSER="PC\Enfant"]
+  Prerequisite: Node.js (>=18) on the machine — the post-install step enrolls and
+  registers the scheduled tasks (+ self-protection) via install-agent.ps1.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package Name="Kidora Agent"
+           Manufacturer="Kidora"
+           Version="$(Version)"
+           UpgradeCode="7B2A1C90-3E4D-4F5A-9B6C-1D2E3F4A5B6C"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="Une version plus récente de Kidora Agent est déjà installée." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- Passed on the msiexec command line. -->
+    <Property Id="TOKEN" Secure="yes" />
+    <Property Id="SERVER" Value="http://localhost:3000" Secure="yes" />
+    <Property Id="CHILDUSER" Secure="yes" />
+
+    <!-- Install into Program Files\Kidora\Agent -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="VENDORDIR" Name="Kidora">
+        <Directory Id="INSTALLFOLDER" Name="Agent" />
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Harvest the agent source tree (excludes installer + runtime artifacts). -->
+    <ComponentGroup Id="AgentFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(AgentSrc)\**"
+             Exclude="$(AgentSrc)\installer\**;$(AgentSrc)\node_modules\**;$(AgentSrc)\README.md;$(AgentSrc)\config.json;$(AgentSrc)\heartbeat.json;$(AgentSrc)\overlay-state.json;$(AgentSrc)\KidoraAgent.xml;$(AgentSrc)\guardian.log" />
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="Kidora Agent" Level="1">
+      <ComponentGroupRef Id="AgentFiles" />
+    </Feature>
+
+    <!-- ── Post-install: enroll + register scheduled tasks (+ self-protection). ── -->
+    <SetProperty Id="SetupAgent" Sequence="execute" Before="SetupAgent" Condition="NOT Installed"
+                 Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]install-agent.ps1&quot; -Token &quot;[TOKEN]&quot; -Server &quot;[SERVER]&quot; -ChildUser &quot;[CHILDUSER]&quot;" />
+    <CustomAction Id="SetupAgent" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
+                  Execute="deferred" Impersonate="no" Return="check" />
+
+    <!-- ── Uninstall: remove the scheduled tasks + ACLs. ── -->
+    <SetProperty Id="RemoveAgent" Sequence="execute" Before="RemoveAgent" Condition="Installed AND REMOVE=&quot;ALL&quot;"
+                 Value="&quot;[System64Folder]WindowsPowerShell\v1.0\powershell.exe&quot; -NoProfile -ExecutionPolicy Bypass -File &quot;[INSTALLFOLDER]install-agent.ps1&quot; -Uninstall" />
+    <CustomAction Id="RemoveAgent" DllEntry="WixQuietExec64" BinaryRef="Wix4UtilCA_X64"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+
+    <InstallExecuteSequence>
+      <Custom Action="SetupAgent" After="InstallFiles" Condition="NOT Installed" />
+      <Custom Action="RemoveAgent" Before="RemoveFiles" Condition="Installed AND REMOVE=&quot;ALL&quot;" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>
