@@ -67,6 +67,46 @@ vercel deploy --prod
 > `vercel` CLI : `npm i -g vercel`. Build : `next build` (Turbopack, vérifié OK).
 > Le `prebuild` régénère le client Prisma pour Postgres à partir de `DATABASE_URL`.
 
+## Rapports hebdomadaires par email
+
+Chaque semaine, Kidora peut envoyer à chaque parent un résumé d'usage de sa
+famille (temps d'écran, top apps, web, alertes). **Opt-out** par parent dans
+*Paramètres › Notifications* (champ `Parent.weeklyReportEmail`, activé par défaut).
+
+### 1. Configurer le SMTP (sinon : no-op propre)
+
+| Clé | Exemple |
+|---|---|
+| `SMTP_HOST` | `smtp.sendgrid.net` |
+| `SMTP_PORT` | `587` (ou `465`) |
+| `SMTP_SECURE` | `false` (`true` pour 465) |
+| `SMTP_USER` / `SMTP_PASS` | identifiants SMTP |
+| `MAIL_FROM` | `Kidora <no-reply@kidora.app>` |
+| `APP_URL` | `https://kidora.example.com` (lien dans l'email) |
+
+Sans `SMTP_HOST`, l'envoi est désactivé et le cron répond `configured:false`
+(il indique tout de même combien de parents *seraient* notifiés).
+
+### 2. Planifier le cron
+
+L'endpoint `GET /api/cron/reports` envoie les emails. `apps/server/vercel.json`
+le planifie **chaque lundi 8h** :
+
+```json
+{ "crons": [{ "path": "/api/cron/reports", "schedule": "0 8 * * 1" }] }
+```
+
+Protégez-le avec `CRON_SECRET` (Vercel Cron envoie automatiquement
+`Authorization: Bearer $CRON_SECRET`). Pour un autre hébergeur, planifiez un
+simple appel HTTP :
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://kidora.example.com/api/cron/reports
+```
+
+Test manuel (sans envoi réel) : `?dryRun=1` — `…/api/cron/reports?dryRun=1&days=7`.
+En dev (hors production) l'endpoint est accessible sans secret.
+
 ## Agent Windows en production
 
 Pointez l'agent sur l'URL déployée :

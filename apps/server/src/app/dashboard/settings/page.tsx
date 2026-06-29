@@ -6,6 +6,7 @@ import { User, Shield, Smartphone, ScrollText } from "lucide-react";
 import { GuardiansCard } from "@/components/guardians-card";
 import { AccountDataCard } from "@/components/account-data-card";
 import { PushToggle } from "@/components/push-toggle";
+import { WeeklyReportToggle } from "@/components/weekly-report-toggle";
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Connexion",
@@ -65,6 +66,12 @@ export default async function SettingsPage() {
       </div>
 
       <PushToggle />
+
+      <WeeklyReportToggle
+        initial={parent.weeklyReportEmail}
+        label={t.weeklyReport}
+        desc={t.weeklyReportDesc}
+      />
 
       <GuardiansCard />
 

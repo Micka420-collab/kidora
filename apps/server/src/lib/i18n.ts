@@ -67,6 +67,8 @@ const fr = {
     devicesMonitored: "Appareil(s) surveillé(s)",
     journal: "Journal du compte",
     about: "À propos de Kidora",
+    weeklyReport: "Résumé hebdomadaire par email",
+    weeklyReportDesc: "Recevez chaque semaine un récapitulatif de l'activité de votre famille.",
   },
   apps: {
     intro: "Définissez ce que votre enfant peut utiliser. Les nouvelles apps détectées apparaissent ici automatiquement.",
@@ -256,6 +258,8 @@ const en: typeof fr = {
     devicesMonitored: "Monitored device(s)",
     journal: "Account log",
     about: "About Kidora",
+    weeklyReport: "Weekly email summary",
+    weeklyReportDesc: "Get a weekly recap of your family's activity by email.",
   },
   apps: {
     intro: "Set what your child can use. Newly detected apps appear here automatically.",
