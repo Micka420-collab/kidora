@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatDuration } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, Clock, Ban, Globe, BellRing, Download } from "lucide-react";
 
 type Report = {
@@ -20,6 +21,8 @@ type Report = {
 
 export default function ReportsTab() {
   const { childId } = useParams<{ childId: string }>();
+  const { t: tr } = useT();
+  const t = tr.reports;
   const [days, setDays] = useState(7);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,22 +60,22 @@ export default function ReportsTab() {
         <div className="flex gap-1.5">
           {[7, 14, 30].map((d) => (
             <button key={d} onClick={() => setDays(d)} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${days === d ? "bg-brand-600 text-white" : "border bg-white text-slate-600 hover:bg-slate-50"}`}>
-              {d} jours
+              {d} {t.days}
             </button>
           ))}
         </div>
-        <button className="btn btn-outline" onClick={exportCsv}><Download size={16} /> Exporter CSV</button>
+        <button className="btn btn-outline" onClick={exportCsv}><Download size={16} /> {t.exportCsv}</button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Clock} tint="bg-brand-50 text-brand-600" value={formatDuration(report.totalSeconds)} label={`Temps total (${days} j)`} />
-        <Kpi icon={Clock} tint="bg-indigo-50 text-indigo-600" value={formatDuration(report.avgPerDaySeconds)} label="Moyenne / jour" />
-        <Kpi icon={Ban} tint="bg-red-50 text-red-600" value={String(report.web.blockedVisits)} label="Visites bloquées" />
-        <Kpi icon={BellRing} tint="bg-amber-50 text-amber-600" value={String(report.alerts.total)} label="Alertes" />
+        <Kpi icon={Clock} tint="bg-brand-50 text-brand-600" value={formatDuration(report.totalSeconds)} label={`${t.totalTime} · ${days} ${t.days}`} />
+        <Kpi icon={Clock} tint="bg-indigo-50 text-indigo-600" value={formatDuration(report.avgPerDaySeconds)} label={t.perDay} />
+        <Kpi icon={Ban} tint="bg-red-50 text-red-600" value={String(report.web.blockedVisits)} label={t.blockedVisits} />
+        <Kpi icon={BellRing} tint="bg-amber-50 text-amber-600" value={String(report.alerts.total)} label={t.alerts} />
       </div>
 
       <div className="card p-5">
-        <h3 className="mb-4 text-base font-semibold">Temps d'écran par jour</h3>
+        <h3 className="mb-4 text-base font-semibold">{t.dailyScreenTime}</h3>
         <div className="flex h-40 items-end gap-1.5">
           {report.trend.map((t) => (
             <div key={t.date} className="flex flex-1 flex-col items-center gap-1">
@@ -87,8 +90,8 @@ export default function ReportsTab() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="card p-5">
-          <h3 className="mb-4 text-base font-semibold">Applications les plus utilisées</h3>
-          {report.topApps.length === 0 ? <p className="text-sm text-muted">Aucune donnée.</p> : (
+          <h3 className="mb-4 text-base font-semibold">{t.topApps}</h3>
+          {report.topApps.length === 0 ? <p className="text-sm text-muted">{t.noData}</p> : (
             <div className="space-y-2.5">
               {report.topApps.slice(0, 8).map((a) => {
                 const meta = CATEGORY_META[(a.category as Category) ?? "unknown"] ?? CATEGORY_META.unknown;
@@ -108,13 +111,13 @@ export default function ReportsTab() {
         </div>
 
         <div className="card p-5">
-          <h3 className="mb-4 text-base font-semibold">Sites les plus visités</h3>
-          {report.web.topDomains.length === 0 ? <p className="text-sm text-muted">Aucune donnée.</p> : (
+          <h3 className="mb-4 text-base font-semibold">{t.topSites}</h3>
+          {report.web.topDomains.length === 0 ? <p className="text-sm text-muted">{t.noData}</p> : (
             <div className="divide-y">
               {report.web.topDomains.slice(0, 8).map((d) => (
                 <div key={d.domain} className="flex items-center justify-between py-2 text-sm">
                   <span className="flex items-center gap-2"><Globe size={14} className="text-slate-400" /> {d.domain}</span>
-                  <span className="text-muted">{d.count} visites{d.blocked ? ` · ${d.blocked} bloquées` : ""}</span>
+                  <span className="text-muted">{d.count} {t.visits}{d.blocked ? ` · ${d.blocked} ${t.blockedShort}` : ""}</span>
                 </div>
               ))}
             </div>
@@ -123,8 +126,8 @@ export default function ReportsTab() {
       </div>
 
       <div className="card p-5">
-        <h3 className="mb-4 text-base font-semibold">Répartition par catégorie</h3>
-        {report.byCategory.length === 0 ? <p className="text-sm text-muted">Aucune donnée.</p> : (
+        <h3 className="mb-4 text-base font-semibold">{t.byCategory}</h3>
+        {report.byCategory.length === 0 ? <p className="text-sm text-muted">{t.noData}</p> : (
           <div className="space-y-2.5">
             {report.byCategory.slice(0, 8).map((c) => {
               const meta = CATEGORY_META[(c.category as Category) ?? "unknown"] ?? CATEGORY_META.unknown;
