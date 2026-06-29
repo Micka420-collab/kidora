@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
+import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
 
 const eventSchema = z.object({
@@ -229,7 +230,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 4c. messages (SMS / chat sent & received)
+  // 4c. messages (SMS / chat sent & received) + AI-style risk analysis
   if (body.messages?.length) {
     await prisma.message.createMany({
       data: body.messages.map((m) => ({
@@ -242,6 +243,22 @@ export async function POST(req: NextRequest) {
         ts: m.ts ? new Date(m.ts) : new Date(),
       })),
     });
+    // Scan each message for risk signals (grooming, self-harm, bullying…).
+    for (const m of body.messages) {
+      const r = analyzeRisk(m.body);
+      if (r.level === "medium" || r.level === "high" || r.level === "critical") {
+        const cat = RISK_CATEGORY_LABELS[r.topCategory ?? ""] ?? "Risque";
+        const who = m.contact ? ` (${m.direction === "in" ? "de" : "à"} ${m.contact})` : "";
+        const preview = m.body.length > 80 ? `${m.body.slice(0, 80)}…` : m.body;
+        alerts.push({
+          parentId,
+          childId,
+          type: "risk",
+          severity: riskSeverity(r.level),
+          message: `⚠️ ${cat} détecté dans un message${who} — « ${preview} »`,
+        });
+      }
+    }
   }
 
   // 5. location + geofence transitions
@@ -332,6 +349,19 @@ export async function POST(req: NextRequest) {
           type: "keyword",
           severity: hit.severity,
           message: `Mot-clé sensible détecté (${hit.category}) : « ${hit.keyword} »`,
+        });
+      }
+      // Risk scorer over searches/titles too — only escalate high+ here to
+      // avoid noise (messages already cover medium+).
+      const r = analyzeRisk(t);
+      if ((r.level === "high" || r.level === "critical") && !flagged.has(`risk:${r.topCategory}`)) {
+        flagged.add(`risk:${r.topCategory}`);
+        alerts.push({
+          parentId,
+          childId,
+          type: "risk",
+          severity: riskSeverity(r.level),
+          message: `⚠️ ${RISK_CATEGORY_LABELS[r.topCategory ?? ""] ?? "Risque"} détecté dans une recherche/page`,
         });
       }
     }

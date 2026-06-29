@@ -30,6 +30,7 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 | 🌐 **Filtrage web** | Blocage par **catégorie** (adulte, jeux d'argent, violence, drogues, rencontres…), SafeSearch forcé, listes blanche/noire |
 | 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, détection des nouvelles apps |
 | 🔍 **Mots-clés sensibles** | Alerte si des termes à risque (automutilation, violence…) ou personnalisés apparaissent dans les recherches |
+| 🛡️ **Détection de risque (IA)** | Analyse des **messages** & recherches : score de risque pondéré détectant **grooming/prédation**, automutilation, harcèlement → alertes par sévérité |
 | 📍 **Localisation** | Position temps réel, historique, **zones de sécurité (géofences)** avec alertes entrée/sortie |
 | 📊 **Rapports** | Usage par app / catégorie, tendance, **export CSV** |
 | 📸 **Captures d'écran** | À la demande (Windows), **chiffrées au repos** (AES-256-GCM) |

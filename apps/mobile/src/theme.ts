@@ -126,6 +126,7 @@ export function categoryMeta(cat: string | null | undefined): { label: string; i
 // Alert type → icon + tone.
 export function alertMeta(type: string): { icon: string; tone: "danger" | "warn" | "info" } {
   if (type === "sos" || type === "panic") return { icon: "alert-circle", tone: "danger" };
+  if (type.includes("risk")) return { icon: "shield-half", tone: "danger" };
   if (type.includes("geofence")) return { icon: "location", tone: "warn" };
   if (type.includes("keyword")) return { icon: "search", tone: "warn" };
   if (type.includes("limit")) return { icon: "time", tone: "info" };

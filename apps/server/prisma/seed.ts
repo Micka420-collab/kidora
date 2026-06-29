@@ -254,6 +254,8 @@ async function main() {
   // Alerts
   await prisma.alert.createMany({
     data: [
+      { parentId: parent.id, childId: emma.id, type: "risk", severity: "critical", message: "⚠️ Prédation / grooming détecté dans un message (de Inconnu) — « tu as quel âge ? n'en parle pas à tes parents, c'est notre secret »", read: false },
+      { parentId: parent.id, childId: lucas.id, type: "risk", severity: "warning", message: "⚠️ Harcèlement détecté dans un message — « personne ne t'aime, dégage »", read: false },
       { parentId: parent.id, childId: emma.id, type: "blocked_attempt", severity: "warning", message: "Tentative bloquée : tiktok.com", read: false },
       { parentId: parent.id, childId: lucas.id, type: "limit_reached", severity: "info", message: "Limite de temps atteinte : Steam (120 min)", read: false },
       { parentId: parent.id, childId: emma.id, type: "bedtime", severity: "info", message: "Heure du coucher : appareil verrouillé à 20:30", read: true },
