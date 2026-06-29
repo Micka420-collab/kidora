@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatDate } from "@/lib/format";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, AppWindow, Globe, Search, MonitorPlay, Ban } from "lucide-react";
 
 type Event = {
@@ -17,10 +18,10 @@ type Event = {
 };
 
 const FILTERS = [
-  { key: "", label: "Tout" },
-  { key: "app_open", label: "Apps" },
-  { key: "web_visit", label: "Web" },
-  { key: "search", label: "Recherches" },
+  { key: "", l: "all" as const },
+  { key: "app_open", l: "apps" as const },
+  { key: "web_visit", l: "web" as const },
+  { key: "search", l: "searches" as const },
 ];
 
 function iconFor(type: string) {
@@ -32,6 +33,8 @@ function iconFor(type: string) {
 
 export default function ActivityTab() {
   const { childId } = useParams<{ childId: string }>();
+  const { t: tr } = useT();
+  const t = tr.activity;
   const [events, setEvents] = useState<Event[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,7 +55,7 @@ export default function ActivityTab() {
             onClick={() => setFilter(f.key)}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${filter === f.key ? "bg-brand-600 text-white" : "bg-white border text-slate-600 hover:bg-slate-50"}`}
           >
-            {f.label}
+            {t[f.l]}
           </button>
         ))}
       </div>
@@ -60,7 +63,7 @@ export default function ActivityTab() {
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>
       ) : events.length === 0 ? (
-        <div className="card p-10 text-center text-muted">Aucune activité enregistrée.</div>
+        <div className="card p-10 text-center text-muted">{t.empty}</div>
       ) : (
         <div className="card divide-y">
           {events.map((e) => {
@@ -73,7 +76,7 @@ export default function ActivityTab() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     {e.title ?? e.type}
-                    {e.blocked && <span className="badge bg-red-100 text-red-600">Bloqué</span>}
+                    {e.blocked && <span className="badge bg-red-100 text-red-600">{t.blocked}</span>}
                   </div>
                   {e.detail && <div className="truncate text-xs text-muted">{e.detail}</div>}
                 </div>
