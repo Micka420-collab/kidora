@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import * as Location from "expo-location";
 import { childAgent } from "@/api";
 import * as storage from "@/storage";
+import * as AppUsage from "../modules/app-usage";
 
 const SYNC_MS = 60_000;
 
@@ -12,7 +13,9 @@ export default function ChildMode() {
   const [active, setActive] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
+  const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevUsage = useRef<Record<string, number>>({});
 
   useEffect(() => {
     start();
@@ -40,9 +43,28 @@ export default function ChildMode() {
         location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
       } catch { /* location may be unavailable momentarily */ }
 
+      // Android app-usage (no-op on iOS / Expo Go). Send deltas since last sync
+      // to match the server's incremental usage model.
+      let usage: { appId: string; appName: string; date: string; seconds: number }[] = [];
+      if (AppUsage.isAvailable) {
+        const granted = await AppUsage.hasPermission();
+        setNeedsUsagePerm(!granted);
+        if (granted) {
+          const today = new Date().toISOString().slice(0, 10);
+          const entries = await AppUsage.getUsageToday();
+          for (const e of entries) {
+            const prev = prevUsage.current[e.packageName] ?? 0;
+            const delta = Math.max(0, e.totalSeconds - prev);
+            prevUsage.current[e.packageName] = e.totalSeconds;
+            if (delta > 0) usage.push({ appId: e.packageName, appName: e.appName, date: today, seconds: delta });
+          }
+        }
+      }
+
       const res = await childAgent.sync({
         online: true,
         location,
+        usage,
         events: [{ type: "location", title: "Position mise à jour" }],
       });
       setPaused(res.policy.paused);
@@ -89,6 +111,12 @@ export default function ChildMode() {
         <Text style={s.refreshText}>Synchroniser maintenant</Text>
       </Pressable>
 
+      {needsUsagePerm && (
+        <Pressable style={s.permBtn} onPress={() => AppUsage.openSettings()}>
+          <Text style={s.permText}>Autoriser l'accès à l'usage des apps</Text>
+        </Pressable>
+      )}
+
       <Pressable style={s.unlink} onPress={unlink}>
         <Text style={s.unlinkText}>Dissocier (parent)</Text>
       </Pressable>
@@ -106,6 +134,8 @@ const s = StyleSheet.create({
   sync: { color: "#94a3b8", marginTop: 24, fontSize: 13 },
   refresh: { marginTop: 16, backgroundColor: "#4f46e5", paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10 },
   refreshText: { color: "#fff", fontWeight: "700" },
+  permBtn: { marginTop: 12, backgroundColor: "#fef3c7", paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
+  permText: { color: "#b45309", fontWeight: "600" },
   unlink: { marginTop: 24, padding: 10 },
   unlinkText: { color: "#94a3b8", fontSize: 13 },
 });

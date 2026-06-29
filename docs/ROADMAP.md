@@ -33,9 +33,10 @@
 - [ ] Signature + installeur MSI
 
 ### Mobile (dev build natif EAS)
-- [ ] Android : `UsageStatsManager` (usage apps), `AccessibilityService` (blocage),
-      `VpnService` (filtrage web), localisation en arrière-plan
-- [ ] iOS : FamilyControls / ManagedSettings / DeviceActivity (Screen Time API)
+- [~] Android : module natif `UsageStatsManager` (usage apps) écrit + branché au sync (deltas) — *à compiler via EAS, non vérifiable en Expo Go*
+- [ ] Android : `AccessibilityService` (blocage), `VpnService` (filtrage web)
+- [~] iOS : module scaffold (renvoie « non supporté ») + doc FamilyControls/DeviceActivity/ManagedSettings (entitlement Apple requis)
+- [ ] Localisation en arrière-plan (`expo-task-manager`)
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation

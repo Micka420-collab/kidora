@@ -51,6 +51,23 @@ modules natifs et des entitlements :
 > il « suffit » de brancher ces modules natifs côté appareil. Le code `src/api.ts`
 > expose déjà `childAgent.sync()` qui accepte `usage`, `webVisits`, `events`, `location`.
 
+## Module natif d'usage des apps (Android)
+
+`modules/app-usage/` est un **module Expo local** (Kotlin) qui lit le temps d'usage
+par application via `UsageStatsManager`. Il est utilisé par l'écran *Mode enfant*,
+qui envoie les **deltas** d'usage au serveur (`/api/agent/sync`, contrat déjà en place).
+
+- Nécessite un **dev build** (`npx expo run:android` ou `eas build`) — **indisponible dans Expo Go**.
+- Permission spéciale `PACKAGE_USAGE_STATS` (« Accès à l'utilisation »), accordée
+  manuellement par l'utilisateur ; l'app propose un bouton qui ouvre les réglages.
+- Le code JS no-op proprement si le module natif est absent (`isAvailable === false`).
+
+### iOS
+`modules/app-usage/ios/AppUsageModule.swift` renvoie « non supporté » : iOS interdit
+la lecture libre de l'usage. Le contrôle passe par **FamilyControls + DeviceActivity +
+ManagedSettings** (entitlement `com.apple.developer.family-controls` accordé par Apple),
+à implémenter dans une extension dédiée.
+
 ## Structure
 
 ```
