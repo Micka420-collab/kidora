@@ -30,3 +30,7 @@ Thumbs.db
 
 # prisma generated client (regenerated on install)
 **/src/generated/
+
+# agent runtime config (contains enroll token)
+config.json
+apps/agent-windows/config.json
