@@ -1,0 +1,67 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { json, readJson, apiError } from "@/lib/http";
+import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
+
+type Ctx = { params: Promise<{ childId: string }> };
+
+export async function GET(_req: NextRequest, ctx: Ctx) {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const { childId } = await ctx.params;
+    await requireOwnedChild(parent.id, childId);
+
+    const child = await prisma.child.findUnique({
+      where: { id: childId },
+      include: {
+        devices: true,
+        screenTime: true,
+        webFilter: true,
+        appRules: { orderBy: { appName: "asc" } },
+        webRules: { orderBy: { value: "asc" } },
+        geofences: true,
+      },
+    });
+    return json({ child });
+  });
+}
+
+const patchSchema = z.object({
+  name: z.string().min(1).max(60).optional(),
+  avatar: z.string().optional(),
+  birthDate: z.string().nullable().optional(),
+});
+
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const { childId } = await ctx.params;
+    await requireOwnedChild(parent.id, childId);
+
+    const parsed = patchSchema.safeParse(await readJson(req));
+    if (!parsed.success) return apiError("Données invalides", 422);
+
+    const child = await prisma.child.update({
+      where: { id: childId },
+      data: {
+        ...(parsed.data.name !== undefined && { name: parsed.data.name }),
+        ...(parsed.data.avatar !== undefined && { avatar: parsed.data.avatar }),
+        ...(parsed.data.birthDate !== undefined && {
+          birthDate: parsed.data.birthDate ? new Date(parsed.data.birthDate) : null,
+        }),
+      },
+    });
+    return json({ child });
+  });
+}
+
+export async function DELETE(_req: NextRequest, ctx: Ctx) {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const { childId } = await ctx.params;
+    await requireOwnedChild(parent.id, childId);
+    await prisma.child.delete({ where: { id: childId } });
+    return json({ ok: true });
+  });
+}

@@ -1,0 +1,262 @@
+// Kidora — Parental control data model
+// SQLite for local/dev. Swap provider to "postgresql" for production (Vercel/Neon).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─────────────────────────────────────────────────────────────
+// Accounts
+// ─────────────────────────────────────────────────────────────
+
+model Parent {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("owner") // owner | guardian
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  children Child[]
+  alerts   Alert[]
+}
+
+model Child {
+  id        String    @id @default(cuid())
+  parentId  String
+  name      String
+  birthDate DateTime?
+  avatar    String? // emoji or url
+  paused    Boolean   @default(false) // internet/app pause "right now"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  parent         Parent           @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  devices        Device[]
+  appRules       AppRule[]
+  webRules       WebRule[]
+  screenTime     ScreenTimeRule?
+  webFilter      WebFilterConfig?
+  activityEvents ActivityEvent[]
+  appUsages      AppUsage[]
+  webVisits      WebVisit[]
+  locationPings  LocationPing[]
+  geofences      Geofence[]
+  alerts         Alert[]
+  commands       Command[]
+
+  @@index([parentId])
+}
+
+model Device {
+  id           String    @id @default(cuid())
+  childId      String
+  name         String
+  platform     String // windows | android | ios | macos
+  model        String?
+  enrollToken  String    @unique // used by agent to authenticate
+  enrolled     Boolean   @default(false)
+  lastSeen     DateTime?
+  agentVersion String?
+  battery      Int? // 0-100
+  online       Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+
+  child          Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  activityEvents ActivityEvent[]
+  appUsages      AppUsage[]
+  webVisits      WebVisit[]
+  locationPings  LocationPing[]
+  commands       Command[]
+
+  @@index([childId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rules / Policies
+// ─────────────────────────────────────────────────────────────
+
+model ScreenTimeRule {
+  id          String   @id @default(cuid())
+  childId     String   @unique
+  enabled     Boolean  @default(true)
+  dailyLimits String   @default("{}") // JSON { "mon":120, ... } minutes/weekday
+  bedtimes    String   @default("[]") // JSON [{days:[],start:"21:00",end:"07:00"}]
+  updatedAt   DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+}
+
+model AppRule {
+  id                String   @id @default(cuid())
+  childId           String
+  appId             String // package name / exe name
+  appName           String
+  category          String?
+  action            String   @default("allow") // allow | block | limit
+  dailyLimitMinutes Int?
+  updatedAt         DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, appId])
+  @@index([childId])
+}
+
+model WebRule {
+  id        String   @id @default(cuid())
+  childId   String
+  kind      String   @default("domain") // domain | category
+  value     String // "pornhub.com" or "adult"
+  action    String   @default("block") // allow | block
+  updatedAt DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, kind, value])
+  @@index([childId])
+}
+
+model WebFilterConfig {
+  id                String   @id @default(cuid())
+  childId           String   @unique
+  safeSearch        Boolean  @default(true)
+  blockUnknown      Boolean  @default(false)
+  blockedCategories String   @default("[]") // JSON array of category keys
+  updatedAt         DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────────────────────
+// Telemetry / Activity
+// ─────────────────────────────────────────────────────────────
+
+model ActivityEvent {
+  id       String   @id @default(cuid())
+  childId  String
+  deviceId String
+  type     String // app_open | web_visit | search | location | screen_on | blocked
+  title    String?
+  detail   String?
+  category String?
+  blocked  Boolean  @default(false)
+  ts       DateTime @default(now())
+
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([childId, ts])
+  @@index([deviceId, ts])
+}
+
+model AppUsage {
+  id        String   @id @default(cuid())
+  childId   String
+  deviceId  String
+  appId     String
+  appName   String
+  category  String?
+  date      String // YYYY-MM-DD local
+  seconds   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, appId, date])
+  @@index([childId, date])
+}
+
+model WebVisit {
+  id       String   @id @default(cuid())
+  childId  String
+  deviceId String
+  domain   String
+  url      String?
+  title    String?
+  category String?
+  blocked  Boolean  @default(false)
+  ts       DateTime @default(now())
+
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([childId, ts])
+}
+
+model LocationPing {
+  id       String   @id @default(cuid())
+  childId  String
+  deviceId String
+  lat      Float
+  lng      Float
+  accuracy Float?
+  address  String?
+  ts       DateTime @default(now())
+
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([childId, ts])
+}
+
+model Geofence {
+  id            String   @id @default(cuid())
+  childId       String
+  name          String
+  lat           Float
+  lng           Float
+  radius        Int      @default(150) // meters
+  notifyOnEnter Boolean  @default(true)
+  notifyOnExit  Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Alerts & Commands
+// ─────────────────────────────────────────────────────────────
+
+model Alert {
+  id       String   @id @default(cuid())
+  parentId String
+  childId  String
+  type     String // blocked_attempt | bedtime | limit_reached | panic | keyword | geofence | new_app
+  severity String   @default("info") // info | warning | critical
+  message  String
+  read     Boolean  @default(false)
+  ts       DateTime @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([parentId, read])
+  @@index([childId, ts])
+}
+
+model Command {
+  id        String   @id @default(cuid())
+  childId   String
+  deviceId  String?
+  type      String // lock | unlock | pause | resume | block_app | message | locate | screenshot
+  payload   String   @default("{}") // JSON
+  status    String   @default("pending") // pending | delivered | done | failed
+  result    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  child  Child   @relation(fields: [childId], references: [id], onDelete: Cascade)
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([deviceId, status])
+}

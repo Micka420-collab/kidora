@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# builds
+.next/
+out/
+dist/
+build/
+
+# env
+.env
+.env.local
+.env*.local
+
+# databases
+*.db
+*.db-journal
+*.sqlite
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# prisma generated client (regenerated on install)
+**/src/generated/
