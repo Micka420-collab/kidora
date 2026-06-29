@@ -13,6 +13,7 @@ import {
   Plus,
   Menu,
   X,
+  Smartphone,
 } from "lucide-react";
 
 type Kid = { id: string; name: string; avatar: string | null };
@@ -86,6 +87,7 @@ export function DashboardShell({
         <nav className="space-y-1">
           {navItem("/dashboard", t.nav.overview, LayoutDashboard)}
           {navItem("/dashboard/alerts", t.nav.alerts, BellRing, unread)}
+          {navItem("/dashboard/devices", t.nav.devices, Smartphone)}
           {navItem("/dashboard/settings", t.nav.settings, Settings)}
         </nav>
 

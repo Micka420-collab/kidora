@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera, Pencil, Trash2, X } from "lucide-react";
 
 type Device = {
   id: string;
@@ -31,6 +31,8 @@ export default function DevicesTab() {
   const [msgText, setMsgText] = useState("");
   const [sentFor, setSentFor] = useState<string | null>(null);
   const [shots, setShots] = useState<{ id: string; dataUrl: string; createdAt: string }[]>([]);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   async function loadShots() {
     const res = await api.get<{ screenshots: { id: string; dataUrl: string; createdAt: string }[] }>(`/api/children/${childId}/screenshots`);
@@ -70,6 +72,19 @@ export default function DevicesTab() {
     await sendCommand(deviceId, "message", { text: msgText.trim() });
     setMsgText("");
     setMsgFor(null);
+  }
+
+  async function renameDevice(id: string) {
+    const name = editName.trim();
+    if (!name) return;
+    setDevices((ds) => ds.map((d) => (d.id === id ? { ...d, name } : d)));
+    setEditId(null);
+    await api.patch(`/api/children/${childId}/devices/${id}`, { name });
+  }
+  async function removeDevice(id: string, name: string) {
+    if (!confirm(`Retirer l'appareil « ${name} » ? La surveillance s'arrêtera pour cet appareil.`)) return;
+    setDevices((ds) => ds.filter((d) => d.id !== id));
+    await api.del(`/api/children/${childId}/devices/${id}`);
   }
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
@@ -133,11 +148,24 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-50 text-slate-500">
                   {d.platform === "windows" || d.platform === "macos" ? <Monitor size={20} /> : <Smartphone size={20} />}
                 </span>
-                <div className="flex-1">
-                  <div className="font-semibold">{d.name}</div>
+                <div className="min-w-0 flex-1">
+                  {editId === d.id ? (
+                    <div className="flex items-center gap-1">
+                      <input className="input py-1 text-sm" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus
+                        onKeyDown={(e) => { if (e.key === "Enter") renameDevice(d.id); if (e.key === "Escape") setEditId(null); }} />
+                      <button className="text-emerald-600" onClick={() => renameDevice(d.id)}><Check size={16} /></button>
+                      <button className="text-slate-400" onClick={() => setEditId(null)}><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-semibold">{d.name}</span>
+                      <button className="text-slate-300 hover:text-brand-500" onClick={() => { setEditId(d.id); setEditName(d.name); }}><Pencil size={13} /></button>
+                    </div>
+                  )}
                   <div className="text-xs capitalize text-muted">{d.platform}{d.model ? ` · ${d.model}` : ""}</div>
                 </div>
                 <Circle size={9} className={d.online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300"} />
+                <button className="text-slate-300 hover:text-red-500" title="Retirer" onClick={() => removeDevice(d.id, d.name)}><Trash2 size={15} /></button>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                 <Stat label="Statut" value={d.enrolled ? (d.online ? "En ligne" : "Hors ligne") : "En attente"} />

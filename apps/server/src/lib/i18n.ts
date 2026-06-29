@@ -9,6 +9,7 @@ const fr = {
   nav: {
     overview: "Vue d'ensemble",
     alerts: "Alertes",
+    devices: "Appareils",
     settings: "Paramètres",
     myChildren: "Mes enfants",
     addChild: "Ajouter un enfant",
@@ -146,6 +147,7 @@ const en: typeof fr = {
   nav: {
     overview: "Overview",
     alerts: "Alerts",
+    devices: "Devices",
     settings: "Settings",
     myChildren: "My children",
     addChild: "Add a child",

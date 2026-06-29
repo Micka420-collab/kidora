@@ -14,6 +14,7 @@
 ## 🔜 Prochaines étapes
 
 ### Serveur / dashboard
+- [x] Gestion multi-appareils : page globale « Appareils » (famille entière) + renommer/retirer un appareil
 - [x] Vue **Rapports** par enfant (période 7/14/30 j, KPIs, top apps/catégories/domaines, export CSV)
 - [x] Actions à distance depuis le dashboard (verrouiller l'appareil, envoyer un message) via le système de commandes
 - [x] Actions familiales groupées (tout mettre en pause / reprendre) sur la vue d'ensemble
