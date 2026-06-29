@@ -22,7 +22,7 @@
 - [x] Mode sombre **web** (dashboard) — variables CSS + overrides ciblés, bascule persistée par cookie, SSR sans flash
 - [~] États de chargement (skeleton dashboard) + error boundary + page 404 soignée ; *toasts à ajouter*
 - [ ] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`)
-- [ ] Tests d'intégration (API) + e2e Playwright
+- [~] Tests d'intégration du moteur de politique (base de test réelle, 42 tests) ; *e2e Playwright à venir*
 - [x] Observabilité : `proxy.ts` (Next 16) — log d'accès structuré JSON + en-tête `x-request-id` ; erreurs API loguées en JSON
 
 ## 🔜 Prochaines étapes
