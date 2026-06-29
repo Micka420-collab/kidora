@@ -84,15 +84,9 @@ Deux apps distinctes (à installer en sideload sur le téléphone) :
 | **Kidora Parents** | Suivi & gestion depuis le téléphone parent | onglet **[Releases](https://github.com/Micka420-collab/kidora/releases)** (`mobile-v*`) |
 | **Kidora Kids** | Appareil enfant : localisation, usage, **SOS** | onglet **[Releases](https://github.com/Micka420-collab/kidora/releases)** (`mobile-v*`) |
 
-> ⏳ **Les APK ne sont pas encore publiés.** Leur compilation passe par le **cloud
-> EAS** (compte Expo gratuit requis). Une fois le pipeline lancé, `kidora-parents.apk`
-> et `kidora-kids.apk` apparaissent dans la Release `mobile-v1.0.0`.
-> Mise en place : [`apps/mobile/README.md`](apps/mobile/README.md#publier-les-apk-releases-github)
-> (`eas init` + secrets, puis tag `mobile-v1.0.0`).
-
-**Installer un APK** (une fois disponible) : sur le téléphone, autorisez « Installer
-des applications inconnues » pour votre navigateur, téléchargez l'APK depuis la
-Release puis ouvrez-le. Android 6.0+ (minSdk 23).
+**Installer un APK** : sur le téléphone, autorisez « Installer des applications
+inconnues » pour votre navigateur, téléchargez l'APK depuis la Release puis
+ouvrez-le. Android 6.0+ (minSdk 23).
 
 ### 🪟 Agent Windows (MSI)
 

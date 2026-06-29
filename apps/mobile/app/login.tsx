@@ -1,25 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert as RNAlert, ScrollView, Animated, Easing } from "react-native";
+import { View, Text, TextInput, KeyboardAvoidingView, Platform, Alert as RNAlert, ScrollView, Animated, Easing } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { parent, childAgent, getServer } from "@/api";
+import { useTheme, space, radius } from "@/theme";
+import { Btn } from "@/ui";
 
 const ROLE = (Constants.expoConfig?.extra?.role as "parent" | "child") ?? "parent";
 const isChild = ROLE === "child";
 
 export default function Login() {
+  const { c, gradient } = useTheme();
   const [server, setServer] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const fade = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(20)).current;
+  const slide = useRef(new Animated.Value(24)).current;
+
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      Animated.timing(slide, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 550, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 550, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
   }, [fade, slide]);
 
@@ -32,7 +38,7 @@ export default function Login() {
         router.replace("/child-mode");
       } else {
         await parent.login(email.trim(), password, srv);
-        router.replace("/parent");
+        router.replace("/(parent)");
       }
     } catch (e) {
       RNAlert.alert("Erreur", e instanceof Error ? e.message : "Connexion impossible");
@@ -41,60 +47,60 @@ export default function Login() {
     }
   }
 
+  const inputStyle = { backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, fontSize: 15, minHeight: 52, flex: 1 } as const;
+
   return (
-    <ScrollView contentContainerStyle={s.container}>
-      <Animated.View style={{ width: "100%", alignItems: "center", opacity: fade, transform: [{ translateY: slide }] }}>
-      <LinearGradient colors={["#6366f1", "#4338ca"]} style={s.logo}><Text style={s.logoText}>K</Text></LinearGradient>
-      <Text style={s.title}>{isChild ? "Kidora Kids" : "Kidora Parents"}</Text>
-      <Text style={s.subtitle}>{isChild ? "Connecter cet appareil" : "Espace parent"}</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: space.xl }} keyboardShouldPersistTaps="handled">
+          <Animated.View style={{ opacity: fade, transform: [{ translateY: slide }], gap: space.lg }}>
+            <View style={{ alignItems: "center", gap: 10, marginBottom: space.sm }}>
+              <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 80, height: 80, borderRadius: 26, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 40 }}>🛡️</Text>
+              </LinearGradient>
+              <Text style={{ fontSize: 28, fontWeight: "800", color: c.text }}>{isChild ? "Kidora Kids" : "Kidora Parents"}</Text>
+              <Text style={{ color: c.textMuted, fontSize: 14 }}>{isChild ? "Connecter cet appareil" : "Veillez sur votre famille, avec bienveillance."}</Text>
+            </View>
 
-      <TextInput
-        style={s.input}
-        placeholder="Serveur (https://…)"
-        autoCapitalize="none"
-        value={server}
-        onChangeText={setServer}
-        accessibilityLabel="Adresse du serveur Kidora"
-      />
+            <Field icon="server-outline">
+              <TextInput style={inputStyle} placeholder="Serveur (https://…)" placeholderTextColor={c.textFaint} autoCapitalize="none" value={server} onChangeText={setServer} accessibilityLabel="Adresse du serveur Kidora" />
+            </Field>
 
-      {isChild ? (
-        <TextInput
-          style={s.input}
-          placeholder="Jeton d'enrôlement"
-          autoCapitalize="none"
-          value={token}
-          onChangeText={setToken}
-          accessibilityLabel="Jeton d'enrôlement de l'appareil"
-        />
-      ) : (
-        <>
-          <TextInput style={s.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="Email" />
-          <TextInput style={s.input} placeholder="Mot de passe" secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="Mot de passe" />
-        </>
-      )}
+            {isChild ? (
+              <Field icon="key-outline">
+                <TextInput style={inputStyle} placeholder="Jeton d'enrôlement" placeholderTextColor={c.textFaint} autoCapitalize="none" value={token} onChangeText={setToken} accessibilityLabel="Jeton d'enrôlement" />
+              </Field>
+            ) : (
+              <>
+                <Field icon="mail-outline">
+                  <TextInput style={inputStyle} placeholder="Email" placeholderTextColor={c.textFaint} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="Email" />
+                </Field>
+                <Field icon="lock-closed-outline">
+                  <TextInput style={inputStyle} placeholder="Mot de passe" placeholderTextColor={c.textFaint} secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="Mot de passe" />
+                </Field>
+              </>
+            )}
 
-      <Pressable style={[s.button, busy && { opacity: 0.6 }]} onPress={submit} disabled={busy} accessibilityRole="button">
-        <Text style={s.buttonText}>{busy ? "…" : isChild ? "Connecter l'appareil" : "Se connecter"}</Text>
-      </Pressable>
+            <Btn title={isChild ? "Connecter l'appareil" : "Se connecter"} icon="arrow-forward" loading={busy} onPress={submit} full />
 
-      <Text style={s.hint}>
-        {isChild
-          ? "Le jeton se trouve dans l'app parent : enfant → Appareils."
-          : "Démo : demo@kidora.app / kidora1234"}
-      </Text>
-      </Animated.View>
-    </ScrollView>
+            <Text style={{ color: c.textFaint, fontSize: 13, textAlign: "center", marginTop: 4 }}>
+              {isChild ? "Le jeton est dans l'app parent : enfant → Appareils." : "Démo : demo@kidora.app / kidora1234"}
+            </Text>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  container: { padding: 24, alignItems: "center", paddingTop: 64 },
-  logo: { width: 64, height: 64, borderRadius: 18, backgroundColor: "#4f46e5", alignItems: "center", justifyContent: "center" },
-  logoText: { color: "#fff", fontSize: 32, fontWeight: "800" },
-  title: { fontSize: 28, fontWeight: "800", marginTop: 12 },
-  subtitle: { color: "#64748b", marginBottom: 24 },
-  input: { width: "100%", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 10, padding: 14, marginBottom: 12, fontSize: 15, minHeight: 48 },
-  button: { width: "100%", backgroundColor: "#4f46e5", borderRadius: 10, padding: 16, alignItems: "center", marginTop: 4, minHeight: 52, justifyContent: "center" },
-  buttonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  hint: { color: "#94a3b8", fontSize: 13, marginTop: 16, textAlign: "center" },
-});
+function Field({ icon, children }: { icon: string; children: React.ReactNode }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={{ position: "absolute", left: 0, zIndex: 1, width: 44, alignItems: "center" }} pointerEvents="none">
+        <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={18} color={c.textFaint} />
+      </View>
+      <View style={{ flex: 1, paddingLeft: 30 }}>{children}</View>
+    </View>
+  );
+}

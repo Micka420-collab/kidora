@@ -4,6 +4,7 @@ import * as SecureStore from "expo-secure-store";
 const KEYS = {
   server: "kidora.server",
   parentToken: "kidora.parentToken",
+  parentName: "kidora.parentName",
   enrollToken: "kidora.enrollToken",
   role: "kidora.role",
 } as const;

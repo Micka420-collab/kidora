@@ -1,24 +1,27 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useTheme } from "@/theme";
 import "../src/location-task"; // registers the background location task at startup
 
 export default function RootLayout() {
+  const { c, isDark } = useTheme();
   return (
-    <>
-      <StatusBar style="dark" />
+    <SafeAreaProvider>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: "#4f46e5" },
-          headerTintColor: "#fff",
-          headerTitleStyle: { fontWeight: "800" },
-          contentStyle: { backgroundColor: "#f6f7fb" },
+          headerShown: false,
+          contentStyle: { backgroundColor: c.bg },
+          animation: "slide_from_right",
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ title: "Kidora" }} />
-        <Stack.Screen name="parent" options={{ title: "Ma famille" }} />
-        <Stack.Screen name="child-mode" options={{ title: "Mode enfant" }} />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(parent)" />
+        <Stack.Screen name="child/[id]" options={{ presentation: "card" }} />
+        <Stack.Screen name="child-mode" />
       </Stack>
-    </>
+    </SafeAreaProvider>
   );
 }
