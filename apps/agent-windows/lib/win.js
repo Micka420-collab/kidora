@@ -137,6 +137,26 @@ export async function getBattery() {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Best-effort read of the foreground browser's address bar via UIAutomation.
+ * Used to recover a video's URL (and thus its YouTube id / thumbnail) since the
+ * window title only carries the page title. Returns "" if it can't be read.
+ */
+export async function getForegroundBrowserUrl() {
+  const script = [
+    "$ErrorActionPreference='SilentlyContinue'",
+    "Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes",
+    "Add-Type 'using System;using System.Runtime.InteropServices;public class FgW{[DllImport(\"user32.dll\")]public static extern IntPtr GetForegroundWindow();}'",
+    "$h=[FgW]::GetForegroundWindow()",
+    "$el=[System.Windows.Automation.AutomationElement]::FromHandle($h)",
+    "$cond=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Edit)",
+    "$edit=$el.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$cond)",
+    "if($edit){$v=$edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value; if($v){Write-Output $v}}",
+  ].join("; ");
+  const out = (await runPS(script)).trim();
+  return out;
+}
+
 /** Capture the primary screen, resized, as a base64 JPEG (no data URL prefix). */
 export function captureScreen() {
   return new Promise((resolve) => {

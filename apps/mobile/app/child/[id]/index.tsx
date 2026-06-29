@@ -115,6 +115,12 @@ export default function ChildDetail() {
               <Stat icon="globe" value={String(report?.web.totalVisits ?? 0)} label={`${report?.web.blockedVisits ?? 0} bloqués`} color={c.warn} />
             </View>
 
+            {/* videos + messages shortcuts */}
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <NavCard icon="logo-youtube" color="#ef4444" label="Vidéos YouTube" onPress={() => router.push(`/child/${id}/videos`)} />
+              <NavCard icon="chatbubbles" color={c.primary} label="Messages" onPress={() => router.push(`/child/${id}/messages`)} />
+            </View>
+
             {/* weekly trend */}
             <Card>
               <H2>Temps d'écran · 7 jours</H2>
@@ -190,6 +196,19 @@ function Action({ icon, label, onPress, active, disabled }: { icon: string; labe
       <View style={{ alignItems: "center", gap: 6, backgroundColor: active ? c.warnSoft : c.card, borderRadius: radius.md, paddingVertical: space.md, borderWidth: 1, borderColor: active ? c.warn + "55" : c.border }}>
         <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={22} color={active ? c.warn : c.primary} />
         <Text style={{ fontSize: 11, fontWeight: "700", color: active ? c.warn : c.text }}>{label}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function NavCard({ icon, color, label, onPress }: { icon: string; color: string; label: string; onPress: () => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityLabel={label} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: c.card, borderRadius: radius.md, padding: space.md, borderWidth: 1, borderColor: c.border }}>
+        <IconBubble icon={icon} color={color} size={36} />
+        <Text style={{ flex: 1, fontSize: 13, fontWeight: "700", color: c.text }}>{label}</Text>
+        <Ionicons name="chevron-forward" size={16} color={c.textFaint} />
       </View>
     </Pressable>
   );

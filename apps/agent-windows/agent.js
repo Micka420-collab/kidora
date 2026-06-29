@@ -6,9 +6,10 @@ import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
-import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns } from "./lib/win.js";
+import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain } from "./lib/domains.js";
+import { VideoCollector } from "./lib/videos.js";
 import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
 
@@ -87,10 +88,19 @@ async function main() {
   // Clear any block overlay left over by a previously-crashed agent instance.
   hideOverlay();
 
+  const videos = new VideoCollector(); // detects watched YouTube videos by window title
+
   // 2. Sensor loop (frequent sampling + live enforcement)
   startSensor(SAMPLE_INTERVAL, async (sample) => {
     lastSample = sample;
     tracker.tick(sample, SAMPLE_INTERVAL);
+    const newVideo = videos.observe(sample);
+    if (newVideo) {
+      // best-effort: recover the URL (→ video id → thumbnail) from the address bar
+      getForegroundBrowserUrl().then((u) => {
+        if (u && /youtu\.?be|youtube\.com/i.test(u)) newVideo.url = u.startsWith("http") ? u : `https://${u}`;
+      }).catch(() => {});
+    }
     try {
       await enforcer.apply(policy, sample, tracker);
     } catch (e) {
@@ -108,6 +118,7 @@ async function main() {
     const { usage, events } = tracker.drain();
     const enforceEvents = enforcer.drainEvents();
     const webVisits = drainBlockedHosts(filter.blocked);
+    const watchedVideos = videos.drain();
     const battery = await getBattery();
     try {
       const res = await api.sync({
@@ -116,6 +127,7 @@ async function main() {
         usage,
         events: [...events, ...enforceEvents],
         webVisits,
+        videos: watchedVideos.length ? watchedVideos : undefined,
         commandResults: pendingCmdResults.splice(0),
       });
       policy = res.policy;

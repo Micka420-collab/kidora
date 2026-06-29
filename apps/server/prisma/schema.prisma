@@ -104,8 +104,43 @@ model Child {
   screenshots    Screenshot[]
   routines       Routine[]
   guardianships  Guardianship[]
+  watchedVideos  WatchedVideo[]
+  messages       Message[]
 
   @@index([parentId])
+}
+
+// A video the child watched (e.g. a YouTube title), from PC or phone.
+model WatchedVideo {
+  id       String   @id @default(cuid())
+  childId  String
+  deviceId String?
+  source   String   @default("youtube") // youtube | other
+  platform String   @default("pc") // pc | phone
+  title    String
+  channel  String?
+  url      String?
+  ts       DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, ts])
+}
+
+// A message (SMS / chat) sent or received on the child's phone.
+model Message {
+  id        String   @id @default(cuid())
+  childId   String
+  deviceId  String?
+  app       String   @default("sms") // sms | whatsapp | …
+  direction String // in | out
+  contact   String? // name or number of the other party
+  body      String
+  ts        DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, ts])
 }
 
 // Time-window profile that blocks selected apps (e.g. school hours).

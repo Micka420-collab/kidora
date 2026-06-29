@@ -98,6 +98,13 @@ export function relativeTime(iso: string | null): string {
   return `il y a ${Math.floor(diff / 86400)} j`;
 }
 
+/** YouTube thumbnail URL from a watch/share url, or null. */
+export function youtubeThumb(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const m = url.match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
+}
+
 // Category → label + icon (Ionicons name) + accent color.
 export function categoryMeta(cat: string | null | undefined): { label: string; icon: string; color: string } {
   const map: Record<string, { label: string; icon: string; color: string }> = {

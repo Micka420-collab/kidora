@@ -47,6 +47,10 @@ const config: ExpoConfig = {
           "FOREGROUND_SERVICE_LOCATION",
           "PACKAGE_USAGE_STATS",
           "RECEIVE_BOOT_COMPLETED",
+          // SMS monitoring (sent/received) — requires a native module + manual
+          // grant; restricted by Google Play (parental-control use case).
+          "READ_SMS",
+          "RECEIVE_SMS",
         ]
       : ["POST_NOTIFICATIONS"],
   },

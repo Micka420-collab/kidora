@@ -186,6 +186,51 @@ async function main() {
     });
   }
 
+  // Watched videos (YouTube) — phone + PC
+  const videoTitles = [
+    { title: "Minecraft: 100 jours en mode Hardcore !", channel: "Aypierre", vid: "dQw4w9WgXcQ" },
+    { title: "Comment dessiner un dragon facile", channel: "Art for Kids Hub", vid: "9bZkp7q19f0" },
+    { title: "Les volcans expliqués aux enfants", channel: "1 jour, 1 question", vid: "kJQP7kiw5Fk" },
+    { title: "Roblox Brookhaven RP - On emménage !", channel: "Furious Jumper", vid: "JGwWNGJdvx8" },
+    { title: "Top 10 des buts incroyables", channel: "FootStats", vid: "OPf0YbXqDm0" },
+    { title: "Slime satisfaisant ASMR", channel: "Craft Factory", vid: "hT_nvWreIhg" },
+    { title: "Apprendre les tables de multiplication en chanson", channel: "Comptines TV", vid: "60ItHLz5WEA" },
+    { title: "Pokémon - Le film : extrait", channel: "Pokémon France", vid: "RgKAFK5djSk" },
+  ];
+  for (let i = 0; i < videoTitles.length; i++) {
+    const child = i % 2 === 0 ? emma : lucas;
+    const dev = child.id === emma.id ? emmaTablet : lucasPC;
+    const v = videoTitles[i];
+    await prisma.watchedVideo.create({
+      data: {
+        childId: child.id, deviceId: dev.id, source: "youtube",
+        platform: child.id === emma.id ? "phone" : "pc",
+        title: v.title, channel: v.channel, url: `https://www.youtube.com/watch?v=${v.vid}`,
+        ts: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 2)),
+      },
+    });
+  }
+
+  // Messages (SMS) — sent & received on the phone
+  const msgs = [
+    { direction: "in", contact: "Maman", body: "Tu rentres à quelle heure ?" },
+    { direction: "out", contact: "Maman", body: "Vers 17h, je suis chez Léa 😊" },
+    { direction: "in", contact: "Léa", body: "On se voit demain à l'école ?" },
+    { direction: "out", contact: "Léa", body: "Oui ! N'oublie pas ton livre 📚" },
+    { direction: "in", contact: "+33 6 12 34 56 78", body: "Bonjour, votre colis est arrivé." },
+    { direction: "in", contact: "Papa", body: "Bon courage pour ton contrôle 💪" },
+  ];
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[i];
+    await prisma.message.create({
+      data: {
+        childId: emma.id, deviceId: emmaTablet.id, app: "sms",
+        direction: m.direction, contact: m.contact, body: m.body,
+        ts: new Date(Date.now() - (msgs.length - i) * 3600000),
+      },
+    });
+  }
+
   // Geofences + location for Emma
   await prisma.geofence.createMany({
     data: [
