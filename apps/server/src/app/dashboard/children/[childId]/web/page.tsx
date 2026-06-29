@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
-import { Loader2, Plus, Trash2, ShieldCheck, Search } from "lucide-react";
+import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye } from "lucide-react";
 
 type WebRule = { id: string; kind: string; value: string; action: "allow" | "block" };
 type Filter = { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string[] };
+type Keyword = { id: string; term: string };
 
 const FILTERABLE: Category[] = [
   "adult", "gambling", "violence", "drugs", "dating",
@@ -21,8 +22,27 @@ export default function WebTab() {
   const [loading, setLoading] = useState(true);
   const [domain, setDomain] = useState("");
   const [domainAction, setDomainAction] = useState<"block" | "allow">("block");
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const [kw, setKw] = useState("");
+
+  async function loadKeywords() {
+    const res = await api.get<{ keywords: Keyword[] }>(`/api/children/${childId}/keywords`);
+    setKeywords(res.keywords);
+  }
+  async function addKeyword(e: React.FormEvent) {
+    e.preventDefault();
+    if (kw.trim().length < 2) return;
+    const res = await api.post<{ keyword: Keyword }>(`/api/children/${childId}/keywords`, { term: kw.trim() });
+    setKeywords((ks) => [res.keyword, ...ks.filter((k) => k.id !== res.keyword.id)]);
+    setKw("");
+  }
+  async function removeKeyword(id: string) {
+    setKeywords((ks) => ks.filter((k) => k.id !== id));
+    await api.del(`/api/children/${childId}/keywords?id=${id}`);
+  }
 
   async function load() {
+    loadKeywords();
     const res = await api.get<{ child: { webFilter: Filter | null; webRules: WebRule[] } }>(`/api/children/${childId}`);
     const wf = res.child.webFilter;
     setFilter({
@@ -139,6 +159,32 @@ export default function WebTab() {
                   <button className="text-slate-400 hover:text-red-500" onClick={() => removeRule(r)}><Trash2 size={16} /></button>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Watched keywords */}
+      <div className="card p-5">
+        <h3 className="mb-1 flex items-center gap-2 text-base font-semibold"><Eye size={18} /> Mots-clés surveillés</h3>
+        <p className="mb-4 text-sm text-muted">
+          Recevez une alerte si l'un de ces mots apparaît dans les recherches ou les titres
+          de pages. Une liste de termes à risque (automutilation, violence…) est déjà
+          surveillée par défaut.
+        </p>
+        <form onSubmit={addKeyword} className="mb-4 flex gap-2">
+          <input className="input flex-1" placeholder="ex : nom d'un jeu, sujet sensible…" value={kw} onChange={(e) => setKw(e.target.value)} />
+          <button className="btn btn-primary"><Plus size={16} /> Ajouter</button>
+        </form>
+        {keywords.length === 0 ? (
+          <p className="text-sm text-muted">Aucun mot-clé personnalisé.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {keywords.map((k) => (
+              <span key={k.id} className="badge bg-slate-100 text-slate-700">
+                {k.term}
+                <button className="text-slate-400 hover:text-red-500" onClick={() => removeKeyword(k.id)}><Trash2 size={12} /></button>
+              </span>
             ))}
           </div>
         )}

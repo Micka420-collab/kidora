@@ -17,7 +17,7 @@
 - [ ] Rapports hebdomadaires par email (cron + résumé d'usage)
 - [x] Demandes de temps supplémentaire (enfant → parent approuve) + octroi manuel de bonus, étend la limite du jour (policy + agent)
 - [x] Édition des géofences depuis le dashboard (ajout/suppression, pré-rempli par la position) — *carte cliquable = polish futur*
-- [ ] Surveillance YouTube/recherches dédiée (mots-clés sensibles → alerte)
+- [x] Surveillance de mots-clés sensibles (recherches + titres de pages) → alertes, liste intégrée + mots-clés personnalisés par enfant
 - [ ] Multi-tuteurs (inviter un 2ᵉ parent), rôles
 - [ ] Notifications push (web push + Expo push) pour les alertes critiques
 - [ ] Mode « jumeau » horaires (école/devoirs) avec profils de règles

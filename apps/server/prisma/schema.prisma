@@ -52,6 +52,7 @@ model Child {
   commands       Command[]
   timeRequests   TimeRequest[]
   timeGrants     TimeGrant[]
+  watchedKeywords WatchedKeyword[]
 
   @@index([parentId])
 }
@@ -276,6 +277,19 @@ model TimeRequest {
   child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, status])
+}
+
+// Parent-defined keyword to watch for in searches & page titles.
+model WatchedKeyword {
+  id        String   @id @default(cuid())
+  childId   String
+  term      String
+  createdAt DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([childId, term])
+  @@index([childId])
 }
 
 // Bonus minutes granted to a child for a specific day (extends the daily limit).

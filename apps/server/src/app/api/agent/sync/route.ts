@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
+import { scanText } from "@/lib/keywords";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -236,6 +237,32 @@ export async function POST(req: NextRequest) {
       severity: "info",
       message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
     });
+  }
+
+  // 6c. sensitive-keyword scan over searches & page titles
+  {
+    const watched = await prisma.watchedKeyword.findMany({ where: { childId } });
+    const customTerms = watched.map((w) => w.term);
+    const texts: string[] = [];
+    for (const e of body.events ?? []) {
+      if (e.type === "search" || e.type === "web_visit") texts.push(`${e.title ?? ""} ${e.detail ?? ""}`);
+    }
+    for (const w of body.webVisits ?? []) texts.push(`${w.title ?? ""} ${w.url ?? ""} ${w.domain}`);
+
+    const flagged = new Set<string>();
+    for (const t of texts) {
+      for (const hit of scanText(t, customTerms)) {
+        if (flagged.has(hit.keyword)) continue;
+        flagged.add(hit.keyword);
+        alerts.push({
+          parentId,
+          childId,
+          type: "keyword",
+          severity: hit.severity,
+          message: `Mot-clé sensible détecté (${hit.category}) : « ${hit.keyword} »`,
+        });
+      }
+    }
   }
 
   // 7. persist alerts
