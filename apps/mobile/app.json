@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Kidora",
+    "slug": "kidora",
+    "version": "1.0.0",
+    "scheme": "kidora",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#4f46e5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.kidora.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Kidora utilise la localisation pour partager la position de l'enfant avec ses parents.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Kidora partage la position en arrière-plan pour la sécurité de l'enfant.",
+        "UIBackgroundModes": ["location", "fetch"]
+      }
+    },
+    "android": {
+      "package": "app.kidora.mobile",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "PACKAGE_USAGE_STATS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Kidora partage la position de l'enfant avec ses parents."
+        }
+      ]
+    ],
+    "extra": {
+      "defaultServer": "http://localhost:3000"
+    }
+  }
+}

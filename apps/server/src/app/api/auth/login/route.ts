@@ -27,5 +27,6 @@ export async function POST(req: NextRequest) {
   const token = await signSession({ parentId: parent.id, email: parent.email });
   await setSessionCookie(token);
 
-  return json({ id: parent.id, name: parent.name, email: parent.email });
+  // token is also returned for non-browser clients (mobile app)
+  return json({ id: parent.id, name: parent.name, email: parent.email, token });
 }
