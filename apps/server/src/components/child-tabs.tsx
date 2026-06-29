@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/components/i18n-provider";
 import {
   BarChart3,
   AppWindow,
@@ -15,16 +16,17 @@ import {
 
 export function ChildTabs({ childId }: { childId: string }) {
   const pathname = usePathname();
+  const { t } = useT();
   const base = `/dashboard/children/${childId}`;
   const tabs = [
-    { href: base, label: "Vue d'ensemble", icon: BarChart3 },
-    { href: `${base}/apps`, label: "Applications", icon: AppWindow },
-    { href: `${base}/web`, label: "Web", icon: Globe },
-    { href: `${base}/screentime`, label: "Temps d'écran", icon: Clock },
-    { href: `${base}/location`, label: "Localisation", icon: MapPin },
-    { href: `${base}/activity`, label: "Activité", icon: Activity },
-    { href: `${base}/reports`, label: "Rapports", icon: FileText },
-    { href: `${base}/devices`, label: "Appareils", icon: Smartphone },
+    { href: base, label: t.tabs.overview, icon: BarChart3 },
+    { href: `${base}/apps`, label: t.tabs.apps, icon: AppWindow },
+    { href: `${base}/web`, label: t.tabs.web, icon: Globe },
+    { href: `${base}/screentime`, label: t.tabs.screenTime, icon: Clock },
+    { href: `${base}/location`, label: t.tabs.location, icon: MapPin },
+    { href: `${base}/activity`, label: t.tabs.activity, icon: Activity },
+    { href: `${base}/reports`, label: t.tabs.reports, icon: FileText },
+    { href: `${base}/devices`, label: t.tabs.devices, icon: Smartphone },
   ];
 
   return (

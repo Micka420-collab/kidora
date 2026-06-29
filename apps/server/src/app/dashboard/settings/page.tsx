@@ -1,6 +1,7 @@
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { relativeTime } from "@/lib/format";
+import { getLocale, getDict } from "@/lib/i18n";
 import { User, Shield, Smartphone, ScrollText } from "lucide-react";
 import { GuardiansCard } from "@/components/guardians-card";
 import { AccountDataCard } from "@/components/account-data-card";
@@ -26,21 +27,23 @@ export default async function SettingsPage() {
     orderBy: { ts: "desc" },
     take: 15,
   });
+  const locale = await getLocale();
+  const t = getDict(locale).settings;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Paramètres</h1>
-        <p className="text-sm text-muted">Votre compte et votre famille.</p>
+        <h1 className="text-2xl font-bold">{t.title}</h1>
+        <p className="text-sm text-muted">{t.subtitle}</p>
       </div>
 
       <div className="card p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><User size={18} /> Compte</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><User size={18} /> {t.account}</h2>
         <dl className="grid gap-3 sm:grid-cols-2">
-          <Field label="Nom" value={parent.name} />
-          <Field label="Email" value={parent.email} />
-          <Field label="Rôle" value={parent.role === "owner" ? "Propriétaire" : "Tuteur"} />
-          <Field label="Membre depuis" value={parent.createdAt.toLocaleDateString("fr-FR")} />
+          <Field label={t.name} value={parent.name} />
+          <Field label={t.email} value={parent.email} />
+          <Field label={t.role} value={parent.role === "owner" ? t.owner : t.guardian} />
+          <Field label={t.memberSince} value={parent.createdAt.toLocaleDateString(locale === "en" ? "en-US" : "fr-FR")} />
         </dl>
       </div>
 
@@ -49,14 +52,14 @@ export default async function SettingsPage() {
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-600"><Shield size={20} /></span>
           <div>
             <div className="text-2xl font-bold">{childCount}</div>
-            <div className="text-xs text-muted">Enfant(s) protégé(s)</div>
+            <div className="text-xs text-muted">{t.childrenProtected}</div>
           </div>
         </div>
         <div className="card flex items-center gap-4 p-5">
           <span className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-50 text-emerald-600"><Smartphone size={20} /></span>
           <div>
             <div className="text-2xl font-bold">{deviceCount}</div>
-            <div className="text-xs text-muted">Appareil(s) surveillé(s)</div>
+            <div className="text-xs text-muted">{t.devicesMonitored}</div>
           </div>
         </div>
       </div>
@@ -66,7 +69,7 @@ export default async function SettingsPage() {
       <GuardiansCard />
 
       <div className="card p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><ScrollText size={18} /> Journal du compte</h2>
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><ScrollText size={18} /> {t.journal}</h2>
         {auditLogs.length === 0 ? (
           <p className="text-sm text-muted">Aucune action enregistrée pour l'instant.</p>
         ) : (
@@ -87,7 +90,7 @@ export default async function SettingsPage() {
       <AccountDataCard />
 
       <div className="card p-6">
-        <h2 className="mb-2 text-base font-semibold">À propos de Kidora</h2>
+        <h2 className="mb-2 text-base font-semibold">{t.about}</h2>
         <p className="text-sm text-muted">
           Kidora protège votre famille sur Windows, Android et iPhone. Temps d'écran,
           filtrage web, contrôle des applications, localisation et alertes — depuis un
