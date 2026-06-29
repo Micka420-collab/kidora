@@ -54,7 +54,7 @@
 - [ ] Filtrage web par catégorie au niveau DNS (proxy local) plutôt que hosts
 - [ ] Écran de blocage en superposition (au lieu du verrouillage complet)
 - [x] Capture d'écran à la demande (commande `screenshot`) — capture PowerShell, upload gardé par auth, galerie dans le dashboard
-- [ ] Auto-protection (empêcher l'arrêt du service par l'enfant)
+- [x] Auto-protection (empêcher l'arrêt du service par l'enfant) — gardien **SYSTEM** `KidoraGuardian` (~1 min, non tuable par un compte standard) qui relance/réinstalle/réactive l'agent et redémarre un agent figé ; tâche agent durcie (redémarrage auto, logon+boot, masquée), **heartbeat** (`heartbeat.json`) pour détecter un agent bloqué, **ACL** lecture seule sur les scripts, capteur auto-résilient ; flags `-NoSelfProtect`/`-ChildUser`/`-DryRun` ; PS parse-OK + dry-run vérifiés (aucune tâche créée)
 - [ ] Signature + installeur MSI
 
 ### Mobile (dev build natif EAS)
