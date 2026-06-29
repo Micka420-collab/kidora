@@ -29,6 +29,12 @@
 - [x] Professionnalisation du dépôt : Dependabot, templates issue/PR, CONTRIBUTING, SECURITY
 - [x] **Audit de sécurité** : correction IDOR (update de routine cross-famille), rate-limit inscription + enrôlement, garde-fou `AUTH_SECRET` en prod ; toutes les routes enfant scopées à la propriété (vérifié)
 
+## 📦 Distribution
+- [x] Installeur **Linux/Ubuntu** en une commande (`install.sh`)
+- [x] **Release GitHub v1.0.0** (archives source téléchargeables) + section Téléchargement & Configuration requise dans le README
+- [ ] Publier les **APK Android** (Kidora Parents / Kidora Kids) dans les Releases via build EAS
+- [ ] Agent **Linux** (surveillance natif) — équivalent de l'agent Windows
+
 ## 🔜 Prochaines étapes
 
 ### Serveur / dashboard
