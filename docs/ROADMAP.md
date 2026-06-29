@@ -11,6 +11,12 @@
 - [x] App mobile Expo : compagnon parent + agent de localisation enfant
 - [x] PWA installable · build de production vérifié
 
+## ⭐ Priorités demandées (2026-06-29)
+- [x] **Bouton SOS / Panique** (enfant) → alerte critique + localisation + push aux parents (serveur testé ; bouton mobile accessible câblé)
+- [ ] **Activité en direct** : app au premier plan + dernière position en temps réel sur le dashboard
+- [ ] **Appairage par QR code** + onboarding guidé
+- [ ] **Refonte UX app Android** (voir directive ci-dessous)
+
 ## 🔜 Prochaines étapes
 
 ### Serveur / dashboard

@@ -59,6 +59,7 @@ const syncSchema = z.object({
   timeRequest: z
     .object({ minutes: z.number().int().min(5).max(480), reason: z.string().max(200).optional() })
     .optional(),
+  panic: z.boolean().optional(),
 });
 
 function haversine(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -237,6 +238,20 @@ export async function POST(req: NextRequest) {
       type: "limit_reached",
       severity: "info",
       message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
+    });
+  }
+
+  // 6b-bis. SOS / panic from the child
+  if (body.panic) {
+    const where = body.location
+      ? ` (position : ${body.location.lat.toFixed(5)}, ${body.location.lng.toFixed(5)})`
+      : "";
+    alerts.push({
+      parentId,
+      childId,
+      type: "panic",
+      severity: "critical",
+      message: `🆘 ${device.child.name} a déclenché une alerte SOS${where}`,
     });
   }
 

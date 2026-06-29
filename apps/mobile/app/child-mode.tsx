@@ -78,6 +78,20 @@ export default function ChildMode() {
     }
   }
 
+  async function triggerSOS() {
+    try {
+      let location: { lat: number; lng: number; accuracy?: number } | undefined;
+      try {
+        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
+      } catch { /* send without location if unavailable */ }
+      await childAgent.sync({ online: true, panic: true, location, events: [{ type: "panic", title: "SOS déclenché" }] });
+      RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
+    } catch {
+      RNAlert.alert("Erreur", "Impossible d'envoyer le SOS. Réessaie.");
+    }
+  }
+
   async function unlink() {
     RNAlert.alert("Dissocier cet appareil ?", "La surveillance sera désactivée.", [
       { text: "Annuler", style: "cancel" },
@@ -109,6 +123,16 @@ export default function ChildMode() {
         désactiver la protection sans leur accord.
       </Text>
 
+      <Pressable
+        style={s.sos}
+        onPress={triggerSOS}
+        accessibilityRole="button"
+        accessibilityLabel="Bouton SOS : alerter mes parents avec ma position"
+      >
+        <Text style={s.sosText}>🆘  SOS</Text>
+        <Text style={s.sosSub}>Prévenir mes parents maintenant</Text>
+      </Pressable>
+
       {lastSync && <Text style={s.sync}>Dernière synchro : {lastSync}</Text>}
 
       <Pressable style={s.refresh} onPress={syncNow}>
@@ -135,6 +159,9 @@ const s = StyleSheet.create({
   shield: { fontSize: 72, marginBottom: 16 },
   title: { fontSize: 22, fontWeight: "800", textAlign: "center" },
   desc: { color: "#64748b", textAlign: "center", marginTop: 12, lineHeight: 20 },
+  sos: { marginTop: 24, backgroundColor: "#ef4444", paddingHorizontal: 40, paddingVertical: 20, borderRadius: 16, alignItems: "center", minWidth: 220 },
+  sosText: { color: "#fff", fontWeight: "800", fontSize: 26, letterSpacing: 1 },
+  sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
   sync: { color: "#94a3b8", marginTop: 24, fontSize: 13 },
   refresh: { marginTop: 16, backgroundColor: "#4f46e5", paddingHorizontal: 24, paddingVertical: 14, borderRadius: 10 },
   refreshText: { color: "#fff", fontWeight: "700" },
