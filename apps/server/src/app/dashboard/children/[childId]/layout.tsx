@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { accessibleChildWhere } from "@/lib/guard";
 import { ChildHeader } from "@/components/child-header";
 import { ChildTabs } from "@/components/child-tabs";
 
@@ -16,7 +17,7 @@ export default async function ChildLayout({
   const { childId } = await params;
 
   const child = await prisma.child.findFirst({
-    where: { id: childId, parentId: parent.id },
+    where: { id: childId, ...accessibleChildWhere(parent.id) },
     include: { devices: true },
   });
   if (!child) notFound();

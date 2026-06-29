@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { accessibleChildWhere } from "@/lib/guard";
 import { DashboardShell } from "@/components/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -12,7 +13,7 @@ export default async function DashboardLayout({
   if (!parent) redirect("/login");
 
   const kids = await prisma.child.findMany({
-    where: { parentId: parent.id },
+    where: accessibleChildWhere(parent.id),
     orderBy: { createdAt: "asc" },
     select: { id: true, name: true, avatar: true },
   });

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
-import { requireParent, withGuard } from "@/lib/guard";
+import { requireParent, withGuard, accessibleChildWhere } from "@/lib/guard";
 import { DEFAULT_BLOCKED_CATEGORIES } from "@/lib/categories";
 import { audit } from "@/lib/audit";
 
@@ -17,7 +17,7 @@ export async function GET() {
   return withGuard(async () => {
     const parent = await requireParent();
     const children = await prisma.child.findMany({
-      where: { parentId: parent.id },
+      where: accessibleChildWhere(parent.id),
       include: {
         devices: true,
         screenTime: true,

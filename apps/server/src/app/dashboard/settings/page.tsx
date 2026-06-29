@@ -2,6 +2,7 @@ import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { relativeTime } from "@/lib/format";
 import { User, Shield, Smartphone, ScrollText } from "lucide-react";
+import { GuardiansCard } from "@/components/guardians-card";
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Connexion",
@@ -57,6 +58,8 @@ export default async function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <GuardiansCard />
 
       <div className="card p-6">
         <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><ScrollText size={18} /> Journal du compte</h2>

@@ -23,9 +23,26 @@ model Parent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  children  Child[]
-  alerts    Alert[]
-  auditLogs AuditLog[]
+  children      Child[]
+  alerts        Alert[]
+  auditLogs     AuditLog[]
+  guardianships Guardianship[]
+}
+
+// Additional (co-)guardian access to a child, beyond the owner (Child.parentId).
+model Guardianship {
+  id        String   @id @default(cuid())
+  parentId  String
+  childId   String
+  role      String   @default("guardian")
+  createdAt DateTime @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@unique([parentId, childId])
+  @@index([parentId])
+  @@index([childId])
 }
 
 // Audit trail of sensitive account actions.
@@ -70,6 +87,7 @@ model Child {
   watchedKeywords WatchedKeyword[]
   screenshots    Screenshot[]
   routines       Routine[]
+  guardianships  Guardianship[]
 
   @@index([parentId])
 }

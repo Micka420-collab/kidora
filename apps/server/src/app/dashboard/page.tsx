@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
+import { accessibleChildWhere } from "@/lib/guard";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import {
@@ -19,7 +20,7 @@ function today() {
 export default async function OverviewPage() {
   const parent = (await getCurrentParent())!;
   const kids = await prisma.child.findMany({
-    where: { parentId: parent.id },
+    where: accessibleChildWhere(parent.id),
     orderBy: { createdAt: "asc" },
     include: { devices: true },
   });
