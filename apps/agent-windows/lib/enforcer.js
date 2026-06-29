@@ -1,5 +1,5 @@
 // Applies a Kidora policy to the live machine state each sensor tick.
-import { killProcess, lockWorkstation, notify } from "./win.js";
+import { killProcess, showOverlay, hideOverlay, notify } from "./win.js";
 import { SYSTEM_PROCS } from "./categorize.js";
 import { log } from "./logger.js";
 
@@ -23,7 +23,8 @@ export class Enforcer {
   constructor({ dryRun = false } = {}) {
     this.dryRun = dryRun;
     this.lastKill = new Map(); // appId -> ts (throttle kills)
-    this.lastLock = 0;
+    this.blocked = false; // is the block overlay currently shown?
+    this.blockReason = null;
     this.limitNotifiedDate = null;
     this.events = [];
   }
@@ -46,15 +47,26 @@ export class Enforcer {
     }
   }
 
-  async _lock(reason, message) {
-    const now = Date.now();
-    if (now - this.lastLock < 60000) return; // at most once per minute
-    this.lastLock = now;
-    log.warn(`Verrouillage: ${reason}`);
+  /** Show/refresh the block overlay (soft block — keeps the session). */
+  _block({ reason, title, message }) {
+    if (this.blocked && this.blockReason === reason) return; // already blocking, same reason
+    const first = !this.blocked;
+    this.blocked = true;
+    this.blockReason = reason;
+    log.warn(`Blocage écran: ${reason}`);
     if (!this.dryRun) {
-      notify("Kidora", message);
-      await lockWorkstation();
+      if (first) notify("Kidora", message);
+      showOverlay(title, message);
     }
+  }
+
+  /** Remove the block overlay when no condition applies anymore. */
+  _unblock() {
+    if (!this.blocked) return;
+    this.blocked = false;
+    this.blockReason = null;
+    log.info("Déblocage écran.");
+    if (!this.dryRun) hideOverlay();
   }
 
   /** Main enforcement decision for one sample. */
@@ -62,11 +74,12 @@ export class Enforcer {
     if (!policy) return;
     const runningSet = new Set((sample.procs || []).map((p) => p.toLowerCase()));
 
-    // ── 1. Global lock conditions ──
+    // ── 1. Global block conditions → fullscreen overlay (not a full lock) ──
+    let block = null;
     if (policy.paused) {
-      await this._lock("pause", "Internet mis en pause par un parent.");
+      block = { reason: "pause", title: "En pause ⏸", message: "Ton accès est en pause. Reviens un peu plus tard 🙂" };
     } else if (isBedtimeNow(policy.screenTime?.bedtimes)) {
-      await this._lock("bedtime", "C'est l'heure de dormir 🌙 — appareil verrouillé.");
+      block = { reason: "bedtime", title: "Heure du coucher 🌙", message: "C'est l'heure de dormir. À demain !" };
     } else if (policy.screenTime?.enabled) {
       const wd = WEEKDAYS[new Date().getDay()];
       const baseLimit = policy.screenTime.dailyLimits?.[wd] ?? 0;
@@ -78,9 +91,12 @@ export class Enforcer {
           this.limitNotifiedDate = today;
           this.events.push({ type: "limit_reached", title: `Limite quotidienne (${limitMin} min)` });
         }
-        await this._lock("limit", "Limite de temps d'écran atteinte pour aujourd'hui.");
+        block = { reason: "limit", title: "Temps d'écran terminé ⏰", message: `Tu as atteint ta limite de ${limitMin} min pour aujourd'hui.` };
       }
     }
+
+    if (block) this._block(block);
+    else this._unblock();
 
     // ── 2. Per-app rules ──
     for (const rule of policy.appRules || []) {

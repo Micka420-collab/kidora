@@ -1,7 +1,7 @@
 // Windows OS integration: foreground sensor, process control, hosts file,
 // workstation lock, notifications. Pure Node + PowerShell (no native deps).
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
@@ -9,6 +9,9 @@ import { log } from "./logger.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SENSOR = join(__dirname, "..", "sensor.ps1");
+const OVERLAY = join(__dirname, "..", "overlay.ps1");
+const OVERLAY_STATE = join(__dirname, "..", "overlay-state.json");
+let overlayProc = null;
 const HOSTS = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 const MARK_START = "# >>> KIDORA START (géré automatiquement, ne pas éditer)";
 const MARK_END = "# <<< KIDORA END";
@@ -77,6 +80,44 @@ export async function killProcess(name) {
 
 export async function lockWorkstation() {
   await runPS("rundll32.exe user32.dll,LockWorkStation");
+}
+
+/**
+ * Show the fullscreen block overlay (soft block — keeps the session, unlike
+ * LockWorkStation). Idempotent: updates the message if already shown. The
+ * overlay self-closes when the state file becomes inactive (see hideOverlay).
+ */
+export function showOverlay(title, message) {
+  try {
+    writeFileSync(OVERLAY_STATE, JSON.stringify({ active: true, title, message }), "utf8");
+  } catch {
+    /* best-effort */
+  }
+  // Already running? the overlay polls the state file and picks up the new text.
+  if (overlayProc && overlayProc.exitCode === null && !overlayProc.killed) return;
+  const p = spawn("powershell", [...PS, "-File", OVERLAY, "-StateFile", OVERLAY_STATE], { windowsHide: false });
+  overlayProc = p;
+  p.on("close", () => { if (overlayProc === p) overlayProc = null; });
+  p.on("error", () => { if (overlayProc === p) overlayProc = null; });
+}
+
+/**
+ * Remove the block overlay. Node's child.kill() is unreliable on a GUI
+ * PowerShell process, so we kill by command-line match via PowerShell — which
+ * also clears an overlay orphaned by a previously-crashed agent instance.
+ * `$PID` is excluded so the sweep never kills itself.
+ */
+export function hideOverlay() {
+  try {
+    writeFileSync(OVERLAY_STATE, JSON.stringify({ active: false }), "utf8");
+  } catch {
+    /* best-effort */
+  }
+  overlayProc = null;
+  runPS(
+    "Get-WmiObject Win32_Process | Where-Object { $_.CommandLine -match 'overlay\\.ps1' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+  );
+  try { unlinkSync(OVERLAY_STATE); } catch { /* ignore */ }
 }
 
 /** Non-blocking toast/message to the child. */
