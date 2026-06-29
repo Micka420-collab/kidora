@@ -79,7 +79,8 @@ export default function LocationTab() {
       {latest && bbox ? (
         <div className="card overflow-hidden">
           <iframe
-            title="map"
+            title="Carte de localisation de l'enfant"
+            loading="lazy"
             className="h-80 w-full border-0"
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latest.lat},${latest.lng}`}
           />
