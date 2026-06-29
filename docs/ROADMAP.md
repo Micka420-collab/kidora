@@ -23,7 +23,7 @@
 - [~] États de chargement (skeleton dashboard) + error boundary + page 404 soignée ; *toasts à ajouter*
 - [ ] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`)
 - [ ] Tests d'intégration (API) + e2e Playwright
-- [ ] Observabilité (logs structurés, IDs de requête)
+- [x] Observabilité : `proxy.ts` (Next 16) — log d'accès structuré JSON + en-tête `x-request-id` ; erreurs API loguées en JSON
 
 ## 🔜 Prochaines étapes
 

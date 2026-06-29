@@ -37,7 +37,15 @@ export async function withGuard(
     return await fn();
   } catch (e) {
     if (e instanceof Response) return e;
-    console.error(e);
+    console.error(
+      JSON.stringify({
+        level: "error",
+        msg: "unhandled_api_error",
+        error: e instanceof Error ? e.message : String(e),
+        stack: e instanceof Error ? e.stack : undefined,
+        ts: new Date().toISOString(),
+      }),
+    );
     return Response.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
