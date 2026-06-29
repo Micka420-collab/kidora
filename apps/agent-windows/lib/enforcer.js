@@ -69,7 +69,8 @@ export class Enforcer {
       await this._lock("bedtime", "C'est l'heure de dormir 🌙 — appareil verrouillé.");
     } else if (policy.screenTime?.enabled) {
       const wd = WEEKDAYS[new Date().getDay()];
-      const limitMin = policy.screenTime.dailyLimits?.[wd] ?? 0;
+      const baseLimit = policy.screenTime.dailyLimits?.[wd] ?? 0;
+      const limitMin = baseLimit + (policy.screenTime.bonusMinutesToday ?? 0);
       const total = tracker.totalTodaySeconds();
       if (limitMin > 0 && total >= limitMin * 60) {
         const today = new Date().toISOString().slice(0, 10);

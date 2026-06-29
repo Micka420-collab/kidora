@@ -15,7 +15,7 @@
 
 ### Serveur / dashboard
 - [ ] Rapports hebdomadaires par email (cron + résumé d'usage)
-- [ ] Demandes de temps supplémentaire (enfant → parent approuve depuis l'app)
+- [x] Demandes de temps supplémentaire (enfant → parent approuve) + octroi manuel de bonus, étend la limite du jour (policy + agent)
 - [x] Édition des géofences depuis le dashboard (ajout/suppression, pré-rempli par la position) — *carte cliquable = polish futur*
 - [ ] Surveillance YouTube/recherches dédiée (mots-clés sensibles → alerte)
 - [ ] Multi-tuteurs (inviter un 2ᵉ parent), rôles

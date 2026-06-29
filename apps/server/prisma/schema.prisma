@@ -50,6 +50,8 @@ model Child {
   geofences      Geofence[]
   alerts         Alert[]
   commands       Command[]
+  timeRequests   TimeRequest[]
+  timeGrants     TimeGrant[]
 
   @@index([parentId])
 }
@@ -259,4 +261,33 @@ model Command {
   device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([deviceId, status])
+}
+
+// A child's request for extra screen time (parent approves/denies).
+model TimeRequest {
+  id        String   @id @default(cuid())
+  childId   String
+  minutes   Int
+  reason    String?
+  status    String   @default("pending") // pending | approved | denied
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, status])
+}
+
+// Bonus minutes granted to a child for a specific day (extends the daily limit).
+model TimeGrant {
+  id        String   @id @default(cuid())
+  childId   String
+  date      String // YYYY-MM-DD
+  minutes   Int
+  source    String   @default("parent") // parent | request
+  createdAt DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, date])
 }

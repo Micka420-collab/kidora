@@ -10,6 +10,7 @@ export type EffectivePolicy = {
     enabled: boolean;
     dailyLimits: Record<string, number>; // weekday -> minutes
     bedtimes: { days: string[]; start: string; end: string }[];
+    bonusMinutesToday: number; // extra minutes granted for today
   };
   webFilter: {
     safeSearch: boolean;
@@ -50,6 +51,10 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   });
   if (!child) throw new Error("child not found");
 
+  const today = new Date().toISOString().slice(0, 10);
+  const grants = await prisma.timeGrant.findMany({ where: { childId, date: today } });
+  const bonusMinutesToday = grants.reduce((a, g) => a + g.minutes, 0);
+
   const blockedDomains = new Set<string>(DEFAULT_BLOCKLIST);
   const allowedDomains = new Set<string>();
   const blockedCategories = safeParse<string[]>(
@@ -75,6 +80,7 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
       enabled: child.screenTime?.enabled ?? false,
       dailyLimits: safeParse(child.screenTime?.dailyLimits, {}),
       bedtimes: safeParse(child.screenTime?.bedtimes, []),
+      bonusMinutesToday,
     },
     webFilter: {
       safeSearch: child.webFilter?.safeSearch ?? true,

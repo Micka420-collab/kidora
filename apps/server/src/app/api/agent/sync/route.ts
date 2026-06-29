@@ -54,6 +54,9 @@ const syncSchema = z.object({
   commandResults: z
     .array(z.object({ id: z.string(), status: z.string(), result: z.string().optional() }))
     .optional(),
+  timeRequest: z
+    .object({ minutes: z.number().int().min(5).max(480), reason: z.string().max(200).optional() })
+    .optional(),
 });
 
 function haversine(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -219,6 +222,20 @@ export async function POST(req: NextRequest) {
         data: { status: r.status, result: r.result },
       });
     }
+  }
+
+  // 6b. time request from the child
+  if (body.timeRequest) {
+    await prisma.timeRequest.create({
+      data: { childId, minutes: body.timeRequest.minutes, reason: body.timeRequest.reason },
+    });
+    alerts.push({
+      parentId,
+      childId,
+      type: "limit_reached",
+      severity: "info",
+      message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
+    });
   }
 
   // 7. persist alerts

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isBedtimeNow, todayWeekday } from "@/lib/policy";
+import { TimeRequestsCard } from "@/components/time-requests-card";
 
 function dateStr(daysAgo: number) {
   const d = new Date();
@@ -22,7 +23,7 @@ export default async function ChildOverview({
   const dates = Array.from({ length: 7 }, (_, i) => dateStr(6 - i));
   const today = dateStr(0);
 
-  const [usage, screenTime, recent] = await Promise.all([
+  const [usage, screenTime, recent, grants] = await Promise.all([
     prisma.appUsage.findMany({ where: { childId, date: { in: dates } } }),
     prisma.screenTimeRule.findUnique({ where: { childId } }),
     prisma.activityEvent.findMany({
@@ -31,7 +32,9 @@ export default async function ChildOverview({
       take: 8,
       include: { device: { select: { name: true } } },
     }),
+    prisma.timeGrant.findMany({ where: { childId, date: today } }),
   ]);
+  const bonusMin = grants.reduce((a, g) => a + g.minutes, 0);
 
   const byDay = new Map<string, number>(dates.map((d) => [d, 0]));
   const byApp = new Map<string, { name: string; category: string | null; seconds: number }>();
@@ -45,7 +48,7 @@ export default async function ChildOverview({
   }
   const totalToday = byApp.size ? [...byApp.values()].reduce((a, b) => a + b.seconds, 0) : 0;
   const limits = safeParse<Record<string, number>>(screenTime?.dailyLimits, {});
-  const limitToday = limits[todayWeekday()] ?? 0;
+  const limitToday = (limits[todayWeekday()] ?? 0) + bonusMin;
   const limitSecs = limitToday * 60;
   const pct = limitSecs ? Math.min(100, Math.round((totalToday / limitSecs) * 100)) : 0;
   const bedtimes = safeParse<{ days: string[]; start: string; end: string }[]>(screenTime?.bedtimes, []);
@@ -67,7 +70,10 @@ export default async function ChildOverview({
                   style={{ width: `${pct}%` }}
                 />
               </div>
-              <div className="mt-1.5 text-xs text-muted">Limite : {formatDuration(limitSecs)} · {pct}%</div>
+              <div className="mt-1.5 text-xs text-muted">
+                Limite : {formatDuration(limitSecs)} · {pct}%
+                {bonusMin > 0 && <span className="text-emerald-600"> (dont +{bonusMin} min bonus)</span>}
+              </div>
             </>
           ) : (
             <div className="mt-3 text-xs text-muted">Aucune limite définie</div>
@@ -101,6 +107,8 @@ export default async function ChildOverview({
           </div>
         </div>
       </div>
+
+      <TimeRequestsCard childId={childId} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         {/* Top apps */}
