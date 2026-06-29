@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
+import { verifyTotp } from "@/lib/totp";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
@@ -10,6 +11,7 @@ import { audit } from "@/lib/audit";
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  code: z.string().optional(), // TOTP code, required when 2FA is enabled
 });
 
 export async function POST(req: NextRequest) {
@@ -34,6 +36,17 @@ export async function POST(req: NextRequest) {
 
   const ok = await verifyPassword(password, parent.passwordHash);
   if (!ok) return apiError("Email ou mot de passe incorrect", 401);
+
+  // Second factor (TOTP) when enabled.
+  if (parent.totpEnabled && parent.totpSecret) {
+    const { code } = parsed.data;
+    if (!code) {
+      return Response.json({ twoFactor: true, error: "Code de vérification requis." }, { status: 401 });
+    }
+    if (!verifyTotp(parent.totpSecret, code)) {
+      return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
+    }
+  }
 
   const token = await signSession({ parentId: parent.id, email: parent.email });
   await setSessionCookie(token);

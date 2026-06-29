@@ -7,6 +7,7 @@ import { GuardiansCard } from "@/components/guardians-card";
 import { AccountDataCard } from "@/components/account-data-card";
 import { PushToggle } from "@/components/push-toggle";
 import { WeeklyReportToggle } from "@/components/weekly-report-toggle";
+import { TwoFactorCard } from "@/components/two-factor-card";
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Connexion",
@@ -64,6 +65,8 @@ export default async function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <TwoFactorCard />
 
       <PushToggle />
 

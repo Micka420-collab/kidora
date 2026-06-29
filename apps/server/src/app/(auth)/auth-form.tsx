@@ -32,6 +32,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [needs2fa, setNeeds2fa] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,12 +45,18 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       if (mode === "register") {
         await api.post("/api/auth/register", { name, email, password });
       } else {
-        await api.post("/api/auth/login", { email, password });
+        await api.post("/api/auth/login", { email, password, code: needs2fa ? code : undefined });
       }
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur est survenue");
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue";
+      if (mode === "login" && /vérification/i.test(msg)) {
+        setNeeds2fa(true);
+        setError(needs2fa ? msg : null); // first time: just reveal the field
+      } else {
+        setError(msg);
+      }
       setLoading(false);
     }
   }
@@ -87,6 +95,23 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required />
               {mode === "register" && <StrengthMeter value={password} />}
             </div>
+
+            {needs2fa && (
+              <div>
+                <label className="label">Code de vérification (2FA)</label>
+                <input
+                  className="input tracking-widest"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  placeholder="123456"
+                  autoFocus
+                />
+                <p className="mt-1 text-xs text-muted">Saisissez le code à 6 chiffres de votre application d&apos;authentification.</p>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
