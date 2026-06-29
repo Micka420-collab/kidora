@@ -20,6 +20,7 @@ model Parent {
   name         String
   passwordHash String
   role         String   @default("owner") // owner | guardian
+  weeklyReportEmail Boolean @default(true) // receive the weekly usage summary by email
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

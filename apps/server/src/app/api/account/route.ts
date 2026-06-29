@@ -7,6 +7,23 @@ import { clearSessionCookie } from "@/lib/auth";
 
 const schema = z.object({ confirm: z.literal("SUPPRIMER") });
 
+const prefsSchema = z.object({ weeklyReportEmail: z.boolean() });
+
+// PATCH /api/account — update account preferences.
+export async function PATCH(req: NextRequest) {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const parsed = prefsSchema.safeParse(await readJson(req));
+    if (!parsed.success) return apiError("Données invalides", 422);
+    const updated = await prisma.parent.update({
+      where: { id: parent.id },
+      data: { weeklyReportEmail: parsed.data.weeklyReportEmail },
+      select: { weeklyReportEmail: true },
+    });
+    return json(updated);
+  });
+}
+
 // DELETE /api/account — permanently delete the account and all owned data.
 export async function DELETE(req: NextRequest) {
   return withGuard(async () => {
