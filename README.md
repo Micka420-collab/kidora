@@ -77,17 +77,22 @@ Ou téléchargez une archive depuis l'onglet **Releases** (ZIP / tar.gz), ou
 
 ### 📱 Applications Android (APK)
 
-Deux apps distinctes, à installer sur le téléphone (sideload) :
+Deux apps distinctes (à installer en sideload sur le téléphone) :
 
-| App | Rôle | Téléchargement |
+| App | Rôle | APK |
 |---|---|---|
-| **Kidora Parents** | Suivi & gestion depuis le téléphone parent | [`kidora-parents.apk`](https://github.com/Micka420-collab/kidora/releases/download/mobile-v1.0.0/kidora-parents.apk) |
-| **Kidora Kids** | Appareil enfant : localisation, usage, **SOS** | [`kidora-kids.apk`](https://github.com/Micka420-collab/kidora/releases/download/mobile-v1.0.0/kidora-kids.apk) |
+| **Kidora Parents** | Suivi & gestion depuis le téléphone parent | onglet **[Releases](https://github.com/Micka420-collab/kidora/releases)** (`mobile-v*`) |
+| **Kidora Kids** | Appareil enfant : localisation, usage, **SOS** | onglet **[Releases](https://github.com/Micka420-collab/kidora/releases)** (`mobile-v*`) |
 
-**Installer un APK** : sur le téléphone, autorisez « Installer des applications
-inconnues » pour votre navigateur, téléchargez l'APK puis ouvrez-le. Android 6.0+
-(minSdk 23). Les APK sont publiés dans les **[Releases](https://github.com/Micka420-collab/kidora/releases)**
-(tag `mobile-v*`), compilés via EAS — voir [`apps/mobile`](apps/mobile/README.md).
+> ⏳ **Les APK ne sont pas encore publiés.** Leur compilation passe par le **cloud
+> EAS** (compte Expo gratuit requis). Une fois le pipeline lancé, `kidora-parents.apk`
+> et `kidora-kids.apk` apparaissent dans la Release `mobile-v1.0.0`.
+> Mise en place : [`apps/mobile/README.md`](apps/mobile/README.md#publier-les-apk-releases-github)
+> (`eas init` + secrets, puis tag `mobile-v1.0.0`).
+
+**Installer un APK** (une fois disponible) : sur le téléphone, autorisez « Installer
+des applications inconnues » pour votre navigateur, téléchargez l'APK depuis la
+Release puis ouvrez-le. Android 6.0+ (minSdk 23).
 
 ### 🪟 Agent Windows (MSI)
 
