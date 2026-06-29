@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Alert as RNAlert, ScrollView } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, Text, TextInput, Pressable, StyleSheet, Alert as RNAlert, ScrollView, Animated, Easing } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
+import { LinearGradient } from "expo-linear-gradient";
 import { parent, childAgent, getServer } from "@/api";
 
 const ROLE = (Constants.expoConfig?.extra?.role as "parent" | "child") ?? "parent";
@@ -13,6 +14,14 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
+  const fade = useRef(new Animated.Value(0)).current;
+  const slide = useRef(new Animated.Value(20)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fade, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+  }, [fade, slide]);
 
   async function submit() {
     setBusy(true);
@@ -34,7 +43,8 @@ export default function Login() {
 
   return (
     <ScrollView contentContainerStyle={s.container}>
-      <View style={s.logo}><Text style={s.logoText}>K</Text></View>
+      <Animated.View style={{ width: "100%", alignItems: "center", opacity: fade, transform: [{ translateY: slide }] }}>
+      <LinearGradient colors={["#6366f1", "#4338ca"]} style={s.logo}><Text style={s.logoText}>K</Text></LinearGradient>
       <Text style={s.title}>{isChild ? "Kidora Kids" : "Kidora Parents"}</Text>
       <Text style={s.subtitle}>{isChild ? "Connecter cet appareil" : "Espace parent"}</Text>
 
@@ -72,6 +82,7 @@ export default function Login() {
           ? "Le jeton se trouve dans l'app parent : enfant → Appareils."
           : "Démo : demo@kidora.app / kidora1234"}
       </Text>
+      </Animated.View>
     </ScrollView>
   );
 }
