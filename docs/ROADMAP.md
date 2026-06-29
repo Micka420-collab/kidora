@@ -25,7 +25,7 @@
 - [x] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`) — `src/lib/prisma.ts` choisit le driver au runtime (sqlite `file:` / postgres `postgres://`, chargement paresseux), `scripts/select-db-provider.mjs` aligne le `provider` du schéma avant `prisma generate` (hooks `postinstall`/`prebuild`), scripts `db:generate`/`db:push`, `serverExternalPackages` + deps `pg`/`@prisma/adapter-pg` ; schéma vérifié générable pour les deux dialectes, 42 tests verts
 - [~] Tests d'intégration du moteur de politique (base de test réelle, 42 tests) ; *e2e Playwright à venir*
 - [x] Observabilité : `proxy.ts` (Next 16) — log d'accès structuré JSON + en-tête `x-request-id` ; erreurs API loguées en JSON
-- [x] En-têtes de sécurité HTTP (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, HSTS)
+- [x] En-têtes de sécurité HTTP : **Content-Security-Policy** (default-src 'self', frame-ancestors 'none', object-src 'none', img-src autorisant les miniatures YouTube), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy (+ interest-cohort), **HSTS preload**, Cross-Origin-Opener-Policy ; cookie de session httpOnly+secure+sameSite vérifié
 - [x] Professionnalisation du dépôt : Dependabot, templates issue/PR, CONTRIBUTING, SECURITY
 - [x] **Audit de sécurité** : correction IDOR (update de routine cross-famille), rate-limit inscription + enrôlement, garde-fou `AUTH_SECRET` en prod ; toutes les routes enfant scopées à la propriété (vérifié)
 
