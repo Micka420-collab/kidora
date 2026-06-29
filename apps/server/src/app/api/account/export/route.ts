@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { json } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 
 // GET /api/account/export — full export of the parent's data (RGPD/portability)
