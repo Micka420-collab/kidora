@@ -7,6 +7,7 @@ import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
 import { startSensor, getBattery, isAdmin, updateHostsFile } from "./lib/win.js";
+import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
 
 const SAMPLE_INTERVAL = 5; // seconds between foreground samples
@@ -69,8 +70,13 @@ async function main() {
     }
   });
 
+  // Liveness heartbeat (read by the SYSTEM guardian to detect a hung agent).
+  writeHeartbeat();
+  const heartbeatTimer = setInterval(writeHeartbeat, 30_000);
+
   // 3. Sync loop (telemetry up, policy + commands down)
   async function syncOnce() {
+    writeHeartbeat();
     const { usage, events } = tracker.drain();
     const enforceEvents = enforcer.drainEvents();
     const battery = await getBattery();
@@ -110,6 +116,7 @@ async function main() {
   // graceful shutdown
   process.on("SIGINT", async () => {
     log.info("Arrêt…");
+    clearInterval(heartbeatTimer);
     try {
       await api.sync({ online: false });
     } catch {}

@@ -26,25 +26,47 @@ export function runPS(command) {
   });
 }
 
-/** Persistent sensor: calls onSample({ fg, procs, ts }) every interval. */
+/**
+ * Persistent sensor: calls onSample({ fg, procs, ts }) every interval.
+ * Self-healing: if the PowerShell sensor subprocess dies (e.g. the child kills
+ * it), it is automatically respawned so the agent never goes blind. Returns a
+ * handle with stop() to end it deliberately.
+ */
 export function startSensor(intervalSec, onSample) {
-  const p = spawn("powershell", [...PS, "-File", SENSOR, String(intervalSec)], { windowsHide: true });
-  const rl = createInterface({ input: p.stdout });
-  rl.on("line", (line) => {
-    line = line.trim();
-    if (!line.startsWith("{")) return;
-    try {
-      const obj = JSON.parse(line);
-      if (typeof obj.procs === "string") obj.procs = [obj.procs];
-      if (!Array.isArray(obj.procs)) obj.procs = [];
-      onSample(obj);
-    } catch {
-      /* ignore partial lines */
-    }
-  });
-  p.stderr.on("data", (d) => log.warn("sensor:", String(d).trim().slice(0, 120)));
-  p.on("close", (code) => log.warn(`sensor stopped (code ${code})`));
-  return p;
+  let proc = null;
+  let stopped = false;
+
+  function spawnOnce() {
+    const p = spawn("powershell", [...PS, "-File", SENSOR, String(intervalSec)], { windowsHide: true });
+    proc = p;
+    const rl = createInterface({ input: p.stdout });
+    rl.on("line", (line) => {
+      line = line.trim();
+      if (!line.startsWith("{")) return;
+      try {
+        const obj = JSON.parse(line);
+        if (typeof obj.procs === "string") obj.procs = [obj.procs];
+        if (!Array.isArray(obj.procs)) obj.procs = [];
+        onSample(obj);
+      } catch {
+        /* ignore partial lines */
+      }
+    });
+    p.stderr.on("data", (d) => log.warn("sensor:", String(d).trim().slice(0, 120)));
+    p.on("close", (code) => {
+      if (stopped) return;
+      log.warn(`sensor stopped (code ${code}) — redémarrage dans 2s`);
+      setTimeout(() => { if (!stopped) spawnOnce(); }, 2000);
+    });
+  }
+
+  spawnOnce();
+  return {
+    stop() {
+      stopped = true;
+      try { proc?.kill(); } catch { /* ignore */ }
+    },
+  };
 }
 
 /** Kill all processes whose name matches (case-insensitive, no extension). */
