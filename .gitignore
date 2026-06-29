@@ -38,3 +38,6 @@ apps/agent-windows/config.json
 # Web Push VAPID keys (dev)
 .vapid.json
 apps/server/.vapid.json
+
+# Local-only presentation site (do NOT push)
+presentation/

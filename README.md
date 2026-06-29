@@ -1,11 +1,13 @@
 <div align="center">
 
-# 🛡️ Kidora
+<img src="assets/kidora-logo.svg" alt="Kidora" width="380" />
 
-### Contrôle parental multi-plateforme — aussi complet que Qustodio
+### 🛡️ Contrôle parental multi-plateforme, bienveillant et complet
 
-**Temps d'écran · Filtrage web · Contrôle des apps · Localisation · Alertes**
+**Temps d'écran · Filtrage web · Contrôle des apps · Localisation · SOS · Alertes**
 Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
+
+<sub>Un <b>bouclier</b> qui abrite un <b>cœur</b> — protéger sans surveiller à l'excès.</sub>
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
@@ -18,6 +20,13 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 </div>
 
 ---
+
+## 🎨 Présentation & marque
+
+Une **page de présentation** (site vitrine local, non publié) est disponible :
+ouvrez `presentation/index.html` dans un navigateur pour découvrir le projet avec
+son identité de marque complète (logo, palette, animations). Le logo officiel se
+trouve dans [`assets/`](assets/) (`kidora-logo.svg`, `kidora-mark.svg`).
 
 ## ✨ Fonctionnalités
 
