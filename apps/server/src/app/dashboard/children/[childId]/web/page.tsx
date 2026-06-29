@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye } from "lucide-react";
 
 type WebRule = { id: string; kind: string; value: string; action: "allow" | "block" };
@@ -17,6 +18,8 @@ const FILTERABLE: Category[] = [
 
 export default function WebTab() {
   const { childId } = useParams<{ childId: string }>();
+  const { t: tr } = useT();
+  const t = tr.web;
   const [filter, setFilter] = useState<Filter | null>(null);
   const [rules, setRules] = useState<WebRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,18 +92,18 @@ export default function WebTab() {
     <div className="space-y-5">
       {/* Switches */}
       <div className="card p-5">
-        <h3 className="mb-4 text-base font-semibold">Protection</h3>
+        <h3 className="mb-4 text-base font-semibold">{t.protection}</h3>
         <Switch
           icon={<Search size={18} />}
-          title="Recherche sécurisée (SafeSearch)"
-          desc="Force le mode sans contenu explicite sur Google, Bing et YouTube."
+          title={t.safeSearch}
+          desc={t.safeSearchDesc}
           checked={filter.safeSearch}
           onChange={(v) => saveFilter({ ...filter, safeSearch: v })}
         />
         <Switch
           icon={<ShieldCheck size={18} />}
-          title="Bloquer les sites inconnus"
-          desc="Bloque les domaines non classés (mode strict pour les jeunes enfants)."
+          title={t.blockUnknown}
+          desc={t.blockUnknownDesc}
           checked={filter.blockUnknown}
           onChange={(v) => saveFilter({ ...filter, blockUnknown: v })}
         />
@@ -108,8 +111,8 @@ export default function WebTab() {
 
       {/* Categories */}
       <div className="card p-5">
-        <h3 className="mb-1 text-base font-semibold">Catégories bloquées</h3>
-        <p className="mb-4 text-sm text-muted">Activez les catégories à bloquer pour cet enfant.</p>
+        <h3 className="mb-1 text-base font-semibold">{t.categories}</h3>
+        <p className="mb-4 text-sm text-muted">{t.categoriesDesc}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           {FILTERABLE.map((cat) => {
             const meta = CATEGORY_META[cat];
@@ -126,7 +129,7 @@ export default function WebTab() {
                   <span className="text-lg">{meta.emoji}</span> {meta.label}
                 </span>
                 <span className={`badge ${blocked ? "bg-red-500 text-white" : "bg-slate-100 text-slate-500"}`}>
-                  {blocked ? "Bloqué" : "Autorisé"}
+                  {blocked ? t.blocked : t.allowed}
                 </span>
               </button>
             );
@@ -136,17 +139,17 @@ export default function WebTab() {
 
       {/* Allow / block list */}
       <div className="card p-5">
-        <h3 className="mb-4 text-base font-semibold">Sites spécifiques</h3>
+        <h3 className="mb-4 text-base font-semibold">{t.sites}</h3>
         <form onSubmit={addDomain} className="mb-4 flex flex-wrap gap-2">
           <input className="input flex-1" placeholder="exemple.com" value={domain} onChange={(e) => setDomain(e.target.value)} />
           <select className="input w-auto" value={domainAction} onChange={(e) => setDomainAction(e.target.value as "block" | "allow")}>
-            <option value="block">Bloquer</option>
-            <option value="allow">Autoriser</option>
+            <option value="block">{t.block}</option>
+            <option value="allow">{t.allow}</option>
           </select>
-          <button className="btn btn-primary"><Plus size={16} /> Ajouter</button>
+          <button className="btn btn-primary"><Plus size={16} /> {t.addSite}</button>
         </form>
         {rules.filter((r) => r.kind === "domain").length === 0 ? (
-          <p className="text-sm text-muted">Aucun site dans la liste.</p>
+          <p className="text-sm text-muted">{t.noSites}</p>
         ) : (
           <div className="divide-y">
             {rules.filter((r) => r.kind === "domain").map((r) => (
@@ -154,7 +157,7 @@ export default function WebTab() {
                 <span className="text-sm">{r.value}</span>
                 <div className="flex items-center gap-3">
                   <span className={`badge ${r.action === "block" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}>
-                    {r.action === "block" ? "Bloqué" : "Autorisé"}
+                    {r.action === "block" ? t.blocked : t.allowed}
                   </span>
                   <button className="text-slate-400 hover:text-red-500" onClick={() => removeRule(r)}><Trash2 size={16} /></button>
                 </div>
@@ -166,18 +169,14 @@ export default function WebTab() {
 
       {/* Watched keywords */}
       <div className="card p-5">
-        <h3 className="mb-1 flex items-center gap-2 text-base font-semibold"><Eye size={18} /> Mots-clés surveillés</h3>
-        <p className="mb-4 text-sm text-muted">
-          Recevez une alerte si l'un de ces mots apparaît dans les recherches ou les titres
-          de pages. Une liste de termes à risque (automutilation, violence…) est déjà
-          surveillée par défaut.
-        </p>
+        <h3 className="mb-1 flex items-center gap-2 text-base font-semibold"><Eye size={18} /> {t.keywords}</h3>
+        <p className="mb-4 text-sm text-muted">{t.keywordsDesc}</p>
         <form onSubmit={addKeyword} className="mb-4 flex gap-2">
-          <input className="input flex-1" placeholder="ex : nom d'un jeu, sujet sensible…" value={kw} onChange={(e) => setKw(e.target.value)} />
-          <button className="btn btn-primary"><Plus size={16} /> Ajouter</button>
+          <input className="input flex-1" placeholder={t.keywordPlaceholder} value={kw} onChange={(e) => setKw(e.target.value)} />
+          <button className="btn btn-primary"><Plus size={16} /> {tr.apps.add}</button>
         </form>
         {keywords.length === 0 ? (
-          <p className="text-sm text-muted">Aucun mot-clé personnalisé.</p>
+          <p className="text-sm text-muted">{t.noKeywords}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {keywords.map((k) => (
