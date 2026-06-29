@@ -1,5 +1,9 @@
 import { prisma } from "./prisma";
 import { DEFAULT_BLOCKLIST } from "./categories";
+import { isBedtimeNow, todayWeekday } from "./schedule";
+
+// Re-exported for existing importers.
+export { isBedtimeNow, todayWeekday };
 
 export type EffectivePolicy = {
   childId: string;
@@ -27,8 +31,6 @@ export type EffectivePolicy = {
   }[];
   activeRoutines: string[];
 };
-
-const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 function safeParse<T>(raw: string | null | undefined, fallback: T): T {
   if (!raw) return fallback;
@@ -123,32 +125,4 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
     appRules: [...appRuleMap.values()],
     activeRoutines,
   };
-}
-
-/** Today's weekday key (server-local). */
-export function todayWeekday(d = new Date()): string {
-  return WEEKDAYS[d.getDay()];
-}
-
-/** Is the given time within any bedtime window? Handles overnight ranges. */
-export function isBedtimeNow(
-  bedtimes: { days: string[]; start: string; end: string }[],
-  now = new Date(),
-): boolean {
-  const wd = todayWeekday(now);
-  const mins = now.getHours() * 60 + now.getMinutes();
-  for (const b of bedtimes) {
-    if (b.days.length && !b.days.includes(wd)) continue;
-    const [sh, sm] = b.start.split(":").map(Number);
-    const [eh, em] = b.end.split(":").map(Number);
-    const s = sh * 60 + sm;
-    const e = eh * 60 + em;
-    if (s <= e) {
-      if (mins >= s && mins < e) return true;
-    } else {
-      // overnight, e.g. 21:00 → 07:00
-      if (mins >= s || mins < e) return true;
-    }
-  }
-  return false;
 }

@@ -38,7 +38,7 @@
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation
-- [x] Tests unitaires Vitest des libs (catégorisation + scanner de mots-clés) — 14 tests verts ; *Playwright dashboard à venir*
+- [x] Tests unitaires Vitest (catégorisation, mots-clés, fenêtres horaires coucher/routines, rate-limit) — 36 tests verts ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [ ] Migration Postgres + déploiement Vercel de référence
 - [ ] i18n (FR/EN)
