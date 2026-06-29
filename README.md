@@ -11,8 +11,8 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
+[![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
 ![Tests](https://img.shields.io/badge/tests-40%20passing-brightgreen)
-![Build](https://img.shields.io/badge/build-passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>

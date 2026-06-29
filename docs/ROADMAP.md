@@ -17,6 +17,14 @@
 - [x] **Appairage par QR code** : QR généré localement à l'ajout d'un appareil (deep link `kidorachild://enroll`), l'app Kids l'enrôle automatiquement ; *onboarding guidé à étoffer*
 - [~] **Refonte UX app Android** — **deux apps séparées** (Kidora Parents / Kidora Kids via `APP_ROLE`, packages distincts), mode sombre, minSdk 23, labels d'accessibilité, cibles ≥48dp ; *à compiler via EAS*
 
+## 🏅 Niveau pro / expert (directive 2026-06-29)
+- [x] **CI GitHub Actions** : typecheck + tests + build à chaque push/PR (badge dans le README)
+- [ ] Mode sombre **web** (dashboard) + thème cohérent
+- [ ] États de chargement (skeletons) + toasts + error boundaries
+- [ ] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`)
+- [ ] Tests d'intégration (API) + e2e Playwright
+- [ ] Observabilité (logs structurés, IDs de requête)
+
 ## 🔜 Prochaines étapes
 
 ### Serveur / dashboard
