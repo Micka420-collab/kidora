@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/client";
+import { useT } from "@/components/i18n-provider";
 import {
   LayoutDashboard,
   BellRing,
@@ -29,11 +30,17 @@ export function DashboardShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t, locale } = useT();
   const [open, setOpen] = useState(false);
 
   async function logout() {
     await api.post("/api/auth/logout");
     router.push("/login");
+    router.refresh();
+  }
+
+  function setLocale(l: "fr" | "en") {
+    document.cookie = `kidora_locale=${l}; path=/; max-age=31536000`;
     router.refresh();
   }
 
@@ -77,15 +84,15 @@ export function DashboardShell({
         </div>
 
         <nav className="space-y-1">
-          {navItem("/dashboard", "Vue d'ensemble", LayoutDashboard)}
-          {navItem("/dashboard/alerts", "Alertes", BellRing, unread)}
-          {navItem("/dashboard/settings", "Paramètres", Settings)}
+          {navItem("/dashboard", t.nav.overview, LayoutDashboard)}
+          {navItem("/dashboard/alerts", t.nav.alerts, BellRing, unread)}
+          {navItem("/dashboard/settings", t.nav.settings, Settings)}
         </nav>
 
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between px-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted">Mes enfants</span>
-            <Link href="/dashboard/children/new" className="text-brand-600 hover:text-brand-700"><Plus size={16} /></Link>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">{t.nav.myChildren}</span>
+            <Link href="/dashboard/children/new" className="text-brand-600 hover:text-brand-700" title={t.nav.addChild}><Plus size={16} /></Link>
           </div>
           <div className="space-y-1">
             {kids.map((k) => {
@@ -107,7 +114,7 @@ export function DashboardShell({
             })}
             {kids.length === 0 && (
               <Link href="/dashboard/children/new" className="block rounded-lg border border-dashed px-3 py-2 text-center text-sm text-muted hover:border-brand-300">
-                + Ajouter un enfant
+                + {t.nav.addChild}
               </Link>
             )}
           </div>
@@ -118,8 +125,12 @@ export function DashboardShell({
             <div className="truncate text-sm font-semibold">{parent.name}</div>
             <div className="truncate text-xs text-muted">{parent.email}</div>
           </div>
+          <div className="mb-2 flex overflow-hidden rounded-lg border text-xs">
+            <button onClick={() => setLocale("fr")} className={`flex-1 py-1.5 font-semibold ${locale === "fr" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>FR</button>
+            <button onClick={() => setLocale("en")} className={`flex-1 py-1.5 font-semibold ${locale === "en" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>EN</button>
+          </div>
           <button onClick={logout} className="btn btn-outline w-full">
-            <LogOut size={16} /> Déconnexion
+            <LogOut size={16} /> {t.nav.logout}
           </button>
         </div>
       </aside>

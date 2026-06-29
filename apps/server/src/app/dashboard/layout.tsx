@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleChildWhere } from "@/lib/guard";
+import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { I18nProvider } from "@/components/i18n-provider";
 
 export default async function DashboardLayout({
   children,
@@ -21,13 +23,18 @@ export default async function DashboardLayout({
     where: { parentId: parent.id, read: false },
   });
 
+  const locale = await getLocale();
+  const dict = getDict(locale);
+
   return (
-    <DashboardShell
-      parent={{ name: parent.name, email: parent.email }}
-      kids={kids}
-      unread={unread}
-    >
-      {children}
-    </DashboardShell>
+    <I18nProvider dict={dict} locale={locale}>
+      <DashboardShell
+        parent={{ name: parent.name, email: parent.email }}
+        kids={kids}
+        unread={unread}
+      >
+        {children}
+      </DashboardShell>
+    </I18nProvider>
   );
 }

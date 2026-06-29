@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
 import { accessibleChildWhere } from "@/lib/guard";
+import { getLocale, getDict } from "@/lib/i18n";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { FamilyPause } from "@/components/family-pause";
 import { CATEGORY_META, type Category } from "@/lib/categories";
@@ -20,6 +21,7 @@ function today() {
 
 export default async function OverviewPage() {
   const parent = (await getCurrentParent())!;
+  const tt = getDict(await getLocale());
   const kids = await prisma.child.findMany({
     where: accessibleChildWhere(parent.id),
     orderBy: { createdAt: "asc" },
@@ -54,27 +56,27 @@ export default async function OverviewPage() {
     <div className="space-y-7">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Bonjour, {parent.name.split(" ")[0]} 👋</h1>
-          <p className="text-sm text-muted">Voici l'activité de votre famille aujourd'hui.</p>
+          <h1 className="text-2xl font-bold">{tt.overview.hello}, {parent.name.split(" ")[0]} 👋</h1>
+          <p className="text-sm text-muted">{tt.overview.todayActivity}</p>
         </div>
         <div className="flex gap-2">
           {kids.length > 0 && <FamilyPause anyActive={kids.some((k) => !k.paused)} />}
           <Link href="/dashboard/children/new" className="btn btn-primary">
-            <Plus size={16} /> Ajouter un enfant
+            <Plus size={16} /> {tt.nav.addChild}
           </Link>
         </div>
       </div>
 
       {/* Summary tiles */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Tile icon={Clock} label="Temps d'écran aujourd'hui" value={formatDuration(totalToday)} tint="bg-brand-50 text-brand-600" />
-        <Tile icon={Smartphone} label="Appareils en ligne" value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" />
-        <Tile icon={ShieldAlert} label="Alertes non lues" value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" />
+        <Tile icon={Clock} label={tt.overview.screenTimeToday} value={formatDuration(totalToday)} tint="bg-brand-50 text-brand-600" />
+        <Tile icon={Smartphone} label={tt.overview.devicesOnline} value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" />
+        <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" />
       </div>
 
       {/* Children */}
       <div>
-        <h2 className="mb-3 text-lg font-semibold">Mes enfants</h2>
+        <h2 className="mb-3 text-lg font-semibold">{tt.nav.myChildren}</h2>
         {kids.length === 0 ? (
           <Link href="/dashboard/children/new" className="card grid place-items-center gap-2 border-dashed p-10 text-center text-muted hover:border-brand-300">
             <Plus size={28} />
@@ -150,11 +152,11 @@ export default async function OverviewPage() {
         {/* Recent alerts */}
         <div className="card p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Alertes récentes</h2>
-            <Link href="/dashboard/alerts" className="text-sm font-semibold text-brand-600">Tout voir</Link>
+            <h2 className="text-lg font-semibold">{tt.overview.recentAlerts}</h2>
+            <Link href="/dashboard/alerts" className="text-sm font-semibold text-brand-600">{tt.overview.seeAll}</Link>
           </div>
           {recentAlerts.length === 0 ? (
-            <p className="text-sm text-muted">Aucune alerte. Tout va bien ! ✅</p>
+            <p className="text-sm text-muted">{tt.overview.allGood}</p>
           ) : (
             <ul className="space-y-3">
               {recentAlerts.map((a) => (
