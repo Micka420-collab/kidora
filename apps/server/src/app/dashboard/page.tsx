@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
 import { accessibleChildWhere } from "@/lib/guard";
 import { formatDuration, relativeTime } from "@/lib/format";
+import { FamilyPause } from "@/components/family-pause";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import {
   Smartphone,
@@ -56,9 +57,12 @@ export default async function OverviewPage() {
           <h1 className="text-2xl font-bold">Bonjour, {parent.name.split(" ")[0]} 👋</h1>
           <p className="text-sm text-muted">Voici l'activité de votre famille aujourd'hui.</p>
         </div>
-        <Link href="/dashboard/children/new" className="btn btn-primary">
-          <Plus size={16} /> Ajouter un enfant
-        </Link>
+        <div className="flex gap-2">
+          {kids.length > 0 && <FamilyPause anyActive={kids.some((k) => !k.paused)} />}
+          <Link href="/dashboard/children/new" className="btn btn-primary">
+            <Plus size={16} /> Ajouter un enfant
+          </Link>
+        </div>
       </div>
 
       {/* Summary tiles */}
