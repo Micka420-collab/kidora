@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
+import { passwordPolicyError, isPasswordBreached } from "@/lib/password-policy";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return apiError("Données invalides", 422);
 
   const { name, email, password } = parsed.data;
+
+  // Password policy: strength + known-breach (HIBP k-anonymity).
+  const policyErr = passwordPolicyError(password);
+  if (policyErr) return apiError(policyErr, 422);
+  if (await isPasswordBreached(password)) {
+    return apiError("Ce mot de passe figure dans une fuite de données connue. Choisissez-en un autre.", 422);
+  }
+
   const existing = await prisma.parent.findUnique({
     where: { email: email.toLowerCase() },
   });

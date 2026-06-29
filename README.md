@@ -37,7 +37,7 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 | 🎮 **Actions à distance** | Verrouiller un appareil, envoyer un message |
 | 👨‍👩‍👧 **Multi-tuteurs** | Inviter un co-parent (accès partagé, révocable) |
 | 🔔 **Notifications** | **Web push** pour les alertes critiques |
-| 🔐 **Sécurité & RGPD** | JWT httpOnly, bcrypt, rate-limiting, journal d'audit, export & suppression de compte |
+| 🔐 **Sécurité & RGPD** | JWT httpOnly, bcrypt, rate-limiting, **CSP** + en-têtes durcis, **force de mot de passe + détection de fuite (HIBP)**, journal d'audit, export & suppression de compte |
 | 🌍 **Bilingue** | Interface FR / EN |
 
 ## 🏗️ Architecture
