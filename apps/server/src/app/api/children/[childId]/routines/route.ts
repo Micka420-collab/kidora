@@ -45,9 +45,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       end: d.end,
       blockedAppIds: JSON.stringify(d.blockedAppIds),
     };
-    const routine = d.id
-      ? await prisma.routine.update({ where: { id: d.id }, data })
-      : await prisma.routine.create({ data: { childId, ...data } });
+    if (d.id) {
+      // Ownership scope: ensure the routine belongs to THIS child (prevents IDOR
+      // via a guessed/foreign routine id with an owned childId).
+      const owned = await prisma.routine.findFirst({ where: { id: d.id, childId } });
+      if (!owned) return apiError("Routine introuvable", 404);
+      const routine = await prisma.routine.update({ where: { id: d.id }, data });
+      return json({ routine });
+    }
+    const routine = await prisma.routine.create({ data: { childId, ...data } });
     return json({ routine });
   });
 }

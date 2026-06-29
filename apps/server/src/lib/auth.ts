@@ -5,10 +5,15 @@ import { prisma } from "./prisma";
 const COOKIE = "kidora_session";
 const ALG = "HS256";
 
+const DEV_SECRET = "dev-insecure-secret-change-me-in-production-kidora";
+
 function secret(): Uint8Array {
-  const s =
-    process.env.AUTH_SECRET ||
-    "dev-insecure-secret-change-me-in-production-kidora";
+  const s = process.env.AUTH_SECRET || DEV_SECRET;
+  if (process.env.NODE_ENV === "production" && s === DEV_SECRET) {
+    throw new Error(
+      "AUTH_SECRET must be set to a strong value in production (the dev fallback is forbidden).",
+    );
+  }
   return new TextEncoder().encode(s);
 }
 

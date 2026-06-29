@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 const schema = z.object({
   name: z.string().min(1).max(80),
@@ -12,6 +13,15 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const ip = clientIp(req);
+  const rl = rateLimit(`register:${ip}`, 5, 60 * 60_000); // 5/hour per IP
+  if (!rl.ok) {
+    return Response.json(
+      { error: "Trop de créations de compte. Réessayez plus tard." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    );
+  }
+
   const body = await readJson(req);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return apiError("Données invalides", 422);
