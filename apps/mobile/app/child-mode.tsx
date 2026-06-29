@@ -5,6 +5,7 @@ import * as Location from "expo-location";
 import { childAgent } from "@/api";
 import * as storage from "@/storage";
 import * as AppUsage from "../modules/app-usage";
+import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
 
 const SYNC_MS = 60_000;
 
@@ -31,6 +32,8 @@ export default function ChildMode() {
     }
     setActive(true);
     setStatus("Protection active 🛡️");
+    // continuous location even when app is backgrounded (best-effort)
+    startBackgroundLocation().catch(() => undefined);
     await syncNow();
     timer.current = setInterval(syncNow, SYNC_MS);
   }
@@ -83,6 +86,7 @@ export default function ChildMode() {
         style: "destructive",
         onPress: async () => {
           if (timer.current) clearInterval(timer.current);
+          await stopBackgroundLocation().catch(() => undefined);
           await storage.clearAll();
           router.replace("/login");
         },

@@ -36,7 +36,7 @@
 - [~] Android : module natif `UsageStatsManager` (usage apps) écrit + branché au sync (deltas) — *à compiler via EAS, non vérifiable en Expo Go*
 - [ ] Android : `AccessibilityService` (blocage), `VpnService` (filtrage web)
 - [~] iOS : module scaffold (renvoie « non supporté ») + doc FamilyControls/DeviceActivity/ManagedSettings (entitlement Apple requis)
-- [ ] Localisation en arrière-plan (`expo-task-manager`)
+- [~] Localisation en arrière-plan (`expo-task-manager` + `expo-location`) — tâche écrite & branchée (start/stop dans le mode enfant) ; *à vérifier sur appareil*
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation
