@@ -4,8 +4,16 @@
 
 ### Contrôle parental multi-plateforme — aussi complet que Qustodio
 
-Temps d'écran · Filtrage web · Contrôle des applications · Localisation · Alertes
-**Windows · Android · iPhone**, pilotés depuis un tableau de bord unique.
+**Temps d'écran · Filtrage web · Contrôle des apps · Localisation · Alertes**
+Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-149eca?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
+![Tests](https://img.shields.io/badge/tests-40%20passing-brightgreen)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
 
@@ -15,41 +23,46 @@ Temps d'écran · Filtrage web · Contrôle des applications · Localisation · 
 
 | Domaine | Détail |
 |---|---|
-| ⏱️ **Temps d'écran** | Limites quotidiennes par jour de la semaine, heures du coucher, pause instantanée |
-| 🌐 **Filtrage web** | Blocage par catégorie (adulte, jeux d'argent, violence…), SafeSearch forcé, listes blanche/noire |
-| 🎮 **Applications** | Autoriser / bloquer / limiter chaque app, détection des nouvelles apps |
-| 📍 **Localisation** | Position en temps réel, historique, zones de sécurité (géofences) avec alertes entrée/sortie |
-| 🔔 **Alertes** | Tentatives bloquées, limites atteintes, nouvelles apps, géofences |
-| 📊 **Rapports** | Usage par app et par catégorie, tendance sur 7 jours, timeline d'activité |
-| 🖥️ **Multi-appareils** | Un tableau de bord, tous les appareils de la famille |
+| ⏱️ **Temps d'écran** | Limites quotidiennes par jour, heures du coucher, **pause instantanée** (par enfant ou familiale), **temps bonus** (demandes de l'enfant + octroi parental) |
+| 🗓️ **Routines** | Profils horaires (ex. heures d'école) qui bloquent automatiquement certaines apps |
+| 🌐 **Filtrage web** | Blocage par **catégorie** (adulte, jeux d'argent, violence, drogues, rencontres…), SafeSearch forcé, listes blanche/noire |
+| 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, détection des nouvelles apps |
+| 🔍 **Mots-clés sensibles** | Alerte si des termes à risque (automutilation, violence…) ou personnalisés apparaissent dans les recherches |
+| 📍 **Localisation** | Position temps réel, historique, **zones de sécurité (géofences)** avec alertes entrée/sortie |
+| 📊 **Rapports** | Usage par app / catégorie, tendance, **export CSV** |
+| 📸 **Captures d'écran** | À la demande (Windows), **chiffrées au repos** (AES-256-GCM) |
+| 🎮 **Actions à distance** | Verrouiller un appareil, envoyer un message |
+| 👨‍👩‍👧 **Multi-tuteurs** | Inviter un co-parent (accès partagé, révocable) |
+| 🔔 **Notifications** | **Web push** pour les alertes critiques |
+| 🔐 **Sécurité & RGPD** | JWT httpOnly, bcrypt, rate-limiting, journal d'audit, export & suppression de compte |
+| 🌍 **Bilingue** | Interface FR / EN |
 
 ## 🏗️ Architecture
 
 ```
 kidora/
 ├── apps/
-│   ├── server/          # Next.js 16 — dashboard parent + API REST (Prisma/SQLite)
+│   ├── server/          # Next.js 16 — dashboard parent + API REST (Prisma/SQLite→Postgres)
 │   ├── agent-windows/   # Agent Node.js — surveillance & application des règles (Windows)
 │   └── mobile/          # App Expo/React Native — compagnon parent + agent enfant
-└── docs/                # Architecture & schéma de l'API
+└── docs/                # Architecture, API, déploiement, roadmap
 ```
 
 ```
    Appareil enfant                      Serveur Kidora                 Parent
  ┌──────────────────┐   télémétrie    ┌─────────────────┐           ┌──────────┐
  │  Agent Windows   │ ─────────────▶  │   API /agent/*  │           │ Dashboard│
- │  (ou app mobile) │ ◀─────────────  │  policy engine  │ ◀───────▶ │   web    │
+ │  / app mobile    │ ◀─────────────  │  policy engine  │ ◀───────▶ │   web    │
  └──────────────────┘   policy+cmds   └─────────────────┘   REST    └──────────┘
 ```
 
 Le serveur calcule une **politique effective** par enfant (règles d'apps, domaines
-bloqués, filtres, temps d'écran). Chaque appareil la récupère et l'applique
-localement, en remontant l'usage et les événements.
+bloqués, filtres, temps d'écran, routines actives, bonus). Chaque appareil la récupère
+et l'applique localement, en remontant l'usage et les événements.
 
 ## 🚀 Démarrage rapide
 
 ### 1. Serveur + dashboard
-
 ```bash
 cd apps/server
 npm install
@@ -57,48 +70,45 @@ npx prisma migrate dev      # crée la base SQLite
 npm run seed                # données de démo
 npm run dev                 # http://localhost:3000
 ```
-
-Connexion démo : **demo@kidora.app** / **kidora1234**
+**Démo :** `demo@kidora.app` / `kidora1234`
 
 ### 2. Agent Windows (sur le PC enfant)
-
 ```bash
 cd apps/agent-windows
-node agent.js --token <JETON> --server http://localhost:3000
-# mode test sans blocage réel :
-node agent.js --token <JETON> --server http://localhost:3000 --dry-run
+node agent.js --token <JETON> --server http://localhost:3000        # surveillance + application
+node agent.js --token <JETON> --server http://localhost:3000 --dry-run   # mode test (sans blocage réel)
 ```
-
 Le jeton s'obtient dans le dashboard : *enfant → Appareils → Ajouter un appareil*.
 
-### 3. App mobile (compagnon / agent enfant)
-
+### 3. App mobile
 ```bash
 cd apps/mobile
 npm install
-npx expo start
+npx expo start              # Expo Go (compagnon + localisation) ; EAS pour l'enforcement natif
 ```
 
-## 🧱 Stack technique
+## 🧪 Qualité
+```bash
+cd apps/server
+npm test          # 40 tests unitaires (Vitest)
+npm run build     # build de production (Turbopack)
+```
 
-- **Next.js 16** (App Router, Turbopack) · **React 19** · **Tailwind CSS v4**
-- **Prisma 7** + SQLite (dev) → PostgreSQL/Neon (prod)
-- **Auth** JWT (cookie httpOnly), **jose** + **bcryptjs**
-- **Agent** Node.js pur + PowerShell (zéro dépendance native)
-- **Mobile** Expo / React Native
+## 🧱 Stack
+**Next.js 16** (App Router, Turbopack) · **React 19** · **Tailwind CSS v4** · **Prisma 7** (SQLite → PostgreSQL) · **jose** + **bcryptjs** · **web-push** · Agent : **Node.js + PowerShell** (zéro dépendance native) · Mobile : **Expo / React Native**.
 
-## 📦 Déploiement (production)
+## 📦 Déploiement
+Prêt pour **Vercel** (basculer Prisma sur PostgreSQL via Neon). Voir [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Le serveur est prêt pour **Vercel** : remplacez le provider Prisma par `postgresql`
-(Neon via le Vercel Marketplace), définissez `DATABASE_URL` et `AUTH_SECRET`, puis
-`vercel deploy`. Voir `docs/DEPLOYMENT.md`.
+## 📚 Documentation
+- [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Déploiement](docs/DEPLOYMENT.md) · [Roadmap](docs/ROADMAP.md)
 
 ## ⚖️ Usage légal
-
-Kidora est destiné au **contrôle parental d'enfants mineurs par leurs représentants
-légaux**. Informez les utilisateurs des appareils de la surveillance lorsque la loi
-l'exige. N'utilisez pas ce logiciel pour surveiller des adultes sans consentement.
+Kidora est destiné au **contrôle parental d'enfants mineurs par leurs représentants légaux**.
+Informez les utilisateurs des appareils lorsque la loi l'exige. N'utilisez pas ce logiciel
+pour surveiller des adultes sans consentement.
 
 ## 📄 Licence
+[MIT](LICENSE)
 
-MIT — voir [LICENSE](./LICENSE).
+<div align="center"><sub>Conçu pour les familles. 🛡️</sub></div>
