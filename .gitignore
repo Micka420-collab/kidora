@@ -37,6 +37,7 @@ apps/agent-windows/config.json
 # agent runtime artifacts (generated at install/run)
 apps/agent-windows/heartbeat.json
 apps/agent-windows/KidoraAgent.xml
+apps/agent-windows/overlay-state.json
 
 # Web Push VAPID keys (dev)
 .vapid.json
