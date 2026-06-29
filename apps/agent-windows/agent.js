@@ -6,7 +6,9 @@ import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
-import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay } from "./lib/win.js";
+import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns } from "./lib/win.js";
+import { startDnsProxy } from "./lib/dns-proxy.js";
+import { normalizeDomain } from "./lib/domains.js";
 import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
 
@@ -49,13 +51,36 @@ async function main() {
     cfg.childId = res.childId;
     saveConfig(cfg);
     log.ok(`Enrôlé pour « ${res.childName} » (device ${res.deviceId})`);
-    applyHosts(policy, admin);
   } catch (e) {
     log.error("Échec de l'enrôlement :", e.message);
     process.exit(1);
   }
 
+  // Web filtering: prefer the local DNS proxy (category-level, catches new
+  // domains); fall back to the hosts file if not admin or the port is taken.
+  const filter = { web: buildWeb(policy), dns: null, blocked: new Map() };
   let lastHostsKey = hostsKey(policy);
+  if (DRY_RUN) {
+    log.info("[dry-run] filtrage web non appliqué.");
+  } else if (admin) {
+    filter.dns = await startDnsProxy({
+      getWeb: () => filter.web,
+      onEvent: (e) => { if (e.type === "dns_block") filter.blocked.set(e.host, e.reason); },
+    });
+    if (filter.dns) {
+      await setSystemDns("127.0.0.1");
+      updateHostsFile([]); // DNS handles filtering now — clear any old hosts block
+      log.ok("Filtrage web par catégorie actif (proxy DNS local).");
+    } else {
+      // Bind failed: make sure a previous instance didn't leave system DNS
+      // pointing at a now-dead 127.0.0.1 (which would break resolution).
+      try { await restoreSystemDns(); } catch {}
+      applyHosts(policy, admin); // hosts fallback
+    }
+  } else {
+    applyHosts(policy, admin); // non-admin: no-op + warning
+  }
+
   const pendingCmdResults = [];
   let lastSample = null;
 
@@ -82,6 +107,7 @@ async function main() {
     writeHeartbeat();
     const { usage, events } = tracker.drain();
     const enforceEvents = enforcer.drainEvents();
+    const webVisits = drainBlockedHosts(filter.blocked);
     const battery = await getBattery();
     try {
       const res = await api.sync({
@@ -89,17 +115,19 @@ async function main() {
         battery: battery ?? undefined,
         usage,
         events: [...events, ...enforceEvents],
+        webVisits,
         commandResults: pendingCmdResults.splice(0),
       });
       policy = res.policy;
+      filter.web = buildWeb(policy); // DNS proxy reads this live
       const total = Math.round(tracker.totalTodaySeconds() / 60);
       log.event(
-        `sync ✓  usage:${usage.length} events:${events.length + enforceEvents.length}  écran aujourd'hui:${total}min  ${policy.paused ? "[PAUSE]" : ""}`,
+        `sync ✓  usage:${usage.length} events:${events.length + enforceEvents.length} bloqués(dns):${webVisits.length}  écran:${total}min  ${policy.paused ? "[PAUSE]" : ""}`,
       );
 
-      // refresh hosts file if block list changed
+      // hosts fallback: refresh only when the DNS proxy is NOT handling filtering
       const key = hostsKey(policy);
-      if (key !== lastHostsKey) {
+      if (!filter.dns && key !== lastHostsKey) {
         lastHostsKey = key;
         applyHosts(policy, admin);
       }
@@ -121,11 +149,39 @@ async function main() {
     log.info("Arrêt…");
     clearInterval(heartbeatTimer);
     hideOverlay();
+    if (filter.dns) {
+      try { await restoreSystemDns(); } catch {}
+      filter.dns.stop();
+    }
     try {
       await api.sync({ online: false });
     } catch {}
     process.exit(0);
   });
+}
+
+/** Build the DNS-proxy view of the web policy (normalized Sets). */
+function buildWeb(policy) {
+  const w = policy?.webFilter || {};
+  const norm = (arr) => new Set((arr || []).map((d) => normalizeDomain(d)));
+  return {
+    blockedDomains: norm(policy?.blockedDomains),
+    allowedDomains: norm(policy?.allowedDomains),
+    blockedCategories: new Set(w.blockedCategories || []),
+    blockUnknown: !!w.blockUnknown,
+    safeSearch: !!w.safeSearch,
+  };
+}
+
+/** Turn collected DNS blocks into webVisit rows (deduped, capped). */
+function drainBlockedHosts(map) {
+  const rows = [...map.entries()].slice(0, 100).map(([domain, reason]) => ({
+    domain,
+    category: reason && reason.startsWith("category:") ? reason.slice("category:".length) : undefined,
+    blocked: true,
+  }));
+  map.clear();
+  return rows;
 }
 
 function hostsKey(policy) {
