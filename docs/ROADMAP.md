@@ -42,4 +42,5 @@
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [ ] Migration Postgres + déploiement Vercel de référence
 - [ ] i18n (FR/EN)
+- [x] Export des données (JSON) + suppression de compte (RGPD) avec confirmation
 - [ ] Chiffrement au repos des données sensibles

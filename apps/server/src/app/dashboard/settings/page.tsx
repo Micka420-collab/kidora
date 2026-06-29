@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { relativeTime } from "@/lib/format";
 import { User, Shield, Smartphone, ScrollText } from "lucide-react";
 import { GuardiansCard } from "@/components/guardians-card";
+import { AccountDataCard } from "@/components/account-data-card";
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Connexion",
@@ -79,6 +80,8 @@ export default async function SettingsPage() {
           </ul>
         )}
       </div>
+
+      <AccountDataCard />
 
       <div className="card p-6">
         <h2 className="mb-2 text-base font-semibold">À propos de Kidora</h2>
