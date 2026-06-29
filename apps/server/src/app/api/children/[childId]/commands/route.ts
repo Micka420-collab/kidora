@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
+import { audit } from "@/lib/audit";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         payload: JSON.stringify(parsed.data.payload ?? {}),
       },
     });
+    await audit(parent.id, "command", `${parsed.data.type}`);
     return json({ command });
   });
 }

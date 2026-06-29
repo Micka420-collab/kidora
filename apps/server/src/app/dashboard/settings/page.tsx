@@ -1,12 +1,27 @@
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { User, Shield, Smartphone } from "lucide-react";
+import { relativeTime } from "@/lib/format";
+import { User, Shield, Smartphone, ScrollText } from "lucide-react";
+
+const ACTION_LABELS: Record<string, string> = {
+  login: "Connexion",
+  "child.create": "Enfant ajouté",
+  "child.delete": "Enfant supprimé",
+  "time.grant": "Temps bonus accordé",
+  command: "Commande envoyée",
+  "rule.change": "Règle modifiée",
+};
 
 export default async function SettingsPage() {
   const parent = (await getCurrentParent())!;
   const childCount = await prisma.child.count({ where: { parentId: parent.id } });
   const deviceCount = await prisma.device.count({
     where: { child: { parentId: parent.id } },
+  });
+  const auditLogs = await prisma.auditLog.findMany({
+    where: { parentId: parent.id },
+    orderBy: { ts: "desc" },
+    take: 15,
   });
 
   return (
@@ -41,6 +56,25 @@ export default async function SettingsPage() {
             <div className="text-xs text-muted">Appareil(s) surveillé(s)</div>
           </div>
         </div>
+      </div>
+
+      <div className="card p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><ScrollText size={18} /> Journal du compte</h2>
+        {auditLogs.length === 0 ? (
+          <p className="text-sm text-muted">Aucune action enregistrée pour l'instant.</p>
+        ) : (
+          <ul className="divide-y">
+            {auditLogs.map((l) => (
+              <li key={l.id} className="flex items-center justify-between py-2.5 text-sm">
+                <span>
+                  <span className="font-medium">{ACTION_LABELS[l.action] ?? l.action}</span>
+                  {l.detail && <span className="text-muted"> · {l.detail}</span>}
+                </span>
+                <span className="text-xs text-muted">{relativeTime(l.ts)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="card p-6">

@@ -39,7 +39,7 @@
 
 ### Qualité / industrialisation
 - [x] Tests unitaires Vitest des libs (catégorisation + scanner de mots-clés) — 14 tests verts ; *Playwright dashboard à venir*
-- [ ] Rate limiting + audit log
+- [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [ ] Migration Postgres + déploiement Vercel de référence
 - [ ] i18n (FR/EN)
 - [ ] Chiffrement au repos des données sensibles

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
+import { audit } from "@/lib/audit";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
     // lift a manual pause/limit lock implicitly by resuming
     await prisma.command.create({ data: { childId, type: "resume", payload: "{}" } });
+    await audit(parent.id, "time.grant", `+${parsed.data.minutes} min`);
     return json({ ok: true, granted: parsed.data.minutes });
   });
 }

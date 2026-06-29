@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { DEFAULT_BLOCKED_CATEGORIES } from "@/lib/categories";
+import { audit } from "@/lib/audit";
 
 const createSchema = z.object({
   name: z.string().min(1).max(60),
@@ -68,6 +69,7 @@ export async function POST(req: NextRequest) {
       include: { screenTime: true, webFilter: true, devices: true },
     });
 
+    await audit(parent.id, "child.create", child.name);
     return json({ child });
   });
 }

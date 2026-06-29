@@ -23,8 +23,23 @@ model Parent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  children Child[]
-  alerts   Alert[]
+  children  Child[]
+  alerts    Alert[]
+  auditLogs AuditLog[]
+}
+
+// Audit trail of sensitive account actions.
+model AuditLog {
+  id       String   @id @default(cuid())
+  parentId String
+  action   String // login | child.create | rule.change | time.grant | command | child.delete ...
+  detail   String?
+  ip       String?
+  ts       DateTime @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([parentId, ts])
 }
 
 model Child {
