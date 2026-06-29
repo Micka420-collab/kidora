@@ -62,9 +62,41 @@ Le serveur calcule une **politique effective** par enfant (règles d'apps, domai
 bloqués, filtres, temps d'écran, routines actives, bonus). Chaque appareil la récupère
 et l'applique localement, en remontant l'usage et les événements.
 
+## 📥 Téléchargement
+
+Depuis GitHub : <https://github.com/Micka420-collab/kidora>
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/Micka420-collab/kidora.git
+cd kidora
+```
+
+Ou téléchargez une archive depuis l'onglet **Releases** (ZIP / tar.gz), ou
+**Code → Download ZIP**. Les applications mobiles (APK **Kidora Parents** / **Kidora Kids**)
+sont publiées dans les **Releases** une fois compilées via EAS.
+
+## ⚙️ Configuration requise
+
+| Composant | Minimum |
+|---|---|
+| **Serveur / dashboard** | Linux · macOS · Windows · **Node.js 20+** · ~300 Mo disque · navigateur moderne (Chrome 111+, Edge, Firefox, Safari 16.4+) |
+| **Agent Windows** | Windows 10/11 · Node.js 18+ · PowerShell (inclus) |
+| **App Android** | Android **6.0+** (minSdk 23) — *Kidora Parents* et *Kidora Kids* |
+| **App iOS** | iOS 15.1+ (build EAS, entitlement Screen Time) |
+| **Production** | PostgreSQL (Neon) recommandé pour le déploiement (Vercel) |
+
 ## 🚀 Démarrage rapide
 
-### 1. Serveur + dashboard
+### 🐧 Linux / Ubuntu — en une commande
+```bash
+git clone https://github.com/Micka420-collab/kidora.git && cd kidora
+bash install.sh          # installe Node (si besoin), prépare la base, build & démarre
+# développement :  bash install.sh --dev
+```
+→ <http://localhost:3000> — **démo : `demo@kidora.app` / `kidora1234`**
+
+### 1. Serveur + dashboard (manuel, toutes plateformes)
 ```bash
 cd apps/server
 npm install
