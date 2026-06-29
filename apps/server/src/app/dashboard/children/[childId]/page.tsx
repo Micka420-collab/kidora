@@ -3,6 +3,7 @@ import { formatDuration, relativeTime } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isBedtimeNow, todayWeekday } from "@/lib/policy";
 import { TimeRequestsCard } from "@/components/time-requests-card";
+import { LiveNow } from "@/components/live-now";
 
 function dateStr(daysAgo: number) {
   const d = new Date();
@@ -57,6 +58,8 @@ export default async function ChildOverview({
 
   return (
     <div className="space-y-6">
+      <LiveNow childId={childId} />
+
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Today vs limit */}
         <div className="card p-5">

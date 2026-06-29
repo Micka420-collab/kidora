@@ -13,7 +13,7 @@
 
 ## ⭐ Priorités demandées (2026-06-29)
 - [x] **Bouton SOS / Panique** (enfant) → alerte critique + localisation + push aux parents (serveur testé ; bouton mobile accessible câblé)
-- [ ] **Activité en direct** : app au premier plan + dernière position en temps réel sur le dashboard
+- [x] **Activité en direct** : carte temps réel (app au premier plan, position, batterie, online) sur la vue enfant (polling 15s)
 - [ ] **Appairage par QR code** + onboarding guidé
 - [ ] **Refonte UX app Android** (voir directive ci-dessous)
 
