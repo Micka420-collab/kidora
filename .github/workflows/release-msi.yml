@@ -1,0 +1,72 @@
+name: Release Windows Agent MSI
+
+# Builds the Kidora Windows agent into a signed MSI and attaches it to a GitHub
+# Release. WiX + .NET SDK + signtool are preinstalled on windows-latest.
+#
+# Optional repo secrets for Authenticode signing (else the MSI is unsigned):
+#   WINDOWS_PFX_BASE64    — base64 of your code-signing .pfx
+#   WINDOWS_PFX_PASSWORD  — its password
+#
+# Trigger: push a tag like `agent-v1.0.0`, or run manually from the Actions tab.
+
+on:
+  push:
+    tags: ["agent-v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to attach the MSI to (e.g. agent-v1.0.0)"
+        required: true
+        default: "agent-v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version + tag
+        id: ver
+        run: |
+          if ($env:GITHUB_REF_NAME -like 'agent-v*') { $tag = $env:GITHUB_REF_NAME }
+          else { $tag = '${{ github.event.inputs.release_tag }}' }
+          $ver = ($tag -replace '^agent-v','')
+          if ($ver -notmatch '^\d+\.\d+\.\d+$') { $ver = '1.0.0' }
+          "version=$ver" >> $env:GITHUB_OUTPUT
+          "tag=$tag"     >> $env:GITHUB_OUTPUT
+
+      - name: Build MSI
+        working-directory: apps/agent-windows/installer
+        run: ./build-msi.ps1 -Version ${{ steps.ver.outputs.version }} -Output kidora-agent.msi
+
+      - name: Sign MSI (if a certificate secret is configured)
+        working-directory: apps/agent-windows/installer
+        env:
+          PFX_B64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+          PFX_PW: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: |
+          if ([string]::IsNullOrEmpty($env:PFX_B64)) {
+            Write-Host "::warning::No WINDOWS_PFX_BASE64 secret — MSI will be UNSIGNED."
+          } else {
+            [IO.File]::WriteAllBytes("code.pfx", [Convert]::FromBase64String($env:PFX_B64))
+            ./sign-msi.ps1 -MsiPath kidora-agent.msi -CertPath code.pfx -CertPassword $env:PFX_PW
+            Remove-Item code.pfx -Force
+          }
+
+      - name: Publish MSI to GitHub Release
+        working-directory: apps/agent-windows/installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ steps.ver.outputs.tag }}'
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "Kidora Agent $tag" --notes "Installeur MSI de l'agent Windows. Installation silencieuse : msiexec /i kidora-agent.msi /qn TOKEN=<jeton> SERVER=<url> CHILDUSER=\"PC\Enfant\". Node.js requis sur le poste."
+          }
+          gh release upload $tag kidora-agent.msi --clobber

@@ -52,3 +52,9 @@ presentation/
 # Expo (mobile)
 .expo/
 apps/mobile/.expo/
+
+# MSI build artifacts
+apps/agent-windows/installer/*.msi
+apps/agent-windows/installer/*.pfx
+apps/agent-windows/installer/*.wixpdb
+apps/agent-windows/installer/code.pfx

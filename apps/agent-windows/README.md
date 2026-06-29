@@ -34,7 +34,25 @@ Kidora (`overlay.ps1`) au lieu de verrouiller la session Windows :
 > Le verrouillage complet (`LockWorkStation`) reste utilisé pour la commande
 > distante explicite `lock` envoyée par le parent.
 
-## Installation rapide
+## Installation par MSI (recommandé)
+
+Un **installeur MSI** signé empaquette l'agent et configure tout (enrôlement +
+tâches planifiées + auto-protection) en une commande. Voir `installer/`.
+
+```powershell
+# Installation silencieuse (en administrateur). Node.js doit être installé.
+msiexec /i kidora-agent.msi /qn TOKEN=<JETON> SERVER=https://votre-serveur CHILDUSER="PC\Enfant"
+# Désinstallation (retire l'agent, les tâches et l'auto-protection) :
+msiexec /x kidora-agent.msi /qn
+```
+
+Le MSI est bâti et signé par la CI (`.github/workflows/release-msi.yml`, tag
+`agent-v*`) puis publié dans les Releases. Build local : `installer/build-msi.ps1`
+(nécessite le SDK .NET + WiX). Signature : `installer/sign-msi.ps1` (certificat
+de code, ou auto-signé de test). `CHILDUSER` est recommandé pour cibler le compte
+de l'enfant ; sinon l'agent surveille le contexte d'installation.
+
+## Installation rapide (sans MSI)
 
 1. Dans le tableau de bord Kidora → enfant → **Appareils** → *Ajouter un appareil*
    (plateforme **Windows**). Copiez le **jeton d'enrôlement**.
