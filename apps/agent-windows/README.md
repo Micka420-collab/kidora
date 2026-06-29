@@ -13,7 +13,7 @@ limites de temps d'écran, heure du coucher), et synchronise avec le serveur Kid
 | App au premier plan + temps d'usage | Capteur PowerShell (`user32.dll`) |
 | Blocage d'application | `Stop-Process` |
 | Limite de temps par app | Compteur quotidien + `Stop-Process` |
-| Filtrage web | Réécriture du fichier `hosts` (→ 127.0.0.1) — **nécessite admin** |
+| Filtrage web | **Proxy DNS local par catégorie** (sinkhole) — fallback fichier `hosts` ; **nécessite admin** |
 | Limite de temps d'écran / coucher / pause | **Écran de blocage en superposition** (`overlay.ps1`) — se retire seul quand la condition se lève |
 | Commandes à distance | `lock`, `message`, `pause`, … (pull au sync) |
 | Télémétrie | Usage, événements, batterie → serveur |
@@ -102,10 +102,26 @@ Pour tout désinstaller (agent + gardien + ACL) :
 Au premier lancement, `--token`/`--server` sont enregistrés dans `config.json`.
 Les lancements suivants n'ont besoin d'aucun argument.
 
+## Filtrage web par catégorie (proxy DNS local)
+
+En administrateur, l'agent lance un **mini-resolveur DNS local** (sinkhole, façon
+Pi-hole, en Node pur — `lib/dns-proxy.js`) et bascule le DNS du système sur
+`127.0.0.1`. Pour chaque requête il :
+
+- **catégorise le domaine** (`lib/domains.js`) et bloque s'il appartient à une
+  **catégorie interdite** (`webFilter.blockedCategories`) — y compris des domaines
+  **inconnus du fichier hosts**, grâce aux signaux par mots-clés (porn, casino…) ;
+- bloque la **liste de domaines** de la politique (et leurs sous-domaines) ;
+- bloque tout domaine **non catégorisé** si `blockUnknown` est activé ;
+- force la **recherche sécurisée** (Google/YouTube/Bing/DuckDuckGo) via CNAME si
+  `safeSearch` est activé ;
+- **transfère** les requêtes autorisées à un resolveur upstream (1.1.1.1).
+
+Les domaines bloqués remontent au tableau de bord (`webVisits`). Si le port 53 est
+indisponible ou hors admin, l'agent **retombe** sur le filtrage par `hosts`.
+À l'arrêt (ou par le gardien après un crash), le DNS système est **restauré**.
+
 ## Notes
 
-- Le filtrage web par `hosts` couvre les domaines de la liste de blocage de la
-  politique. Pour un filtrage par catégorie au niveau DNS, un proxy/DNS dédié peut
-  être ajouté ultérieurement.
 - L'agent applique la politique en temps réel (échantillon 5 s) et synchronise la
   télémétrie toutes les 30 s par défaut.

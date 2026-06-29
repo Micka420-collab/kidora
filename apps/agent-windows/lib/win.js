@@ -207,4 +207,20 @@ export function updateHostsFile(domains) {
   }
 }
 
+/** Point every active physical adapter at the local DNS proxy. Needs admin. */
+export async function setSystemDns(server = "127.0.0.1") {
+  await runPS(
+    `Get-NetAdapter -Physical | Where-Object { $_.Status -eq 'Up' } | Set-DnsClientServerAddress -ServerAddresses '${server}'`,
+  );
+  await runPS("ipconfig /flushdns");
+}
+
+/** Revert adapters to their automatic (DHCP) DNS. Needs admin. */
+export async function restoreSystemDns() {
+  await runPS(
+    "Get-NetAdapter -Physical | Where-Object { $_.Status -eq 'Up' } | Set-DnsClientServerAddress -ResetServerAddresses",
+  );
+  await runPS("ipconfig /flushdns");
+}
+
 export { HOSTS };
