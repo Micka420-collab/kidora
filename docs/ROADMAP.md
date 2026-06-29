@@ -32,7 +32,7 @@
 ## 📦 Distribution
 - [x] Installeur **Linux/Ubuntu** en une commande (`install.sh`)
 - [x] **Release GitHub v1.0.0** (archives source téléchargeables) + section Téléchargement & Configuration requise dans le README
-- [ ] Publier les **APK Android** (Kidora Parents / Kidora Kids) dans les Releases via build EAS
+- [~] Publier les **APK Android** (Kidora Parents / Kidora Kids) dans les Releases via build EAS — *pipeline prêt* : icônes par rôle générées, profils `parent-apk`/`child-apk` (eas.json), scripts `npm run build:apks` / `release:apks`, workflow `release-apk.yml` (tag `mobile-v*`) ; reste à fournir le **compte Expo/EAS** (`eas init` + secrets `EXPO_TOKEN`/`EAS_PROJECT_ID_*`) pour lancer le build cloud
 - [ ] Agent **Linux** (surveillance natif) — équivalent de l'agent Windows
 
 ## 🔜 Prochaines étapes

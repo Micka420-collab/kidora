@@ -44,3 +44,7 @@ presentation/
 
 # Claude Code harness artifacts
 .claude/scheduled_tasks.lock
+
+# Expo (mobile)
+.expo/
+apps/mobile/.expo/

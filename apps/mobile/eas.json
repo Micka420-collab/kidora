@@ -13,11 +13,27 @@
       "env": { "APP_ROLE": "parent" },
       "android": { "buildType": "apk" }
     },
+
+    "child-apk": {
+      "autoIncrement": true,
+      "distribution": "internal",
+      "env": { "APP_ROLE": "child" },
+      "android": { "buildType": "apk" }
+    },
+    "parent-apk": {
+      "autoIncrement": true,
+      "distribution": "internal",
+      "env": { "APP_ROLE": "parent" },
+      "android": { "buildType": "apk" }
+    },
+
     "child-production": {
+      "autoIncrement": true,
       "env": { "APP_ROLE": "child" },
       "android": { "buildType": "app-bundle" }
     },
     "parent-production": {
+      "autoIncrement": true,
       "env": { "APP_ROLE": "parent" },
       "android": { "buildType": "app-bundle" }
     }
