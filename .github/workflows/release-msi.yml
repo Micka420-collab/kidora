@@ -65,8 +65,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = '${{ steps.ver.outputs.tag }}'
+          $notes = 'Installeur MSI de l''agent Windows Kidora. Installation silencieuse (admin) : msiexec /i kidora-agent.msi /qn TOKEN=jeton SERVER=url CHILDUSER=compte-enfant. Node.js requis sur le poste. Voir apps/agent-windows/README.md.'
           gh release view $tag *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $tag --title "Kidora Agent $tag" --notes "Installeur MSI de l'agent Windows. Installation silencieuse : msiexec /i kidora-agent.msi /qn TOKEN=<jeton> SERVER=<url> CHILDUSER=\"PC\Enfant\". Node.js requis sur le poste."
+            gh release create $tag --title "Kidora Agent $tag" --notes $notes
           }
           gh release upload $tag kidora-agent.msi --clobber
