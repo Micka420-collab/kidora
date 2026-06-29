@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow } from "lucide-react";
 
 type Alert = {
@@ -27,6 +28,7 @@ const ICONS: Record<string, typeof ShieldAlert> = {
 
 export default function AlertsPage() {
   const router = useRouter();
+  const { t } = useT();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,10 +54,10 @@ export default function AlertsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Alertes</h1>
-          <p className="text-sm text-muted">Événements importants détectés sur les appareils de vos enfants.</p>
+          <h1 className="text-2xl font-bold">{t.alerts.title}</h1>
+          <p className="text-sm text-muted">{t.alerts.subtitle}</p>
         </div>
-        <button className="btn btn-outline" onClick={markAll}><CheckCheck size={16} /> Tout marquer comme lu</button>
+        <button className="btn btn-outline" onClick={markAll}><CheckCheck size={16} /> {t.alerts.markAllRead}</button>
       </div>
 
       {loading ? (
@@ -63,7 +65,7 @@ export default function AlertsPage() {
       ) : alerts.length === 0 ? (
         <div className="card grid place-items-center gap-2 py-16 text-center text-muted">
           <ShieldAlert size={28} />
-          <p>Aucune alerte. Tout va bien ! ✅</p>
+          <p>{t.alerts.empty}</p>
         </div>
       ) : (
         <div className="card divide-y">
@@ -79,7 +81,7 @@ export default function AlertsPage() {
                 </div>
                 {!a.read && (
                   <button className="text-xs font-semibold text-brand-600 hover:underline" onClick={() => markOne(a.id)}>
-                    Marquer lu
+                    {t.alerts.markRead}
                   </button>
                 )}
               </div>

@@ -35,6 +35,13 @@ const fr = {
     seeAll: "Tout voir",
     allGood: "Aucune alerte. Tout va bien ! ✅",
   },
+  alerts: {
+    title: "Alertes",
+    subtitle: "Événements importants détectés sur les appareils de vos enfants.",
+    markAllRead: "Tout marquer comme lu",
+    markRead: "Marquer lu",
+    empty: "Aucune alerte. Tout va bien ! ✅",
+  },
 };
 
 const en: typeof fr = {
@@ -66,6 +73,13 @@ const en: typeof fr = {
     recentAlerts: "Recent alerts",
     seeAll: "See all",
     allGood: "No alerts. All good! ✅",
+  },
+  alerts: {
+    title: "Alerts",
+    subtitle: "Important events detected on your children's devices.",
+    markAllRead: "Mark all as read",
+    markRead: "Mark read",
+    empty: "No alerts. All good! ✅",
   },
 };
 
