@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
+import { sendPushToParent } from "@/lib/push";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -265,8 +266,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 7. persist alerts
-  if (alerts.length) await prisma.alert.createMany({ data: alerts });
+  // 7. persist alerts + push critical ones to the parent's devices
+  if (alerts.length) {
+    await prisma.alert.createMany({ data: alerts });
+    const critical = alerts.filter((a) => a.severity === "critical");
+    if (critical.length) {
+      sendPushToParent(parentId, {
+        title: `Kidora — alerte (${device.child.name})`,
+        body: critical[0].message,
+        url: `/dashboard/children/${childId}`,
+      }).catch(() => {});
+    }
+  }
 
   // 8. pending commands → deliver
   const pending = await prisma.command.findMany({

@@ -34,3 +34,7 @@ Thumbs.db
 # agent runtime config (contains enroll token)
 config.json
 apps/agent-windows/config.json
+
+# Web Push VAPID keys (dev)
+.vapid.json
+apps/server/.vapid.json

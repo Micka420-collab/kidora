@@ -27,6 +27,21 @@ model Parent {
   alerts        Alert[]
   auditLogs     AuditLog[]
   guardianships Guardianship[]
+  pushSubs      PushSub[]
+}
+
+// Web Push subscription (browser push notifications).
+model PushSub {
+  id        String   @id @default(cuid())
+  parentId  String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  parent Parent @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@index([parentId])
 }
 
 // Additional (co-)guardian access to a child, beyond the owner (Child.parentId).

@@ -4,6 +4,7 @@ import { relativeTime } from "@/lib/format";
 import { User, Shield, Smartphone, ScrollText } from "lucide-react";
 import { GuardiansCard } from "@/components/guardians-card";
 import { AccountDataCard } from "@/components/account-data-card";
+import { PushToggle } from "@/components/push-toggle";
 
 const ACTION_LABELS: Record<string, string> = {
   login: "Connexion",
@@ -59,6 +60,8 @@ export default async function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <PushToggle />
 
       <GuardiansCard />
 
