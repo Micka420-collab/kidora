@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import QRCode from "qrcode";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera, Pencil, Trash2, X } from "lucide-react";
@@ -33,6 +34,17 @@ export default function DevicesTab() {
   const [shots, setShots] = useState<{ id: string; dataUrl: string; createdAt: string }[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!justAdded || (justAdded.platform !== "android" && justAdded.platform !== "ios")) {
+      setQrUrl(null);
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const payload = `kidorachild://enroll?token=${encodeURIComponent(justAdded.enrollToken)}&server=${encodeURIComponent(origin)}`;
+    QRCode.toDataURL(payload, { width: 200, margin: 1 }).then(setQrUrl).catch(() => setQrUrl(null));
+  }, [justAdded]);
 
   async function loadShots() {
     const res = await api.get<{ screenshots: { id: string; dataUrl: string; createdAt: string }[] }>(`/api/children/${childId}/screenshots`);
@@ -118,10 +130,23 @@ export default function DevicesTab() {
       {justAdded && (
         <div className="card border-brand-200 bg-brand-50 p-5">
           <h3 className="font-semibold">🔗 Connectez « {justAdded.name} »</h3>
-          <p className="mt-1 text-sm text-muted">
-            Installez l'agent Kidora sur l'appareil et saisissez ce jeton d'enrôlement :
+
+          {qrUrl && (
+            <div className="mt-3 flex items-center gap-4 rounded-lg border bg-white p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qrUrl} alt="QR d'appairage" className="h-40 w-40" />
+              <div className="text-sm text-muted">
+                <p className="font-medium text-ink">📱 Appairage rapide</p>
+                <p className="mt-1">Ouvrez <b>Kidora Kids</b> sur l'appareil de l'enfant et <b>scannez ce QR code</b> pour le connecter automatiquement.</p>
+                <p className="mt-1 text-xs">Ou saisissez le jeton ci-dessous manuellement.</p>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-3 text-sm text-muted">
+            Sinon, saisissez ce jeton d'enrôlement dans l'app Kidora :
           </p>
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <code className="flex-1 overflow-x-auto rounded-lg border bg-white px-3 py-2 text-sm">{justAdded.enrollToken}</code>
             <button className="btn btn-outline" onClick={() => copyToken(justAdded.enrollToken)}>
               {copied ? <Check size={16} /> : <Copy size={16} />}

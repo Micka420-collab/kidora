@@ -14,7 +14,7 @@
 ## ⭐ Priorités demandées (2026-06-29)
 - [x] **Bouton SOS / Panique** (enfant) → alerte critique + localisation + push aux parents (serveur testé ; bouton mobile accessible câblé)
 - [x] **Activité en direct** : carte temps réel (app au premier plan, position, batterie, online) sur la vue enfant (polling 15s)
-- [ ] **Appairage par QR code** + onboarding guidé
+- [x] **Appairage par QR code** : QR généré localement à l'ajout d'un appareil (deep link `kidorachild://enroll`), l'app Kids l'enrôle automatiquement ; *onboarding guidé à étoffer*
 - [~] **Refonte UX app Android** — **deux apps séparées** (Kidora Parents / Kidora Kids via `APP_ROLE`, packages distincts), mode sombre, minSdk 23, labels d'accessibilité, cibles ≥48dp ; *à compiler via EAS*
 
 ## 🔜 Prochaines étapes
