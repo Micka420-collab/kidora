@@ -24,12 +24,67 @@ npm run start:child      # app Kids    (APP_ROLE=child)
 ## Builds (deux APK distincts)
 
 ```bash
-npm run build:parent     # eas build -p android --profile parent
-npm run build:child      # eas build -p android --profile child
+npm run build:parent     # dev-client APK (profil parent)
+npm run build:child      # dev-client APK (profil child)
 ```
 
 > Pour tester depuis un téléphone réel, indiquez l'URL du serveur accessible sur le
 > réseau (ex : `http://192.168.1.20:3000`) dans l'écran de connexion.
+
+## Publier les APK (Releases GitHub)
+
+Les builds tournent sur le **cloud EAS** (gratuit avec un compte Expo). On distribue
+des **APK** installables (sideload), pas des AAB Play Store.
+
+### Configuration unique
+
+```bash
+npm i -g eas-cli          # ou via npx (utilisé par les scripts)
+eas login                 # compte Expo  → https://expo.dev
+APP_ROLE=parent eas init  # crée le projet EAS « kidora-parent » → note le projectId
+APP_ROLE=child  eas init  # crée le projet EAS « kidora-child »  → note le projectId
+```
+
+`eas init` lie chaque rôle à un **projet EAS distinct**. Renseignez les deux ids via
+`EAS_PROJECT_ID_PARENT` / `EAS_PROJECT_ID_CHILD` (env locale ou secrets CI) — voir
+`app.config.ts`.
+
+### Build des APK de production
+
+```bash
+npm run build:parent:apk  # profil parent-apk (eas.json)
+npm run build:child:apk   # profil child-apk
+npm run build:apks        # les deux à la suite
+```
+
+### Publication en un coup (local)
+
+Build des deux APK **et** attachement à une Release GitHub (nécessite `gh auth login`) :
+
+```bash
+npm run release:apks -- mobile-v1.0.0
+```
+
+### Publication via CI
+
+Le workflow [`.github/workflows/release-apk.yml`](../../.github/workflows/release-apk.yml)
+fait la même chose automatiquement. Ajoutez les secrets du dépôt
+(`Settings → Secrets and variables → Actions`) :
+
+| Secret | Valeur |
+|---|---|
+| `EXPO_TOKEN` | Token d'accès Expo (expo.dev → Account → Access tokens) |
+| `EAS_PROJECT_ID_PARENT` | projectId de `eas init` (Parents) |
+| `EAS_PROJECT_ID_CHILD` | projectId de `eas init` (Kids) |
+
+Puis poussez un tag : `git tag mobile-v1.0.0 && git push origin mobile-v1.0.0`
+(ou lancez le workflow manuellement depuis l'onglet **Actions**). Les deux APK
+(`kidora-parents.apk`, `kidora-kids.apk`) apparaissent dans la Release.
+
+### Installer un APK (sideload)
+
+Sur le téléphone : autoriser « Installer des applications inconnues » pour le
+navigateur/gestionnaire de fichiers, télécharger l'APK depuis la Release, puis l'ouvrir.
 
 ## Ce qui fonctionne tel quel (Expo Go)
 

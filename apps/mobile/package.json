@@ -8,7 +8,11 @@
     "start:parent": "cross-env APP_ROLE=parent expo start",
     "android": "expo start --android",
     "build:child": "eas build -p android --profile child",
-    "build:parent": "eas build -p android --profile parent"
+    "build:parent": "eas build -p android --profile parent",
+    "build:child:apk": "eas build -p android --profile child-apk --non-interactive",
+    "build:parent:apk": "eas build -p android --profile parent-apk --non-interactive",
+    "build:apks": "npm run build:parent:apk && npm run build:child:apk",
+    "release:apks": "node scripts/release-apks.mjs"
   },
   "dependencies": {
     "expo": "^52.0.0",

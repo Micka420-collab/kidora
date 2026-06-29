@@ -1,0 +1,100 @@
+name: Release Android APKs
+
+# Builds the two Kidora apps (Parents + Kids) as installable APKs via EAS and
+# attaches them to a GitHub Release. Distribution is sideload (APK), not Play Store.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   EXPO_TOKEN              — Expo access token (expo.dev → Account → Access tokens)
+#   EAS_PROJECT_ID_PARENT   — projectId from `eas init` for the Parents app
+#   EAS_PROJECT_ID_CHILD    — projectId from `eas init` for the Kids app
+#
+# Trigger: push a tag like `mobile-v1.0.0`, or run manually from the Actions tab.
+
+on:
+  push:
+    tags: ["mobile-v*"]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to attach the APKs to (e.g. mobile-v1.0.0)"
+        required: true
+        default: "mobile-v1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-apks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_PROJECT_ID_PARENT: ${{ secrets.EAS_PROJECT_ID_PARENT }}
+      EAS_PROJECT_ID_CHILD: ${{ secrets.EAS_PROJECT_ID_CHILD }}
+    steps:
+      - name: Preflight — required secrets
+        run: |
+          missing=0
+          for v in EXPO_TOKEN EAS_PROJECT_ID_PARENT EAS_PROJECT_ID_CHILD; do
+            if [ -z "${!v}" ]; then echo "::error::Missing secret $v"; missing=1; fi
+          done
+          [ "$missing" = "0" ] || { echo "See .github/workflows/release-apk.yml header for setup."; exit 1; }
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install --no-audit --no-fund
+
+      - name: Build both APKs (EAS, cloud)
+        run: |
+          set -euo pipefail
+          build_apk () {
+            local profile="$1" out="$2"
+            echo "::group::EAS build $profile"
+            json="$(npx --yes eas-cli@latest build \
+              --platform android --profile "$profile" \
+              --non-interactive --wait --json)"
+            echo "$json" > "/tmp/$profile.json"
+            url="$(node -e "const b=require('/tmp/$profile.json');const a=Array.isArray(b)?b[0]:b;process.stdout.write((a.artifacts&&(a.artifacts.applicationArchiveUrl||a.artifacts.buildUrl))||'')")"
+            [ -n "$url" ] || { echo "::error::No artifact URL for $profile"; cat "/tmp/$profile.json"; exit 1; }
+            echo "Downloading $profile APK from $url"
+            curl -fsSL "$url" -o "$GITHUB_WORKSPACE/$out"
+            echo "::endgroup::"
+          }
+          build_apk parent-apk kidora-parents.apk
+          build_apk child-apk  kidora-kids.apk
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.inputs.release_tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish APKs to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.tag.outputs.tag }}"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Kidora Mobile $TAG" \
+              --notes "Installable Android APKs — Kidora Parents & Kidora Kids. Sideload: enable 'Install unknown apps', then open the .apk." \
+              --target "${GITHUB_SHA}"
+          fi
+          gh release upload "$TAG" \
+            kidora-parents.apk kidora-kids.apk \
+            --clobber
+          echo "Attached APKs to release $TAG"

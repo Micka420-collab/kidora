@@ -7,6 +7,12 @@ import type { ExpoConfig } from "expo/config";
 const ROLE = (process.env.APP_ROLE === "child" ? "child" : "parent") as "parent" | "child";
 const isChild = ROLE === "child";
 
+// Per-role brand assets so the two installed apps are visually distinct.
+const ICON = isChild ? "./assets/icon-child.png" : "./assets/icon-parent.png";
+const ADAPTIVE = isChild ? "./assets/adaptive-child.png" : "./assets/adaptive-parent.png";
+const SPLASH_BG = isChild ? "#ede9fe" : "#eef2ff"; // violet-100 / indigo-50 tints
+const easProjectId = isChild ? process.env.EAS_PROJECT_ID_CHILD : process.env.EAS_PROJECT_ID_PARENT;
+
 const config: ExpoConfig = {
   name: isChild ? "Kidora Kids" : "Kidora Parents",
   slug: isChild ? "kidora-child" : "kidora-parent",
@@ -15,8 +21,9 @@ const config: ExpoConfig = {
   orientation: "portrait",
   userInterfaceStyle: "automatic", // supports dark mode
   newArchEnabled: true,
-  icon: "./assets/icon.png",
-  splash: { backgroundColor: "#4f46e5" },
+  icon: ICON,
+  splash: { image: "./assets/splash-icon.png", resizeMode: "contain", backgroundColor: SPLASH_BG },
+  web: { favicon: "./assets/favicon.png" },
   ios: {
     supportsTablet: true,
     bundleIdentifier: isChild ? "app.kidora.child" : "app.kidora.parent",
@@ -30,6 +37,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: isChild ? "app.kidora.child" : "app.kidora.parent",
+    adaptiveIcon: { foregroundImage: ADAPTIVE, backgroundColor: SPLASH_BG },
     permissions: isChild
       ? [
           "ACCESS_FINE_LOCATION",
@@ -54,6 +62,9 @@ const config: ExpoConfig = {
   extra: {
     role: ROLE,
     defaultServer: process.env.KIDORA_SERVER || "http://localhost:3000",
+    // Each variant is its own EAS project (distinct slug). `eas init` links one
+    // per role; supply the ids via env so CI can build non-interactively.
+    eas: easProjectId ? { projectId: easProjectId } : undefined,
   },
 };
 
