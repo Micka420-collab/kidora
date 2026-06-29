@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Keep Prisma engine + native SQLite driver out of the bundle.
+  // Keep Prisma engine + DB drivers (SQLite dev / Postgres prod) out of the bundle
+  // so the right native driver is required lazily at runtime (see src/lib/prisma.ts).
   serverExternalPackages: [
     "@prisma/client",
     "@prisma/adapter-better-sqlite3",
     "better-sqlite3",
+    "@prisma/adapter-pg",
+    "pg",
     "web-push",
   ],
   async headers() {

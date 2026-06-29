@@ -15,46 +15,57 @@ npm run dev   # http://localhost:3000
 Le serveur Next.js est prêt pour Vercel. SQLite ne persiste pas en serverless :
 passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 
-### 1. Basculer Prisma sur Postgres
+> **Aucun changement de code.** Le choix de la base est **automatique** d'après
+> `DATABASE_URL` :
+> - `file:…` → SQLite (driver `better-sqlite3`) — défaut dev.
+> - `postgres://` / `postgresql://` → PostgreSQL (driver `pg`).
+>
+> `src/lib/prisma.ts` sélectionne l'adaptateur au runtime, et le script
+> `scripts/select-db-provider.mjs` (lancé par `postinstall` / `prebuild`) aligne
+> le `provider` du schéma Prisma sur la cible **avant** `prisma generate` (le
+> dialecte SQL est figé à la génération et `provider` ne peut pas être un `env()`).
 
-Dans `apps/server/prisma/schema.prisma` :
-
-```prisma
-datasource db {
-  provider = "postgresql"
-}
-```
-
-Et utilisez l'adaptateur Postgres dans `src/lib/prisma.ts` :
-
-```ts
-import { PrismaPg } from "@prisma/adapter-pg";
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-```
-
-(`npm i @prisma/adapter-pg`)
-
-### 2. Provisionner la base
+### 1. Provisionner la base
 
 - Vercel → *Storage* → **Neon Postgres** (ou `npx create-db`).
-- Récupérez `DATABASE_URL`.
+- Récupérez `DATABASE_URL` (ajoutez `?sslmode=require` si nécessaire).
 
-### 3. Variables d'environnement (Vercel → Settings → Environment Variables)
+### 2. Variables d'environnement (Vercel → Settings → Environment Variables)
 
-| Clé | Valeur |
-|---|---|
-| `DATABASE_URL` | chaîne Postgres |
-| `AUTH_SECRET` | secret aléatoire (48+ octets) |
+| Clé | Valeur | Portée |
+|---|---|---|
+| `DATABASE_URL` | chaîne Postgres | **Build + Runtime** |
+| `AUTH_SECRET` | secret aléatoire (48+ octets) | Runtime |
+| `DATABASE_PROVIDER` | *(optionnel)* `postgresql` pour forcer le dialecte au build si `DATABASE_URL` n'est pas dispo au build | Build |
 
-### 4. Migrer & déployer
+> `DATABASE_URL` doit être présente **au build** : `prebuild` génère le client
+> Prisma pour le bon dialecte. Sur Vercel les variables d'env sont dispo au build
+> par défaut. Sinon, posez `DATABASE_PROVIDER=postgresql` (override explicite).
+
+### 3. Provisionner le schéma sur Postgres
+
+Les migrations du dépôt sont en dialecte **SQLite** ; pour Postgres on synchronise
+le schéma via `db push` (pas d'historique de migration) :
 
 ```bash
 cd apps/server
-npx prisma migrate deploy     # applique les migrations sur Postgres
+DATABASE_URL="postgresql://…" npm run db:push    # crée les tables sur Postgres
+DATABASE_URL="postgresql://…" npm run seed        # (optionnel) compte démo
+```
+
+> `db:push` = `select-db-provider` (→ postgresql) + `prisma db push`. Pour un
+> historique de migrations Postgres dédié, générer un baseline avec
+> `prisma migrate diff` contre la base cible (amélioration future).
+
+### 4. Déployer
+
+```bash
+cd apps/server
 vercel deploy --prod
 ```
 
-> `vercel` CLI : `npm i -g vercel`. Build : `next build` (Turbopack, déjà vérifié OK).
+> `vercel` CLI : `npm i -g vercel`. Build : `next build` (Turbopack, vérifié OK).
+> Le `prebuild` régénère le client Prisma pour Postgres à partir de `DATABASE_URL`.
 
 ## Agent Windows en production
 
