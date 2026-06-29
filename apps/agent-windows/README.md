@@ -14,10 +14,25 @@ limites de temps d'écran, heure du coucher), et synchronise avec le serveur Kid
 | Blocage d'application | `Stop-Process` |
 | Limite de temps par app | Compteur quotidien + `Stop-Process` |
 | Filtrage web | Réécriture du fichier `hosts` (→ 127.0.0.1) — **nécessite admin** |
-| Limite de temps d'écran / coucher / pause | Verrouillage du poste (`LockWorkStation`) |
+| Limite de temps d'écran / coucher / pause | **Écran de blocage en superposition** (`overlay.ps1`) — se retire seul quand la condition se lève |
 | Commandes à distance | `lock`, `message`, `pause`, … (pull au sync) |
 | Télémétrie | Usage, événements, batterie → serveur |
 | **Auto-protection (anti-arrêt)** | Gardien **SYSTEM** + redémarrage auto + ACL + heartbeat |
+
+### Écran de blocage (au lieu du verrouillage complet)
+
+Quand une condition globale s'applique (pause parentale, heure du coucher, limite
+de temps d'écran atteinte), l'agent affiche un **overlay plein écran** branché
+Kidora (`overlay.ps1`) au lieu de verrouiller la session Windows :
+
+- couvre tous les écrans, topmost, sans bordure, avec un message clair + l'heure ;
+- **se retire automatiquement** dès que la condition se lève (pause levée, bonus
+  de temps accordé, fin du créneau coucher) — sans déconnecter l'enfant ;
+- piloté par un fichier d'état JSON ; teardown fiable même après un crash de
+  l'agent (balayage par ligne de commande).
+
+> Le verrouillage complet (`LockWorkStation`) reste utilisé pour la commande
+> distante explicite `lock` envoyée par le parent.
 
 ## Installation rapide
 

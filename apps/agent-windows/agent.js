@@ -6,7 +6,7 @@ import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
-import { startSensor, getBattery, isAdmin, updateHostsFile } from "./lib/win.js";
+import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay } from "./lib/win.js";
 import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
 
@@ -58,6 +58,9 @@ async function main() {
   let lastHostsKey = hostsKey(policy);
   const pendingCmdResults = [];
   let lastSample = null;
+
+  // Clear any block overlay left over by a previously-crashed agent instance.
+  hideOverlay();
 
   // 2. Sensor loop (frequent sampling + live enforcement)
   startSensor(SAMPLE_INTERVAL, async (sample) => {
@@ -117,6 +120,7 @@ async function main() {
   process.on("SIGINT", async () => {
     log.info("Arrêt…");
     clearInterval(heartbeatTimer);
+    hideOverlay();
     try {
       await api.sync({ online: false });
     } catch {}
