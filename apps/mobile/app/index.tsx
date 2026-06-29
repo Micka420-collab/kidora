@@ -1,18 +1,24 @@
 import { useEffect } from "react";
 import { View, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 import * as storage from "@/storage";
 
-// Decide where to send the user based on previously stored role.
+const ROLE = (Constants.expoConfig?.extra?.role as "parent" | "child") ?? "parent";
+
+// Role is fixed per app (two separate Android apps):
+//  - Kidora Kids   → child enrollment / child-mode
+//  - Kidora Parents → parent login / dashboard
 export default function Index() {
   useEffect(() => {
     (async () => {
-      const role = await storage.get("role");
-      const parentToken = await storage.get("parentToken");
-      const enrollToken = await storage.get("enrollToken");
-      if (role === "parent" && parentToken) router.replace("/parent");
-      else if (role === "child" && enrollToken) router.replace("/child-mode");
-      else router.replace("/login");
+      if (ROLE === "child") {
+        const enrollToken = await storage.get("enrollToken");
+        router.replace(enrollToken ? "/child-mode" : "/login");
+      } else {
+        const parentToken = await storage.get("parentToken");
+        router.replace(parentToken ? "/parent" : "/login");
+      }
     })();
   }, []);
 

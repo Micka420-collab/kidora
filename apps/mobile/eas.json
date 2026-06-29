@@ -1,0 +1,29 @@
+{
+  "cli": { "version": ">= 12.0.0", "appVersionSource": "remote" },
+  "build": {
+    "child": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "APP_ROLE": "child" },
+      "android": { "buildType": "apk" }
+    },
+    "parent": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "APP_ROLE": "parent" },
+      "android": { "buildType": "apk" }
+    },
+    "child-production": {
+      "env": { "APP_ROLE": "child" },
+      "android": { "buildType": "app-bundle" }
+    },
+    "parent-production": {
+      "env": { "APP_ROLE": "parent" },
+      "android": { "buildType": "app-bundle" }
+    }
+  },
+  "submit": {
+    "child-production": {},
+    "parent-production": {}
+  }
+}

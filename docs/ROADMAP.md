@@ -15,7 +15,7 @@
 - [x] **Bouton SOS / Panique** (enfant) → alerte critique + localisation + push aux parents (serveur testé ; bouton mobile accessible câblé)
 - [x] **Activité en direct** : carte temps réel (app au premier plan, position, batterie, online) sur la vue enfant (polling 15s)
 - [ ] **Appairage par QR code** + onboarding guidé
-- [ ] **Refonte UX app Android** (voir directive ci-dessous)
+- [~] **Refonte UX app Android** — **deux apps séparées** (Kidora Parents / Kidora Kids via `APP_ROLE`, packages distincts), mode sombre, minSdk 23, labels d'accessibilité, cibles ≥48dp ; *à compiler via EAS*
 
 ## 🔜 Prochaines étapes
 

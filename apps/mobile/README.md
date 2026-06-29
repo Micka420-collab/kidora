@@ -1,20 +1,34 @@
 # Kidora Mobile (Expo / React Native)
 
-Application mobile Kidora — deux rôles dans une seule app :
+**Deux applications Android distinctes** depuis une seule base de code, sélectionnées
+par la variable `APP_ROLE` au build (deux packages, deux fiches Play Store) :
 
-- **Compagnon parent** : se connecter, voir ses enfants, leurs appareils et les alertes.
-- **Mode enfant** : l'appareil de l'enfant s'enrôle avec un jeton et remonte sa
-  **localisation** (et, selon la plateforme, l'usage des apps) au serveur Kidora.
+| App | `APP_ROLE` | Package | Rôle |
+|---|---|---|---|
+| **Kidora Parents** | `parent` | `app.kidora.parent` | Compagnon : se connecter, voir enfants/appareils/alertes |
+| **Kidora Kids** | `child` | `app.kidora.child` | Appareil enfant : enrôlement, localisation, usage, **SOS** |
 
-## Démarrage
+> **Qualité Android** : mode sombre (`userInterfaceStyle: automatic`), cibles tactiles ≥48dp,
+> `accessibilityLabel`, layouts responsives, et **`minSdk` 23** (via `expo-build-properties`)
+> pour couvrir la quasi-totalité des appareils Android actifs.
+
+## Démarrage (dev)
 
 ```bash
 cd apps/mobile
 npm install
-npx expo start        # puis 'a' (Android) ou 'i' (iOS), ou scannez le QR avec Expo Go
+npm run start:parent     # app Parents (APP_ROLE=parent)
+npm run start:child      # app Kids    (APP_ROLE=child)
 ```
 
-> Pour tester depuis un téléphone réel, mettez l'URL du serveur accessible sur le
+## Builds (deux APK distincts)
+
+```bash
+npm run build:parent     # eas build -p android --profile parent
+npm run build:child      # eas build -p android --profile child
+```
+
+> Pour tester depuis un téléphone réel, indiquez l'URL du serveur accessible sur le
 > réseau (ex : `http://192.168.1.20:3000`) dans l'écran de connexion.
 
 ## Ce qui fonctionne tel quel (Expo Go)
