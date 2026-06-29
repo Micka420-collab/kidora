@@ -5,7 +5,7 @@ import { verifyPassword } from "@/lib/password";
 import { verifyTotp } from "@/lib/totp";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
-import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { rateLimit, clientIp, loginLockStatus, recordLoginFailure, clearLoginFailures } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 
 const schema = z.object({
@@ -29,13 +29,30 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return apiError("Données invalides", 422);
 
   const { email, password } = parsed.data;
+  const lockKey = `${email.toLowerCase()}|${ip}`;
+
+  // Progressive lockout after repeated failures (brute-force protection).
+  const lock = loginLockStatus(lockKey);
+  if (lock.locked) {
+    return Response.json(
+      { error: `Trop de tentatives échouées. Compte temporairement verrouillé (${Math.ceil(lock.retryAfter / 60)} min).` },
+      { status: 429, headers: { "Retry-After": String(lock.retryAfter) } },
+    );
+  }
+
   const parent = await prisma.parent.findUnique({
     where: { email: email.toLowerCase() },
   });
-  if (!parent) return apiError("Email ou mot de passe incorrect", 401);
+  if (!parent) {
+    recordLoginFailure(lockKey);
+    return apiError("Email ou mot de passe incorrect", 401);
+  }
 
   const ok = await verifyPassword(password, parent.passwordHash);
-  if (!ok) return apiError("Email ou mot de passe incorrect", 401);
+  if (!ok) {
+    recordLoginFailure(lockKey);
+    return apiError("Email ou mot de passe incorrect", 401);
+  }
 
   // Second factor (TOTP) when enabled.
   if (parent.totpEnabled && parent.totpSecret) {
@@ -44,10 +61,12 @@ export async function POST(req: NextRequest) {
       return Response.json({ twoFactor: true, error: "Code de vérification requis." }, { status: 401 });
     }
     if (!verifyTotp(parent.totpSecret, code)) {
+      recordLoginFailure(lockKey);
       return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
     }
   }
 
+  clearLoginFailures(lockKey);
   const token = await signSession({ parentId: parent.id, email: parent.email });
   await setSessionCookie(token);
   await audit(parent.id, "login", undefined, ip);
