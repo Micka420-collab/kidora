@@ -36,6 +36,19 @@ export async function buildChildReport(childId: string, days: number): Promise<C
     prisma.alert.findMany({ where: { childId, ts: { gte: since } } }),
   ]);
 
+  return aggregateReport({ usage, visits, alerts, dates, days });
+}
+
+// Pure aggregation (no DB) — unit-testable in isolation.
+export type ReportInput = {
+  usage: { date: string; appId: string; appName: string; category: string | null; seconds: number }[];
+  visits: { domain: string; blocked: boolean }[];
+  alerts: { type: string }[];
+  dates: string[];
+  days: number;
+};
+
+export function aggregateReport({ usage, visits, alerts, dates, days }: ReportInput): ChildReport {
   const byDay = new Map<string, number>(dates.map((d) => [d, 0]));
   const byApp = new Map<string, { appName: string; category: string | null; seconds: number }>();
   const byCategory = new Map<string, number>();
