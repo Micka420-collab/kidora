@@ -43,4 +43,4 @@
 - [ ] Migration Postgres + déploiement Vercel de référence
 - [ ] i18n (FR/EN)
 - [x] Export des données (JSON) + suppression de compte (RGPD) avec confirmation
-- [ ] Chiffrement au repos des données sensibles
+- [x] Chiffrement au repos des données sensibles (captures d'écran, AES-256-GCM, rétrocompatible) — `DATA_ENC_KEY`

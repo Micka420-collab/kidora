@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
+import { encrypt } from "@/lib/crypto";
 
 const schema = z.object({
   commandId: z.string().optional(),
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return apiError("Image invalide", 422);
 
   const shot = await prisma.screenshot.create({
-    data: { childId: device.childId, deviceId: device.id, dataUrl: parsed.data.dataUrl },
+    data: { childId: device.childId, deviceId: device.id, dataUrl: encrypt(parsed.data.dataUrl) },
   });
 
   if (parsed.data.commandId) {
