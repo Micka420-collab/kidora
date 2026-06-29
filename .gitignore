@@ -41,3 +41,6 @@ apps/server/.vapid.json
 
 # Local-only presentation site (do NOT push)
 presentation/
+
+# Claude Code harness artifacts
+.claude/scheduled_tasks.lock
