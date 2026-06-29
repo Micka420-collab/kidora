@@ -56,7 +56,7 @@ const config: ExpoConfig = {
     // Low minSdk so the app runs on virtually any active Android device.
     ["expo-build-properties", { android: { minSdkVersion: 23, compileSdkVersion: 35, targetSdkVersion: 35 } }],
     ...(isChild
-      ? [["expo-location", { locationAlwaysAndWhenInUsePermission: "Kidora partage la position de l'enfant avec ses parents." }]]
+      ? [["expo-location", { locationAlwaysAndWhenInUsePermission: "Kidora partage la position de l'enfant avec ses parents." }] as [string, Record<string, unknown>]]
       : []),
   ],
   extra: {

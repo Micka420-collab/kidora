@@ -35,6 +35,7 @@ export const parent = {
       body: { email, password },
     });
     await storage.set("parentToken", res.token);
+    await storage.set("parentName", res.name);
     await storage.set("role", "parent");
     return res;
   },
@@ -48,8 +49,33 @@ export const parent = {
   async child(id: string) {
     return req<{ child: ChildDetail }>(`/api/children/${id}`, { headers: await this.authHeader() });
   },
+  async live(id: string) {
+    return req<Live>(`/api/children/${id}/live`, { headers: await this.authHeader() });
+  },
+  async report(id: string, days = 7) {
+    return req<Report>(`/api/children/${id}/report?days=${days}`, { headers: await this.authHeader() });
+  },
   async alerts() {
     return req<{ alerts: Alert[]; unread: number }>("/api/alerts", { headers: await this.authHeader() });
+  },
+  async markAlertsRead() {
+    return req<{ ok: true }>("/api/alerts", { method: "PATCH", body: { all: true }, headers: await this.authHeader() });
+  },
+  // ── Remote actions ──
+  async pause(id: string, paused: boolean) {
+    return req<{ paused: boolean }>(`/api/children/${id}/pause`, { method: "POST", body: { paused }, headers: await this.authHeader() });
+  },
+  async familyPause(paused: boolean) {
+    return req<{ paused: boolean; count: number }>("/api/family/pause", { method: "POST", body: { paused }, headers: await this.authHeader() });
+  },
+  async command(id: string, type: CommandType, payload?: Record<string, unknown>) {
+    return req<{ ok: true }>(`/api/children/${id}/commands`, { method: "POST", body: { type, payload }, headers: await this.authHeader() });
+  },
+  async grantTime(id: string, minutes: number) {
+    return req<{ ok: true; granted: number }>(`/api/children/${id}/time-requests`, { method: "POST", body: { minutes }, headers: await this.authHeader() });
+  },
+  async logout() {
+    await storage.clearAll();
   },
 };
 
@@ -77,8 +103,38 @@ export const childAgent = {
 };
 
 // ── Types ──
-export type Child = { id: string; name: string; avatar: string | null; devices: { online: boolean }[] };
-export type ChildDetail = Child & { paused: boolean; screenTime: unknown; webFilter: unknown };
-export type Alert = { id: string; message: string; ts: string; read: boolean; child: { name: string } };
+export type Device = { id: string; name: string; platform: string; online: boolean; battery: number | null; lastSeen: string | null };
+export type ScreenTimeCfg = { enabled: boolean; dailyLimits: Record<string, number> } | null;
+export type Child = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  paused?: boolean;
+  devices: Device[];
+  screenTime?: ScreenTimeCfg;
+  _count?: { alerts: number };
+};
+export type ChildDetail = Child & { webFilter: unknown };
+export type Live = {
+  online: boolean;
+  paused: boolean;
+  lastSeen: string | null;
+  battery: number | null;
+  deviceName: string | null;
+  currentApp: { title: string; device: string; ts: string } | null;
+  location: { lat: number; lng: number; address: string | null; ts: string } | null;
+};
+export type Report = {
+  days: number;
+  totalSeconds: number;
+  avgPerDaySeconds: number;
+  trend: { date: string; seconds: number }[];
+  topApps: { appName: string; category: string | null; seconds: number }[];
+  byCategory: { category: string; seconds: number }[];
+  web: { totalVisits: number; blockedVisits: number };
+  alerts: { total: number };
+};
+export type Alert = { id: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
+export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = { paused: boolean; blockedDomains: string[]; appRules: unknown[] };
 export type Command = { id: string; type: string; payload: Record<string, unknown> };

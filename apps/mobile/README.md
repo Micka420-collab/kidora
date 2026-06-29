@@ -141,12 +141,25 @@ ManagedSettings** (entitlement `com.apple.developer.family-controls` accordé pa
 
 ```
 app/
-  _layout.tsx     # navigation
-  index.tsx       # routage selon le rôle enregistré
-  login.tsx       # parent (email/mdp) ou enfant (jeton)
-  parent.tsx      # liste enfants + alertes
-  child-mode.tsx  # agent de localisation
+  _layout.tsx       # stack racine (thémé, SafeAreaProvider)
+  index.tsx         # routage + splash branché selon le rôle
+  login.tsx         # connexion (parent: email/mdp · enfant: jeton)
+  (parent)/         # app Parents — navigation par onglets
+    _layout.tsx     #   tab bar (Accueil · Alertes · Réglages)
+    index.tsx       #   Accueil : hero, cartes enfants live, alertes
+    alerts.tsx      #   flux d'alertes (typées, marquer lu)
+    settings.tsx    #   compte, serveur, déconnexion
+  child/[id].tsx    # détail enfant : live, stats, tendance, top apps,
+                    #   localisation, actions (pause/verrou/message/+15 min)
+  child-mode.tsx    # app Kids — agent de localisation
 src/
-  api.ts          # client serveur (parent + agent enfant)
-  storage.ts      # stockage sécurisé (expo-secure-store)
+  api.ts            # client serveur (parent + agent enfant)
+  theme.ts          # design system (clair/sombre, helpers)
+  ui.tsx            # kit de composants (Card, Avatar, Btn, Stat…)
+  storage.ts        # stockage sécurisé (expo-secure-store)
 ```
+
+Design : système clair/sombre (`src/theme.ts`), composants réutilisables
+(`src/ui.tsx`), icônes `@expo/vector-icons`, dégradés `expo-linear-gradient`,
+animations natives (points de présence pulsants, fondus), accessibilité
+(`accessibilityLabel`, cibles ≥48dp, contraste AA).

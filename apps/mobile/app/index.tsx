@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
+import { Text, ActivityIndicator } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
@@ -36,14 +37,16 @@ export default function Index() {
         router.replace(enrollToken ? "/child-mode" : "/login");
       } else {
         const parentToken = await storage.get("parentToken");
-        router.replace(parentToken ? "/parent" : "/login");
+        router.replace(parentToken ? "/(parent)" : "/login");
       }
     })();
   }, []);
 
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#4f46e5" }}>
-      <ActivityIndicator color="#fff" size="large" />
-    </View>
+    <LinearGradient colors={["#818cf8", "#6366f1", "#4338ca"]} style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 18 }}>
+      <Text style={{ fontSize: 64 }}>🛡️</Text>
+      <Text style={{ color: "#fff", fontSize: 30, fontWeight: "800", letterSpacing: 0.5 }}>Kidora</Text>
+      <ActivityIndicator color="#ffffffcc" />
+    </LinearGradient>
   );
 }
