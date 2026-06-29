@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, MapPin, Crosshair, Home, Navigation } from "lucide-react";
+import { Loader2, MapPin, Crosshair, Home, Navigation, Plus, Trash2 } from "lucide-react";
 
 type Ping = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
 type Fence = { id: string; name: string; lat: number; lng: number; radius: number };
@@ -13,6 +13,8 @@ export default function LocationTab() {
   const { childId } = useParams<{ childId: string }>();
   const [data, setData] = useState<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ name: "", lat: "", lng: "", radius: "150" });
 
   async function load() {
     const res = await api.get<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] }>(`/api/children/${childId}/location`);
@@ -24,6 +26,34 @@ export default function LocationTab() {
     setLocating(true);
     await api.post(`/api/children/${childId}/commands`, { type: "locate" });
     setTimeout(() => setLocating(false), 1500);
+  }
+
+  function openAdd() {
+    setForm({
+      name: "",
+      lat: data?.latest ? String(data.latest.lat.toFixed(5)) : "",
+      lng: data?.latest ? String(data.latest.lng.toFixed(5)) : "",
+      radius: "150",
+    });
+    setAdding(true);
+  }
+  async function addGeofence(e: React.FormEvent) {
+    e.preventDefault();
+    const lat = Number(form.lat);
+    const lng = Number(form.lng);
+    if (!form.name || Number.isNaN(lat) || Number.isNaN(lng)) return;
+    await api.post(`/api/children/${childId}/geofences`, {
+      name: form.name,
+      lat,
+      lng,
+      radius: Number(form.radius) || 150,
+    });
+    setAdding(false);
+    load();
+  }
+  async function removeGeofence(id: string) {
+    setData((d) => (d ? { ...d, geofences: d.geofences.filter((f) => f.id !== id) } : d));
+    await api.del(`/api/children/${childId}/geofences?id=${id}`);
   }
 
   if (!data) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
@@ -69,7 +99,27 @@ export default function LocationTab() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="card p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold"><Home size={18} /> Zones de sécurité</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-base font-semibold"><Home size={18} /> Zones de sécurité</h3>
+            <button className="btn btn-outline py-1.5 text-sm" onClick={openAdd}><Plus size={15} /> Ajouter</button>
+          </div>
+
+          {adding && (
+            <form onSubmit={addGeofence} className="mb-3 space-y-2 rounded-lg border p-3">
+              <input className="input" placeholder="Nom (ex : Maison)" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} autoFocus />
+              <div className="grid grid-cols-3 gap-2">
+                <input className="input" placeholder="Latitude" value={form.lat} onChange={(e) => setForm((s) => ({ ...s, lat: e.target.value }))} />
+                <input className="input" placeholder="Longitude" value={form.lng} onChange={(e) => setForm((s) => ({ ...s, lng: e.target.value }))} />
+                <input className="input" placeholder="Rayon (m)" value={form.radius} onChange={(e) => setForm((s) => ({ ...s, radius: e.target.value }))} />
+              </div>
+              <div className="flex gap-2">
+                <button className="btn btn-primary py-1.5 text-sm">Créer la zone</button>
+                <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setAdding(false)}>Annuler</button>
+              </div>
+              {data.latest && <p className="text-xs text-muted">Pré-rempli avec la dernière position connue.</p>}
+            </form>
+          )}
+
           {data.geofences.length === 0 ? (
             <p className="text-sm text-muted">Aucune zone définie.</p>
           ) : (
@@ -77,7 +127,10 @@ export default function LocationTab() {
               {data.geofences.map((f) => (
                 <li key={f.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm">
                   <span className="font-medium">📍 {f.name}</span>
-                  <span className="text-xs text-muted">rayon {f.radius} m</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted">rayon {f.radius} m</span>
+                    <button className="text-slate-400 hover:text-red-500" onClick={() => removeGeofence(f.id)}><Trash2 size={15} /></button>
+                  </div>
                 </li>
               ))}
             </ul>

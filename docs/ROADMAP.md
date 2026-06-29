@@ -16,7 +16,7 @@
 ### Serveur / dashboard
 - [ ] Rapports hebdomadaires par email (cron + résumé d'usage)
 - [ ] Demandes de temps supplémentaire (enfant → parent approuve depuis l'app)
-- [ ] Édition des géofences depuis le dashboard (carte cliquable, rayon)
+- [x] Édition des géofences depuis le dashboard (ajout/suppression, pré-rempli par la position) — *carte cliquable = polish futur*
 - [ ] Surveillance YouTube/recherches dédiée (mots-clés sensibles → alerte)
 - [ ] Multi-tuteurs (inviter un 2ᵉ parent), rôles
 - [ ] Notifications push (web push + Expo push) pour les alertes critiques
