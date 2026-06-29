@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { formatMinutes } from "@/lib/format";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, Plus, Trash2, Check, Ban, Hourglass } from "lucide-react";
 
 type Rule = {
@@ -18,6 +19,7 @@ type Rule = {
 
 export default function AppsTab() {
   const { childId } = useParams<{ childId: string }>();
+  const { t } = useT();
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -64,31 +66,29 @@ export default function AppsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">
-          Définissez ce que {rules.length ? "" : ""}votre enfant peut utiliser. Les nouvelles apps détectées apparaissent ici automatiquement.
-        </p>
+        <p className="text-sm text-muted">{t.apps.intro}</p>
         <button className="btn btn-outline" onClick={() => setAdding((v) => !v)}>
-          <Plus size={16} /> Ajouter
+          <Plus size={16} /> {t.apps.add}
         </button>
       </div>
 
       {adding && (
         <form onSubmit={add} className="card flex flex-wrap items-end gap-3 p-4">
           <div className="flex-1">
-            <label className="label">Nom de l'application</label>
+            <label className="label">{t.apps.appName}</label>
             <input className="input" placeholder="Ex : Fortnite" value={newApp.appName} onChange={(e) => setNewApp((s) => ({ ...s, appName: e.target.value }))} autoFocus />
           </div>
           <div className="flex-1">
-            <label className="label">Identifiant (exe / package) — optionnel</label>
+            <label className="label">{t.apps.appId}</label>
             <input className="input" placeholder="fortnite.exe" value={newApp.appId} onChange={(e) => setNewApp((s) => ({ ...s, appId: e.target.value }))} />
           </div>
-          <button className="btn btn-primary">Ajouter</button>
+          <button className="btn btn-primary">{t.apps.add}</button>
         </form>
       )}
 
       {rules.length === 0 ? (
         <div className="card p-10 text-center text-muted">
-          Aucune règle d'application pour l'instant.
+          {t.apps.empty}
         </div>
       ) : (
         <div className="card divide-y">
@@ -109,15 +109,15 @@ export default function AppsTab() {
                     onChange={(e) => setLimit(r, Number(e.target.value))}
                   >
                     {[15, 30, 45, 60, 90, 120, 180, 240].map((m) => (
-                      <option key={m} value={m}>{formatMinutes(m)}/jour</option>
+                      <option key={m} value={m}>{formatMinutes(m)}{t.apps.perDay}</option>
                     ))}
                   </select>
                 )}
 
                 <div className="flex overflow-hidden rounded-lg border">
-                  <Seg active={r.action === "allow"} color="emerald" onClick={() => setAction(r, "allow")}><Check size={14} /> Autoriser</Seg>
-                  <Seg active={r.action === "limit"} color="amber" onClick={() => setAction(r, "limit")}><Hourglass size={14} /> Limiter</Seg>
-                  <Seg active={r.action === "block"} color="red" onClick={() => setAction(r, "block")}><Ban size={14} /> Bloquer</Seg>
+                  <Seg active={r.action === "allow"} color="emerald" onClick={() => setAction(r, "allow")}><Check size={14} /> {t.apps.allow}</Seg>
+                  <Seg active={r.action === "limit"} color="amber" onClick={() => setAction(r, "limit")}><Hourglass size={14} /> {t.apps.limit}</Seg>
+                  <Seg active={r.action === "block"} color="red" onClick={() => setAction(r, "block")}><Ban size={14} /> {t.apps.block}</Seg>
                 </div>
 
                 <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r)}><Trash2 size={16} /></button>

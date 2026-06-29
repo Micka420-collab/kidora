@@ -67,6 +67,17 @@ const fr = {
     journal: "Journal du compte",
     about: "À propos de Kidora",
   },
+  apps: {
+    intro: "Définissez ce que votre enfant peut utiliser. Les nouvelles apps détectées apparaissent ici automatiquement.",
+    add: "Ajouter",
+    allow: "Autoriser",
+    limit: "Limiter",
+    block: "Bloquer",
+    empty: "Aucune règle d'application pour l'instant.",
+    appName: "Nom de l'application",
+    appId: "Identifiant (exe / package) — optionnel",
+    perDay: "/jour",
+  },
 };
 
 const en: typeof fr = {
@@ -130,6 +141,17 @@ const en: typeof fr = {
     devicesMonitored: "Monitored device(s)",
     journal: "Account log",
     about: "About Kidora",
+  },
+  apps: {
+    intro: "Set what your child can use. Newly detected apps appear here automatically.",
+    add: "Add",
+    allow: "Allow",
+    limit: "Limit",
+    block: "Block",
+    empty: "No app rules yet.",
+    appName: "App name",
+    appId: "Identifier (exe / package) — optional",
+    perDay: "/day",
   },
 };
 
