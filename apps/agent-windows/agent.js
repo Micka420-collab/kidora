@@ -97,7 +97,7 @@ async function main() {
 
       // execute commands
       for (const cmd of res.commands || []) {
-        await handleCommand(cmd, pendingCmdResults, enforcer);
+        await handleCommand(cmd, pendingCmdResults, enforcer, api);
       }
     } catch (e) {
       log.error("sync:", e.message);
@@ -128,9 +128,9 @@ function applyHosts(policy, admin) {
   else log.warn(`Filtrage web indisponible (${res.reason}).`);
 }
 
-async function handleCommand(cmd, results, enforcer) {
+async function handleCommand(cmd, results, enforcer, api) {
   log.info(`Commande reçue : ${cmd.type}`);
-  const { notify, lockWorkstation } = await import("./lib/win.js");
+  const { notify, lockWorkstation, captureScreen } = await import("./lib/win.js");
   try {
     switch (cmd.type) {
       case "lock":
@@ -146,6 +146,18 @@ async function handleCommand(cmd, results, enforcer) {
       case "unlock":
         results.push({ id: cmd.id, status: "done" });
         break;
+      case "screenshot": {
+        const b64 = await captureScreen();
+        if (!b64) {
+          results.push({ id: cmd.id, status: "failed", result: "capture impossible" });
+          break;
+        }
+        await api.uploadScreenshot(`data:image/jpeg;base64,${b64}`, cmd.id);
+        log.ok("Capture d'écran envoyée.");
+        // status is set to done server-side via commandId; ack too
+        results.push({ id: cmd.id, status: "done" });
+        break;
+      }
       case "locate":
         results.push({ id: cmd.id, status: "failed", result: "Localisation non disponible sur Windows." });
         break;

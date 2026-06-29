@@ -17,6 +17,19 @@ export class Api {
     return res.json();
   }
 
+  async uploadScreenshot(dataUrl, commandId) {
+    const res = await fetch(`${this.server}/api/agent/screenshot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.token}`,
+      },
+      body: JSON.stringify({ dataUrl, commandId }),
+    });
+    if (!res.ok) throw new Error(`screenshot failed: ${res.status}`);
+    return res.json();
+  }
+
   async sync(payload) {
     const res = await fetch(`${this.server}/api/agent/sync`, {
       method: "POST",

@@ -27,7 +27,7 @@
 ### Agent Windows
 - [ ] Filtrage web par catégorie au niveau DNS (proxy local) plutôt que hosts
 - [ ] Écran de blocage en superposition (au lieu du verrouillage complet)
-- [ ] Capture d'écran à la demande (commande `screenshot`)
+- [x] Capture d'écran à la demande (commande `screenshot`) — capture PowerShell, upload gardé par auth, galerie dans le dashboard
 - [ ] Auto-protection (empêcher l'arrêt du service par l'enfant)
 - [ ] Signature + installeur MSI
 

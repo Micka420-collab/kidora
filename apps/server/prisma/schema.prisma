@@ -53,6 +53,7 @@ model Child {
   timeRequests   TimeRequest[]
   timeGrants     TimeGrant[]
   watchedKeywords WatchedKeyword[]
+  screenshots    Screenshot[]
 
   @@index([parentId])
 }
@@ -277,6 +278,19 @@ model TimeRequest {
   child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, status])
+}
+
+// On-demand screen capture from a device (base64 JPEG data URL).
+model Screenshot {
+  id        String   @id @default(cuid())
+  childId   String
+  deviceId  String?
+  dataUrl   String // data:image/jpeg;base64,...
+  createdAt DateTime @default(now())
+
+  child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@index([childId, createdAt])
 }
 
 // Parent-defined keyword to watch for in searches & page titles.

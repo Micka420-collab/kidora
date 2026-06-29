@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send } from "lucide-react";
+import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera } from "lucide-react";
 
 type Device = {
   id: string;
@@ -30,8 +30,14 @@ export default function DevicesTab() {
   const [msgFor, setMsgFor] = useState<string | null>(null);
   const [msgText, setMsgText] = useState("");
   const [sentFor, setSentFor] = useState<string | null>(null);
+  const [shots, setShots] = useState<{ id: string; dataUrl: string; createdAt: string }[]>([]);
 
+  async function loadShots() {
+    const res = await api.get<{ screenshots: { id: string; dataUrl: string; createdAt: string }[] }>(`/api/children/${childId}/screenshots`);
+    setShots(res.screenshots);
+  }
   async function load() {
+    loadShots();
     const res = await api.get<{ devices: Device[] }>(`/api/children/${childId}/devices`);
     setDevices(res.devices);
     setLoading(false);
@@ -153,6 +159,11 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
                     <button className="btn btn-outline flex-1 py-1.5 text-sm" onClick={() => { setMsgFor(msgFor === d.id ? null : d.id); setMsgText(""); }}>
                       <MessageSquare size={15} /> Message
                     </button>
+                    {(d.platform === "windows" || d.platform === "macos") && (
+                      <button className="btn btn-outline py-1.5 text-sm" title="Capture d'écran" onClick={() => sendCommand(d.id, "screenshot")}>
+                        {sentFor === d.id + "screenshot" ? <Check size={15} /> : <Camera size={15} />}
+                      </button>
+                    )}
                   </div>
                   {msgFor === d.id && (
                     <div className="flex gap-2">
@@ -167,6 +178,21 @@ node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "und
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {shots.length > 0 && (
+        <div className="card p-5">
+          <h3 className="mb-3 flex items-center gap-2 text-base font-semibold"><Camera size={18} /> Captures d'écran récentes</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {shots.map((sc) => (
+              <a key={sc.id} href={sc.dataUrl} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-lg border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sc.dataUrl} alt="capture" className="h-28 w-full object-cover transition group-hover:opacity-90" />
+                <div className="px-2 py-1 text-[10px] text-muted">{relativeTime(sc.createdAt)}</div>
+              </a>
+            ))}
+          </div>
         </div>
       )}
     </div>
