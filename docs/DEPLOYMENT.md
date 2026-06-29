@@ -12,6 +12,19 @@ npm run dev   # http://localhost:3000
 
 ## Production sur Vercel + Postgres
 
+### Déploiement en un clic
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMicka420-collab%2Fkidora&root-directory=apps/server&env=DATABASE_URL,AUTH_SECRET,DATA_ENC_KEY&envDescription=URL%20Postgres%20(Neon)%2C%20secret%20JWT%20al%C3%A9atoire%2C%20cl%C3%A9%20de%20chiffrement&envLink=https%3A%2F%2Fgithub.com%2FMicka420-collab%2Fkidora%2Fblob%2Fmain%2Fdocs%2FDEPLOYMENT.md&project-name=kidora&repository-name=kidora)
+
+Le bouton clone le dépôt, fixe le **dossier racine** sur `apps/server`, demande les
+3 variables d'env, puis déploie. Le `buildCommand` (`npm run vercel-build`)
+**crée le schéma Postgres automatiquement** (`prisma db push`) au premier build —
+rien d'autre à faire que de provisionner une base et de la coller dans
+`DATABASE_URL`.
+
+> **Import manuel** (dépôt existant) : Vercel → *Add New… → Project* → importez
+> `kidora` → **Root Directory = `apps/server`** → ajoutez les variables d'env → Deploy.
+
 Le serveur Next.js est prêt pour Vercel. SQLite ne persiste pas en serverless :
 passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 
@@ -42,30 +55,33 @@ passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 > Prisma pour le bon dialecte. Sur Vercel les variables d'env sont dispo au build
 > par défaut. Sinon, posez `DATABASE_PROVIDER=postgresql` (override explicite).
 
-### 3. Provisionner le schéma sur Postgres
+### 3. Schéma Postgres — automatique
 
-Les migrations du dépôt sont en dialecte **SQLite** ; pour Postgres on synchronise
-le schéma via `db push` (pas d'historique de migration) :
+Le `buildCommand` de `vercel.json` est `npm run vercel-build`
+(= `db:push` + `next build`) : à **chaque build**, Prisma synchronise le schéma
+sur la base (`prisma db push`, idempotent) puis l'app est compilée. **Aucune
+étape manuelle** — il suffit que `DATABASE_URL` soit présente au build (cas par
+défaut sur Vercel).
+
+Compte démo (optionnel, une fois) :
 
 ```bash
-cd apps/server
-DATABASE_URL="postgresql://…" npm run db:push    # crée les tables sur Postgres
-DATABASE_URL="postgresql://…" npm run seed        # (optionnel) compte démo
+cd apps/server && DATABASE_URL="postgresql://…" npm run seed
 ```
 
-> `db:push` = `select-db-provider` (→ postgresql) + `prisma db push`. Pour un
-> historique de migrations Postgres dédié, générer un baseline avec
+> Les migrations du dépôt sont en dialecte SQLite ; en prod on utilise `db push`
+> (pas d'historique de migration). Pour un baseline de migrations Postgres dédié :
 > `prisma migrate diff` contre la base cible (amélioration future).
 
 ### 4. Déployer
 
+Via le **bouton** ci-dessus, l'**import** Vercel (Git intégré : chaque push
+redéploie), ou la CLI :
+
 ```bash
 cd apps/server
-vercel deploy --prod
+vercel deploy --prod          # npm i -g vercel ; root = apps/server
 ```
-
-> `vercel` CLI : `npm i -g vercel`. Build : `next build` (Turbopack, vérifié OK).
-> Le `prebuild` régénère le client Prisma pour Postgres à partir de `DATABASE_URL`.
 
 ## Rapports hebdomadaires par email
 

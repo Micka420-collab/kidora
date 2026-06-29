@@ -68,7 +68,7 @@
 ### Qualité / industrialisation
 - [x] Tests unitaires Vitest (catégorisation, mots-clés, fenêtres horaires coucher/routines, rate-limit) — 36 tests verts ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
-- [ ] Migration Postgres + déploiement Vercel de référence
+- [x] Migration Postgres + déploiement Vercel de référence — adapter auto Postgres (cf. plus haut) + déploiement **un clic** : `vercel.json` (`framework`, `buildCommand: vercel-build`, crons), script `vercel-build` (= `db:push` + `next build` → schéma Postgres **créé au build**, idempotent), **bouton « Deploy with Vercel »** (root `apps/server` pré-réglé, prompts d'env) dans le README + `DEPLOYMENT.md` (bouton, import manuel, étapes), seed démo documenté
 - [x] i18n (FR/EN) — navigation + tous les onglets (vue d'ensemble, apps, web, temps d'écran, activité, rapports, localisation, **appareils**) + paramètres + alertes + onboarding ; *quelques sous-cartes mineures restent en FR*
 - [x] Endpoint `/api/health` (liveness/readiness + compteurs)
 - [x] Export des données (JSON) + suppression de compte (RGPD) avec confirmation

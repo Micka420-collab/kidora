@@ -159,7 +159,13 @@ npm run build     # build de production (Turbopack)
 **Next.js 16** (App Router, Turbopack) · **React 19** · **Tailwind CSS v4** · **Prisma 7** (SQLite → PostgreSQL) · **jose** + **bcryptjs** · **web-push** · Agent : **Node.js + PowerShell** (zéro dépendance native) · Mobile : **Expo / React Native**.
 
 ## 📦 Déploiement
-Prêt pour **Vercel** (basculer Prisma sur PostgreSQL via Neon). Voir [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMicka420-collab%2Fkidora&root-directory=apps/server&env=DATABASE_URL,AUTH_SECRET,DATA_ENC_KEY&envDescription=URL%20Postgres%20(Neon)%2C%20secret%20JWT%20al%C3%A9atoire%2C%20cl%C3%A9%20de%20chiffrement&envLink=https%3A%2F%2Fgithub.com%2FMicka420-collab%2Fkidora%2Fblob%2Fmain%2Fdocs%2FDEPLOYMENT.md&project-name=kidora&repository-name=kidora)
+
+Déploiement **un clic** sur Vercel : le dossier racine `apps/server` est pré-réglé,
+le schéma Postgres (Neon) est créé automatiquement au build (`vercel-build` →
+`prisma db push`). Renseignez `DATABASE_URL` + `AUTH_SECRET` et c'est en ligne.
+Détails & import manuel : [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## 📚 Documentation
 - [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Déploiement](docs/DEPLOYMENT.md) · [Roadmap](docs/ROADMAP.md)
