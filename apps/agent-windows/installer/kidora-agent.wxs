@@ -26,21 +26,41 @@
     <Property Id="SERVER" Value="http://localhost:3000" Secure="yes" />
     <Property Id="CHILDUSER" Secure="yes" />
 
-    <!-- Install into Program Files\Kidora\Agent -->
+    <!-- Install into Program Files\Kidora\Agent (+ \lib). -->
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="VENDORDIR" Name="Kidora">
-        <Directory Id="INSTALLFOLDER" Name="Agent" />
+        <Directory Id="INSTALLFOLDER" Name="Agent">
+          <Directory Id="LIBFOLDER" Name="lib" />
+        </Directory>
       </Directory>
     </StandardDirectory>
 
-    <!-- Harvest the agent source tree (excludes installer + runtime artifacts). -->
-    <ComponentGroup Id="AgentFiles" Directory="INSTALLFOLDER">
-      <Files Include="$(AgentSrc)\**"
-             Exclude="$(AgentSrc)\installer\**;$(AgentSrc)\node_modules\**;$(AgentSrc)\README.md;$(AgentSrc)\config.json;$(AgentSrc)\heartbeat.json;$(AgentSrc)\overlay-state.json;$(AgentSrc)\KidoraAgent.xml;$(AgentSrc)\guardian.log" />
+    <!-- Explicit components (one file each) — version-independent. -->
+    <ComponentGroup Id="AgentRoot" Directory="INSTALLFOLDER">
+      <Component><File Source="$(AgentSrc)\agent.js" /></Component>
+      <Component><File Source="$(AgentSrc)\package.json" /></Component>
+      <Component><File Source="$(AgentSrc)\sensor.ps1" /></Component>
+      <Component><File Source="$(AgentSrc)\install-agent.ps1" /></Component>
+      <Component><File Source="$(AgentSrc)\guardian.ps1" /></Component>
+      <Component><File Source="$(AgentSrc)\overlay.ps1" /></Component>
+    </ComponentGroup>
+    <ComponentGroup Id="AgentLib" Directory="LIBFOLDER">
+      <Component><File Source="$(AgentSrc)\lib\api.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\categorize.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\config.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\dns.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\dns-proxy.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\domains.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\enforcer.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\heartbeat.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\logger.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\tracker.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\win.js" /></Component>
     </ComponentGroup>
 
     <Feature Id="Main" Title="Kidora Agent" Level="1">
-      <ComponentGroupRef Id="AgentFiles" />
+      <ComponentGroupRef Id="AgentRoot" />
+      <ComponentGroupRef Id="AgentLib" />
     </Feature>
 
     <!-- ── Post-install: enroll + register scheduled tasks (+ self-protection). ── -->
