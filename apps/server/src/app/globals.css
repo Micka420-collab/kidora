@@ -130,3 +130,51 @@ body {
 .spinner {
   animation: spin 0.7s linear infinite;
 }
+
+/* ── Dark mode (class-based, applied on <html class="dark">) ── */
+.dark {
+  color-scheme: dark;
+  --color-ink: #e2e8f0;
+  --color-muted: #94a3b8;
+  --color-line: #334155;
+  --color-canvas: #0b1120;
+  --color-brand-50: #1e1b4b;
+}
+.dark .card {
+  background: #131c31;
+  border-color: #2a3650;
+}
+.dark .input {
+  background: #131c31;
+  border-color: #2a3650;
+  color: var(--color-ink);
+}
+.dark .btn-outline {
+  background: #131c31;
+  border-color: #2a3650;
+  color: var(--color-ink);
+}
+.dark .btn-ghost {
+  color: var(--color-ink);
+}
+.dark .btn-ghost:hover,
+.dark .btn-outline:hover {
+  background: #1b263f;
+}
+/* Retarget the common neutral utilities used across components */
+.dark .bg-white { background-color: #131c31; }
+.dark .bg-slate-50 { background-color: #0f1729; }
+.dark .bg-slate-100 { background-color: #1b263f; }
+.dark .bg-slate-200 { background-color: #243049; }
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900 { color: #cbd5e1; }
+.dark .bg-brand-50 { background-color: #1e1b4b; }
+/* Soft tints → dark equivalents */
+.dark .bg-emerald-50 { background-color: #062e25; }
+.dark .bg-amber-50 { background-color: #3a2a06; }
+.dark .bg-red-50 { background-color: #3a1212; }
+.dark .bg-indigo-100 { background-color: #312e81; }

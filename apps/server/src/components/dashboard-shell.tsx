@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { api } from "@/lib/client";
@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   Smartphone,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 type Kid = { id: string; name: string; avatar: string | null };
@@ -43,6 +45,16 @@ export function DashboardShell({
   function setLocale(l: "fr" | "en") {
     document.cookie = `kidora_locale=${l}; path=/; max-age=31536000`;
     router.refresh();
+  }
+
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+  function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle("dark");
+    setDark(isDark);
+    document.cookie = `kidora_theme=${isDark ? "dark" : "light"}; path=/; max-age=31536000`;
   }
 
   const navItem = (href: string, label: string, Icon: typeof LayoutDashboard, badge?: number) => {
@@ -127,9 +139,18 @@ export function DashboardShell({
             <div className="truncate text-sm font-semibold">{parent.name}</div>
             <div className="truncate text-xs text-muted">{parent.email}</div>
           </div>
-          <div className="mb-2 flex overflow-hidden rounded-lg border text-xs">
-            <button onClick={() => setLocale("fr")} className={`flex-1 py-1.5 font-semibold ${locale === "fr" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>FR</button>
-            <button onClick={() => setLocale("en")} className={`flex-1 py-1.5 font-semibold ${locale === "en" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>EN</button>
+          <div className="mb-2 flex gap-2">
+            <div className="flex flex-1 overflow-hidden rounded-lg border text-xs">
+              <button onClick={() => setLocale("fr")} className={`flex-1 py-1.5 font-semibold ${locale === "fr" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>FR</button>
+              <button onClick={() => setLocale("en")} className={`flex-1 py-1.5 font-semibold ${locale === "en" ? "bg-brand-600 text-white" : "bg-white text-slate-500"}`}>EN</button>
+            </div>
+            <button
+              onClick={toggleTheme}
+              aria-label={dark ? "Mode clair" : "Mode sombre"}
+              className="grid w-10 place-items-center rounded-lg border bg-white text-slate-500 hover:text-brand-600"
+            >
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
           </div>
           <button onClick={logout} className="btn btn-outline w-full">
             <LogOut size={16} /> {t.nav.logout}

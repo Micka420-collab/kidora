@@ -19,7 +19,7 @@
 
 ## 🏅 Niveau pro / expert (directive 2026-06-29)
 - [x] **CI GitHub Actions** : typecheck + tests + build à chaque push/PR (badge dans le README)
-- [ ] Mode sombre **web** (dashboard) + thème cohérent
+- [x] Mode sombre **web** (dashboard) — variables CSS + overrides ciblés, bascule persistée par cookie, SSR sans flash
 - [~] États de chargement (skeleton dashboard) + error boundary + page 404 soignée ; *toasts à ajouter*
 - [ ] Config **PostgreSQL** prête prod (adapter auto selon `DATABASE_URL`)
 - [ ] Tests d'intégration (API) + e2e Playwright
