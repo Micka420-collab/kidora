@@ -73,8 +73,30 @@ cd kidora
 ```
 
 Ou téléchargez une archive depuis l'onglet **Releases** (ZIP / tar.gz), ou
-**Code → Download ZIP**. Les applications mobiles (APK **Kidora Parents** / **Kidora Kids**)
-sont publiées dans les **Releases** une fois compilées via EAS.
+**Code → Download ZIP**.
+
+### 📱 Applications Android (APK)
+
+Deux apps distinctes, à installer sur le téléphone (sideload) :
+
+| App | Rôle | Téléchargement |
+|---|---|---|
+| **Kidora Parents** | Suivi & gestion depuis le téléphone parent | [`kidora-parents.apk`](https://github.com/Micka420-collab/kidora/releases/download/mobile-v1.0.0/kidora-parents.apk) |
+| **Kidora Kids** | Appareil enfant : localisation, usage, **SOS** | [`kidora-kids.apk`](https://github.com/Micka420-collab/kidora/releases/download/mobile-v1.0.0/kidora-kids.apk) |
+
+**Installer un APK** : sur le téléphone, autorisez « Installer des applications
+inconnues » pour votre navigateur, téléchargez l'APK puis ouvrez-le. Android 6.0+
+(minSdk 23). Les APK sont publiés dans les **[Releases](https://github.com/Micka420-collab/kidora/releases)**
+(tag `mobile-v*`), compilés via EAS — voir [`apps/mobile`](apps/mobile/README.md).
+
+### 🪟 Agent Windows (MSI)
+
+Installeur signé `kidora-agent.msi` dans les **[Releases](https://github.com/Micka420-collab/kidora/releases)**
+(tag `agent-v*`). Installation silencieuse :
+
+```powershell
+msiexec /i kidora-agent.msi /qn TOKEN=<jeton> SERVER=https://votre-serveur CHILDUSER="PC\Enfant"
+```
 
 ## ⚙️ Configuration requise
 
