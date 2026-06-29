@@ -43,7 +43,7 @@
 - [x] Tests unitaires Vitest (catégorisation, mots-clés, fenêtres horaires coucher/routines, rate-limit) — 36 tests verts ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [ ] Migration Postgres + déploiement Vercel de référence
-- [~] i18n (FR/EN) — nav, vue d'ensemble, alertes, onglets enfant, paramètres, Applications & Web traduits ; *reste : temps d'écran/localisation/activité/rapports & sous-cartes*
+- [~] i18n (FR/EN) — nav, vue d'ensemble, alertes, paramètres, Applications, Web & Temps d'écran (+ routines) traduits ; *reste : localisation/activité/rapports/appareils & sous-cartes*
 - [x] Endpoint `/api/health` (liveness/readiness + compteurs)
 - [x] Export des données (JSON) + suppression de compte (RGPD) avec confirmation
 - [x] Chiffrement au repos des données sensibles (captures d'écran, AES-256-GCM, rétrocompatible) — `DATA_ENC_KEY`

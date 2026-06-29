@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { WEEKDAYS } from "@/lib/format";
+import { useT } from "@/components/i18n-provider";
 import { Loader2, Plus, Trash2, CalendarClock } from "lucide-react";
 
 type Routine = {
@@ -19,6 +20,8 @@ type AppRule = { appId: string; appName: string };
 const empty = { name: "", days: ["mon", "tue", "wed", "thu", "fri"], start: "08:00", end: "16:00", apps: [] as string[] };
 
 export function RoutinesCard({ childId }: { childId: string }) {
+  const { t: tr } = useT();
+  const t = tr.screen;
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [apps, setApps] = useState<AppRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,14 +72,14 @@ export function RoutinesCard({ childId }: { childId: string }) {
   return (
     <div className="card p-5">
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 text-base font-semibold"><CalendarClock size={18} /> Routines</h3>
-        <button className="btn btn-outline py-1.5 text-sm" onClick={() => setAdding((v) => !v)}><Plus size={15} /> Ajouter</button>
+        <h3 className="flex items-center gap-2 text-base font-semibold"><CalendarClock size={18} /> {t.routines}</h3>
+        <button className="btn btn-outline py-1.5 text-sm" onClick={() => setAdding((v) => !v)}><Plus size={15} /> {t.add}</button>
       </div>
-      <p className="mb-4 text-sm text-muted">Bloque automatiquement certaines apps sur une plage horaire (ex : heures d'école).</p>
+      <p className="mb-4 text-sm text-muted">{t.routinesDesc}</p>
 
       {adding && (
         <form onSubmit={save} className="mb-4 space-y-3 rounded-lg border p-3">
-          <input className="input" placeholder="Nom (ex : Heures d'école)" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus />
+          <input className="input" placeholder={t.routineName} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus />
           <div className="flex items-center gap-2">
             <input type="time" className="input w-auto py-1.5 text-sm" value={form.start} onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))} />
             <span className="text-muted">→</span>
@@ -88,9 +91,9 @@ export function RoutinesCard({ childId }: { childId: string }) {
             ))}
           </div>
           <div>
-            <div className="label">Apps à bloquer</div>
+            <div className="label">{t.blockedApps}</div>
             {apps.length === 0 ? (
-              <p className="text-xs text-muted">Ajoutez d'abord des apps dans l'onglet Applications.</p>
+              <p className="text-xs text-muted">{t.noApps}</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {apps.map((a) => (
@@ -100,14 +103,14 @@ export function RoutinesCard({ childId }: { childId: string }) {
             )}
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-primary py-1.5 text-sm">Créer la routine</button>
-            <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setAdding(false)}>Annuler</button>
+            <button className="btn btn-primary py-1.5 text-sm">{t.createRoutine}</button>
+            <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setAdding(false)}>{t.cancel}</button>
           </div>
         </form>
       )}
 
       {routines.length === 0 ? (
-        <p className="text-sm text-muted">Aucune routine.</p>
+        <p className="text-sm text-muted">{t.noRoutines}</p>
       ) : (
         <div className="space-y-2">
           {routines.map((r) => {
