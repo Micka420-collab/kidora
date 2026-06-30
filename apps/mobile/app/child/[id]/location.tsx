@@ -63,6 +63,18 @@ export default function Location() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const [locating, setLocating] = useState(false);
+  async function requestLocate() {
+    if (!id) return;
+    setLocating(true);
+    try {
+      await parent.command(id, "locate");
+      RNAlert.alert("Kidora", "Demande envoyée. La position se mettra à jour à la prochaine synchro de l'appareil (tirez pour rafraîchir).");
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Demande impossible");
+    } finally { setLocating(false); }
+  }
+
   async function createZone() {
     if (!id || !latest || zoneName.trim().length < 1) return;
     setAdding(true);
@@ -106,9 +118,13 @@ export default function Location() {
         ) : error ? (
           <ErrorState onRetry={() => { setLoading(true); load(); }} />
         ) : !latest ? (
-          <Empty icon="location" title="Aucune position" subtitle="La position de l'enfant apparaîtra ici dès que l'appareil la partage." />
+          <>
+            <Empty icon="location" title="Aucune position" subtitle="La position de l'enfant apparaîtra ici dès que l'appareil la partage." />
+            <Btn title="Localiser maintenant" icon="navigate" loading={locating} onPress={requestLocate} full />
+          </>
         ) : (
           <>
+            <Btn title="Localiser maintenant" icon="navigate" loading={locating} onPress={requestLocate} full />
             {/* current position */}
             <Card padded onPress={() => openMap(latest)}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
