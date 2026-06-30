@@ -13,17 +13,6 @@ import { TwoFactorCard } from "@/components/two-factor-card";
 import { ChangePasswordCard } from "@/components/change-password-card";
 import { ChangeEmailCard } from "@/components/change-email-card";
 
-const ACTION_LABELS: Record<string, string> = {
-  login: "Connexion",
-  "child.create": "Enfant ajouté",
-  "child.delete": "Enfant supprimé",
-  "time.grant": "Temps bonus accordé",
-  command: "Commande envoyée",
-  "rule.change": "Règle modifiée",
-  "account.password_change": "Mot de passe modifié",
-  "account.email_change": "Adresse email modifiée",
-};
-
 export default async function SettingsPage() {
   const parent = (await getCurrentParent())!;
   const childCount = await prisma.child.count({ where: { parentId: parent.id } });
@@ -114,7 +103,7 @@ export default async function SettingsPage() {
             {auditLogs.map((l) => (
               <li key={l.id} className="flex items-center justify-between py-2.5 text-sm">
                 <span>
-                  <span className="font-medium">{ACTION_LABELS[l.action] ?? l.action}</span>
+                  <span className="font-medium">{t.aa[l.action] ?? l.action}</span>
                   {l.detail && <span className="text-muted"> · {l.detail}</span>}
                 </span>
                 <span className="text-xs text-muted">{relativeTime(l.ts)}</span>
