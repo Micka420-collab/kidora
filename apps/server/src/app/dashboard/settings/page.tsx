@@ -20,6 +20,8 @@ const ACTION_LABELS: Record<string, string> = {
   "time.grant": "Temps bonus accordé",
   command: "Commande envoyée",
   "rule.change": "Règle modifiée",
+  "account.password_change": "Mot de passe modifié",
+  "account.email_change": "Adresse email modifiée",
 };
 
 export default async function SettingsPage() {
