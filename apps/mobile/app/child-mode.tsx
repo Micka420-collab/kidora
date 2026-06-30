@@ -27,10 +27,12 @@ export default function ChildMode() {
   const [pendingReq, setPendingReq] = useState<number | null>(null); // minutes of a request awaiting a parent decision
   const [reduceMotion, setReduceMotion] = useState(false);
   const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
+  const [welcome, setWelcome] = useState(false); // first-launch greeting banner
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevUsage = useRef<Record<string, number>>({});
   const prevBonus = useRef<number | null>(null);
   const grantTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const welcomeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Animations ──
   const fade = useRef(new Animated.Value(0)).current;
@@ -44,10 +46,19 @@ export default function ChildMode() {
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
     const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    // First-launch greeting, shown once then remembered.
+    storage.get("kidsWelcomed").then((seen) => {
+      if (!seen) {
+        setWelcome(true);
+        welcomeTimer.current = setTimeout(() => setWelcome(false), 4500);
+        storage.set("kidsWelcomed", "1").catch(() => undefined);
+      }
+    }).catch(() => undefined);
     start();
     return () => {
       if (timer.current) clearInterval(timer.current);
       if (grantTimer.current) clearTimeout(grantTimer.current);
+      if (welcomeTimer.current) clearTimeout(welcomeTimer.current);
       sub.remove();
     };
     // eslint-disable-next-line
@@ -245,6 +256,13 @@ export default function ChildMode() {
       <Sparkle style={{ bottom: 90, right: 64 }} delay={1500} size={8} reduce={reduceMotion} />
 
       <Animated.View style={[s.content, { opacity: fade, transform: [{ translateY: slide }] }]}>
+        {welcome && (
+          <View style={s.welcome}>
+            <Text style={s.welcomeText}>🎉 Bienvenue dans Kidora !</Text>
+            <Text style={s.welcomeSub}>Ici, tu es protégé·e. Bonne journée ! ✨</Text>
+          </View>
+        )}
+
         <View style={[s.badge, { backgroundColor: paused ? "rgba(254,243,199,0.95)" : active ? "rgba(220,252,231,0.95)" : "rgba(254,226,226,0.95)" }]}>
           <Text style={[s.badgeText, { color: paused ? "#b45309" : active ? "#15803d" : "#b91c1c" }]}>{status}</Text>
         </View>
@@ -429,6 +447,9 @@ function Sparkle({ style, delay, size = 10, reduce = false }: { style: object; d
 const s = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28 },
   content: { alignItems: "center", width: "100%" },
+  welcome: { marginBottom: 20, backgroundColor: "rgba(187,247,208,0.96)", borderRadius: 16, paddingHorizontal: 20, paddingVertical: 13, alignItems: "center" },
+  welcomeText: { color: "#166534", fontWeight: "800", fontSize: 16 },
+  welcomeSub: { color: "#15803d", fontWeight: "600", fontSize: 13, marginTop: 2, textAlign: "center" },
   badge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, marginBottom: 28 },
   badgeText: { fontWeight: "700" },
   shieldWrap: { width: 148, height: 148, alignItems: "center", justifyContent: "center", marginBottom: 8 },

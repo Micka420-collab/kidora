@@ -7,6 +7,7 @@ const KEYS = {
   parentName: "kidora.parentName",
   enrollToken: "kidora.enrollToken",
   role: "kidora.role",
+  kidsWelcomed: "kidora.kidsWelcomed",
 } as const;
 
 type Key = keyof typeof KEYS;
