@@ -7,7 +7,7 @@ import { CATEGORY_META, type Category } from "@/lib/categories";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
-import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye, Globe, Ban, History } from "lucide-react";
+import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye, Globe, Ban, History, Download } from "lucide-react";
 
 type WebRule = { id: string; kind: string; value: string; action: "allow" | "block" };
 type Filter = { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string[] };
@@ -202,7 +202,14 @@ export default function WebTab() {
 
       {/* Recent browsing history */}
       <div className="card p-5">
-        <h3 className="mb-1 flex items-center gap-2 text-base font-semibold"><History size={18} /> {t.history}</h3>
+        <div className="mb-1 flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 text-base font-semibold"><History size={18} /> {t.history}</h3>
+          {visits.length > 0 && (
+            <a href={`/api/children/${childId}/export?type=web`} className="btn btn-outline px-3 py-1.5 text-xs" download>
+              <Download size={14} /> {t.exportCsv}
+            </a>
+          )}
+        </div>
         <p className="mb-4 text-sm text-muted">{t.historyDesc}</p>
         {visits.length === 0 ? (
           <p className="text-sm text-muted">{t.noHistory}</p>
