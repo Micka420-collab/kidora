@@ -3,9 +3,18 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
-import { sanitizeMutedTypes } from "@/lib/alert-prefs";
+import { sanitizeMutedTypes, parseMutedTypes, MUTABLE_ALERT_TYPES } from "@/lib/alert-prefs";
 
 const schema = z.object({ mutedTypes: z.array(z.string()).max(20) });
+
+// GET /api/account/notifications — current muted types + the mutable set.
+export async function GET() {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const row = await prisma.parent.findUnique({ where: { id: parent.id }, select: { alertPrefs: true } });
+    return json({ mutedTypes: parseMutedTypes(row?.alertPrefs), mutableTypes: [...MUTABLE_ALERT_TYPES] });
+  });
+}
 
 // PATCH /api/account/notifications — set which (mutable) alert types are muted.
 export async function PATCH(req: NextRequest) {

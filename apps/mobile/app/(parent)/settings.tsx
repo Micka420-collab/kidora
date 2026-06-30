@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TextInput, Alert as RNAlert } from "react-native";
+import { View, Text, ScrollView, TextInput, Switch, Alert as RNAlert } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,6 +8,15 @@ import { parent, getServer } from "@/api";
 import * as storage from "@/storage";
 import { useTheme, space, radius } from "@/theme";
 import { Card, H1, Muted, Btn, IconBubble } from "@/ui";
+
+const NOTIF_LABELS: Record<string, string> = {
+  new_app: "Nouvelle application détectée",
+  limit_reached: "Limite de temps atteinte",
+  blocked_attempt: "Tentative bloquée (site/app)",
+  geofence: "Entrée / sortie de zone",
+  keyword: "Mot-clé sensible",
+  device_offline: "Appareil hors-ligne",
+};
 
 export default function Settings() {
   const { c } = useTheme();
@@ -19,13 +28,33 @@ export default function Settings() {
   const [newEmail, setNewEmail] = useState("");
   const [emailPw, setEmailPw] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
+  const [muted, setMuted] = useState<string[] | null>(null);
+  const [mutable, setMutable] = useState<string[]>([]);
 
   useEffect(() => {
     (async () => {
       setServer(await getServer());
       setName(await storage.get("parentName"));
+      try {
+        const p = await parent.notificationPrefs();
+        setMuted(p.mutedTypes);
+        setMutable(p.mutableTypes);
+      } catch { /* prefs unavailable — hide the card */ }
     })();
   }, []);
+
+  async function toggleNotif(type: string) {
+    if (!muted) return;
+    const next = muted.includes(type) ? muted.filter((t) => t !== type) : [...muted, type];
+    const prev = muted;
+    setMuted(next); // optimistic
+    try {
+      const r = await parent.setNotificationPrefs(next);
+      setMuted(r.mutedTypes);
+    } catch {
+      setMuted(prev);
+    }
+  }
 
   async function changePassword() {
     if (curPw.length < 1 || newPw.length < 8) return;
@@ -114,6 +143,26 @@ export default function Settings() {
             <Btn title="Mettre à jour" icon="mail" loading={emailBusy} disabled={!newEmail.includes("@") || emailPw.length < 1} onPress={changeEmail} full />
           </View>
         </Card>
+
+        {muted && mutable.length > 0 && (
+          <Card>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: c.text, marginBottom: 4 }}>🔔 Notifications d&apos;alerte</Text>
+            <Muted>Les alertes de sécurité (SOS, risque) restent toujours actives.</Muted>
+            <View style={{ marginTop: space.sm }}>
+              {mutable.map((type) => (
+                <View key={type} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.border }}>
+                  <Text style={{ flex: 1, fontSize: 14, color: c.text, paddingRight: 12 }}>{NOTIF_LABELS[type] ?? type}</Text>
+                  <Switch
+                    value={!muted.includes(type)}
+                    onValueChange={() => toggleNotif(type)}
+                    trackColor={{ false: c.border, true: c.primary }}
+                    accessibilityLabel={NOTIF_LABELS[type] ?? type}
+                  />
+                </View>
+              ))}
+            </View>
+          </Card>
+        )}
 
         <View style={{ gap: space.sm }}>
           <Row icon="server" label="Serveur" value={server} />
