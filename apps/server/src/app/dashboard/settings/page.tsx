@@ -7,6 +7,8 @@ import { GuardiansCard } from "@/components/guardians-card";
 import { AccountDataCard } from "@/components/account-data-card";
 import { PushToggle } from "@/components/push-toggle";
 import { WeeklyReportToggle } from "@/components/weekly-report-toggle";
+import { NotificationPrefsCard } from "@/components/notification-prefs-card";
+import { parseMutedTypes } from "@/lib/alert-prefs";
 import { TwoFactorCard } from "@/components/two-factor-card";
 import { ChangePasswordCard } from "@/components/change-password-card";
 import { ChangeEmailCard } from "@/components/change-email-card";
@@ -80,6 +82,22 @@ export default async function SettingsPage() {
         initial={parent.weeklyReportEmail}
         label={t.weeklyReport}
         desc={t.weeklyReportDesc}
+      />
+
+      <NotificationPrefsCard
+        initialMuted={parseMutedTypes(parent.alertPrefs)}
+        labels={{
+          title: t.notifTitle,
+          desc: t.notifDesc,
+          safetyNote: t.notifSafetyNote,
+          types: {
+            new_app: t.nt_new_app,
+            limit_reached: t.nt_limit_reached,
+            blocked_attempt: t.nt_blocked_attempt,
+            geofence: t.nt_geofence,
+            keyword: t.nt_keyword,
+          },
+        }}
       />
 
       <GuardiansCard />
