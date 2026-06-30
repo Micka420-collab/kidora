@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { parent, type Child, type Live, type Alert } from "@/api";
 import { useTheme, relativeTime, radius, space, alertMeta } from "@/theme";
+import { isDeviceOnline } from "@/device";
 import { Card, Avatar, PulseDot, Pill, Muted, SectionHeader, Empty, Skeleton, IconBubble } from "@/ui";
 
 type Enriched = Child & { live?: Live };
@@ -44,7 +45,7 @@ export default function Home() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const onlineCount = kids.filter((k) => k.live?.online ?? k.devices.some((d) => d.online)).length;
+  const onlineCount = kids.filter((k) => k.live?.online ?? k.devices.some((d) => isDeviceOnline(d))).length;
   const allPaused = kids.length > 0 && kids.every((k) => k.live?.paused ?? k.paused);
 
   async function toggleFamilyPause() {
@@ -135,7 +136,7 @@ function ChildList({ kids, alerts, reload, refreshing, setRefreshing }: { kids: 
 
 function ChildCard({ child }: { child: Enriched }) {
   const { c } = useTheme();
-  const online = child.live?.online ?? child.devices.some((d) => d.online);
+  const online = child.live?.online ?? child.devices.some((d) => isDeviceOnline(d));
   const paused = child.live?.paused ?? child.paused ?? false;
   const battery = batteryView(child.live?.battery ?? child.devices[0]?.battery ?? null, c.textMuted);
   const alertCount = child._count?.alerts ?? 0;
