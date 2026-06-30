@@ -251,7 +251,10 @@ export default function ChildDetail() {
               <NavCard icon="apps" color="#8b5cf6" label="Applications" onPress={() => router.push(`/child/${id}/apps`)} />
               <NavCard icon="search" color={c.warn} label="Mots-clés" onPress={() => router.push(`/child/${id}/keywords`)} />
             </View>
-            <NavCard icon="calendar" color={c.info} label="Routines (heures d'école…)" onPress={() => router.push(`/child/${id}/routines`)} />
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <NavCard icon="calendar" color={c.info} label="Routines" onPress={() => router.push(`/child/${id}/routines`)} />
+              <NavCard icon="camera" color="#0ea5e9" label="Captures d'écran" onPress={() => router.push(`/child/${id}/screenshots`)} />
+            </View>
 
             {/* weekly trend */}
             <Card>
