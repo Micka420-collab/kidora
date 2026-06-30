@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRef, type MouseEvent } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValue, type Variants } from "framer-motion";
+import { useRef, useState, useEffect, type MouseEvent } from "react";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, animate, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
   ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check,
@@ -62,6 +62,13 @@ const showcase = [
   },
 ];
 type ShowItem = (typeof showcase)[number];
+
+const stats = [
+  { to: 8, suffix: "", label: "modules tout-en-un" },
+  { to: 3, suffix: "", label: "plateformes protégées" },
+  { to: 100, suffix: " %", label: "conforme RGPD" },
+  { to: 24, suffix: "/7", label: "veille en continu" },
+];
 
 const reveal: Variants = {
   hidden: { opacity: 0, y: 48, rotateX: -10 },
@@ -225,6 +232,23 @@ export function Landing() {
         </motion.div>
       </section>
 
+      {/* stats / trust strip */}
+      <section className="mx-auto max-w-5xl px-6 pb-8">
+        <motion.div
+          variants={reveal} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-60px" }}
+          className="grid grid-cols-2 gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8 lg:grid-cols-4"
+        >
+          {stats.map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="bg-gradient-to-r from-brand-300 to-fuchsia-300 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent sm:text-5xl">
+                <Counter to={s.to} suffix={s.suffix} />
+              </div>
+              <div className="mt-1.5 text-sm text-white/60">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+      </section>
+
       {/* features */}
       <section className="mx-auto max-w-6xl px-6 py-16 [perspective:1400px]">
         <SectionTitle
@@ -344,6 +368,30 @@ export function Landing() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function Counter({ to, suffix = "", duration = 1.4 }: { to: number; suffix?: string; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const mv = useMotionValue(0);
+  const [val, setVal] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    const controls = animate(mv, to, {
+      duration,
+      ease: [0.22, 1, 0.36, 1],
+      onUpdate: (v) => setVal(Math.round(v)),
+    });
+    return () => controls.stop();
+  }, [inView, to, duration, mv]);
+
+  return (
+    <span ref={ref}>
+      {val}
+      {suffix}
+    </span>
   );
 }
 
