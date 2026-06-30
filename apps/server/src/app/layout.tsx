@@ -25,7 +25,7 @@ export default async function RootLayout({
   return (
     <html
       lang={lang}
-      className={`${geistSans.variable} h-full antialiased${dark ? " dark" : ""}`}
+      className={`${geistSans.variable} h-full antialiased motion-safe:scroll-smooth${dark ? " dark" : ""}`}
     >
       <body className="min-h-full">{children}</body>
     </html>
