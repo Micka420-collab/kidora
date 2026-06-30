@@ -35,6 +35,8 @@ const fr = {
     recentAlerts: "Alertes récentes",
     seeAll: "Tout voir",
     allGood: "Aucune alerte. Tout va bien ! ✅",
+    searchChildren: "Rechercher un enfant…",
+    noChildMatch: "Aucun enfant ne correspond.",
   },
   alerts: {
     title: "Alertes",
@@ -233,6 +235,8 @@ const en: typeof fr = {
     recentAlerts: "Recent alerts",
     seeAll: "See all",
     allGood: "No alerts. All good! ✅",
+    searchChildren: "Search a child…",
+    noChildMatch: "No child matches.",
   },
   alerts: {
     title: "Alerts",
