@@ -6,15 +6,27 @@ import { log } from "./logger.js";
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
 function isBedtimeNow(bedtimes, now = new Date()) {
-  const wd = WEEKDAYS[now.getDay()];
+  const todayWd = WEEKDAYS[now.getDay()];
+  const prevWd = WEEKDAYS[(now.getDay() + 6) % 7]; // yesterday's weekday
   const mins = now.getHours() * 60 + now.getMinutes();
   for (const b of bedtimes || []) {
-    if (b.days?.length && !b.days.includes(wd)) continue;
     const [sh, sm] = b.start.split(":").map(Number);
     const [eh, em] = b.end.split(":").map(Number);
     const s = sh * 60 + sm;
     const e = eh * 60 + em;
-    if (s <= e ? mins >= s && mins < e : mins >= s || mins < e) return true;
+    const days = b.days;
+    const onDay = (wd) => !days?.length || days.includes(wd);
+
+    if (s <= e) {
+      // Same-day window (e.g. 13:00–15:00) → check today's weekday.
+      if (mins >= s && mins < e && onDay(todayWd)) return true;
+    } else {
+      // Overnight window (e.g. 21:00–07:00) spans two calendar days. The evening
+      // part (mins >= s) belongs to today; the morning tail (mins < e) belongs to
+      // the day the window STARTED — i.e. yesterday's weekday, not today's.
+      if (mins >= s && onDay(todayWd)) return true;
+      if (mins < e && onDay(prevWd)) return true;
+    }
   }
   return false;
 }
