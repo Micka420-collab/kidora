@@ -7,7 +7,7 @@ import { useRef, useState, useEffect, type MouseEvent } from "react";
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useMotionValueEvent, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
-  ShieldAlert, PlaySquare, KeyRound, ArrowRight, ArrowUp, Lock, ExternalLink, Check, ChevronDown,
+  ShieldAlert, PlaySquare, KeyRound, ArrowRight, ArrowUp, Lock, ExternalLink, Check, ChevronDown, Menu, X,
 } from "lucide-react";
 
 const features = [
@@ -143,6 +143,9 @@ export function Landing() {
   const [showTop, setShowTop] = useState(false);
   useMotionValueEvent(scrollY, "change", (v) => setShowTop(v > 600));
 
+  // Mobile nav (the anchor links are hidden on small screens).
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#0b1020] text-white">
       {/* scroll progress */}
@@ -180,10 +183,43 @@ export function Landing() {
             <a href="#faq" className="transition hover:text-white">FAQ</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login" className="rounded-lg px-4 py-2 text-sm font-semibold text-white/80 transition hover:text-white">Se connecter</Link>
+            <Link href="/login" className="hidden rounded-lg px-4 py-2 text-sm font-semibold text-white/80 transition hover:text-white sm:inline-flex">Se connecter</Link>
             <Link href="/register" className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-brand-700 transition hover:scale-105 hover:bg-white/90">Commencer</Link>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav"
+              aria-label={menuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              className="grid h-10 w-10 place-items-center rounded-lg text-white/80 transition hover:bg-white/10 hover:text-white md:hidden"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.nav
+              id="mobile-nav"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden border-t border-white/10 bg-[#0b1020]/95 md:hidden"
+            >
+              <div className="mx-auto flex max-w-6xl flex-col px-6 py-2">
+                {[
+                  { href: "#features", label: "Fonctionnalités" },
+                  { href: "#showcase", label: "En profondeur" },
+                  { href: "#faq", label: "FAQ" },
+                ].map((l) => (
+                  <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-3 text-sm font-medium text-white/75 transition hover:bg-white/5 hover:text-white">{l.label}</a>
+                ))}
+                <Link href="/login" onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-3 text-sm font-semibold text-white/75 transition hover:bg-white/5 hover:text-white sm:hidden">Se connecter</Link>
+              </div>
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* hero */}
