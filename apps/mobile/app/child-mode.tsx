@@ -223,6 +223,9 @@ export default function ChildMode() {
 
         {hasLimit ? (
           <View style={s.stCard}>
+            {usedPct < 0.5 && (
+              <Image source={require("../assets/reward-star.png")} style={s.rewardStar} resizeMode="contain" accessibilityLabel="Récompense : bravo" />
+            )}
             <Text style={s.stRemain}>⏳  Il te reste {formatDuration(remainingSec)}</Text>
             <View style={s.stTrack}>
               <View style={[s.stFill, { width: `${Math.round(usedPct * 100)}%`, backgroundColor: barColor }]} />
@@ -322,6 +325,7 @@ const s = StyleSheet.create({
   chip: { marginTop: 18, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   chipText: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5 },
   stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
+  rewardStar: { width: 66, height: 66, marginBottom: 4 },
   stRemain: { color: "#fff", fontWeight: "800", fontSize: 19 },
   stTrack: { marginTop: 12, width: "100%", height: 12, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.22)", overflow: "hidden" },
   stFill: { height: "100%", borderRadius: 999 },
