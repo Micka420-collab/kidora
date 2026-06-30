@@ -114,9 +114,13 @@ export default function ReportsTab() {
 
       {report.byHour && report.byHour.some((n) => n > 0) && (() => {
         const max = Math.max(1, ...report.byHour!);
+        const peak = report.byHour!.indexOf(max);
         return (
           <div className="card p-5">
-            <h3 className="mb-4 text-base font-semibold">{t.byHour}</h3>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold">{t.byHour}</h3>
+              <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600">🔥 {t.peakAround} {peak}h</span>
+            </div>
             <div className="flex h-28 items-end gap-[3px]">
               {report.byHour!.map((n, h) => (
                 <div key={h} className="flex flex-1 flex-col items-center gap-1">
