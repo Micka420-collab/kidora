@@ -4,10 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRef, useState, useEffect, type MouseEvent } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useMotionValueEvent, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
-  ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check, ChevronDown,
+  ShieldAlert, PlaySquare, KeyRound, ArrowRight, ArrowUp, Lock, ExternalLink, Check, ChevronDown,
 } from "lucide-react";
 
 const features = [
@@ -138,6 +138,10 @@ export function Landing() {
     tiltXRaw.set(0);
     tiltYRaw.set(0);
   }
+
+  // "Back to top" affordance, shown once the visitor has scrolled past the hero.
+  const [showTop, setShowTop] = useState(false);
+  useMotionValueEvent(scrollY, "change", (v) => setShowTop(v > 600));
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#0b1020] text-white">
@@ -412,6 +416,23 @@ export function Landing() {
           </div>
         </motion.div>
       </section>
+
+      {/* back-to-top */}
+      <AnimatePresence>
+        {showTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.6 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" })}
+            aria-label="Revenir en haut de la page"
+            className="fixed bottom-6 right-6 z-50 grid h-12 w-12 place-items-center rounded-full border border-white/15 bg-white/10 text-white shadow-xl backdrop-blur-md transition hover:bg-white/20"
+          >
+            <ArrowUp size={20} />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <footer className="border-t border-white/10 py-12">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 sm:grid-cols-2 lg:grid-cols-4">
