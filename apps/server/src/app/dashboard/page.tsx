@@ -12,7 +12,7 @@ import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isDeviceOnline } from "@/lib/device-status";
 import { isPausedNow } from "@/lib/pause";
 import { buildInsights, type Insight } from "@/lib/insights";
-import { ymd } from "@/lib/retention";
+import { weekWindows } from "@/lib/insights";
 import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
 
 function today() {
@@ -21,13 +21,12 @@ function today() {
 
 // Date window for the "this week" vs "last week" insights (kept in a helper so
 // the impure Date calls stay out of the component render body).
-function weekWindow() {
+// Module scope so the react-hooks/purity rule doesn't flag Date.now() in render.
+// Uses the shared, tested weekWindows() so "this week vs last week" compares two
+// equal-length 7-day windows (the old d7/d14 made "this week" 8 days).
+function overviewWindows() {
   const now = Date.now();
-  return {
-    d7: ymd(new Date(now - 7 * 86400000)),
-    d14: ymd(new Date(now - 14 * 86400000)),
-    weekAgo: new Date(now - 7 * 86400000),
-  };
+  return { ...weekWindows(now), weekAgo: new Date(now - 7 * 86400000) };
 }
 
 export default async function OverviewPage() {
@@ -41,9 +40,9 @@ export default async function OverviewPage() {
   });
 
   const kidIds = kids.map((k) => k.id);
-  const { d7, d14, weekAgo } = weekWindow();
+  const { curFrom, prevFrom, weekAgo } = overviewWindows();
   // All independent dashboard queries in a single round-trip.
-  const [usageToday, topApps, recentAlerts, recentActivity, thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
+  const [usageToday, topApps, recentAlerts, unreadCount, recentActivity, thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
     prisma.appUsage.groupBy({
       by: ["childId"],
       where: { childId: { in: kidIds }, date: today() },
@@ -60,16 +59,18 @@ export default async function OverviewPage() {
       take: 6,
       include: { child: { select: { name: true, avatar: true } } },
     }),
+    // Real unread total — the tile must not be capped at the 6 fetched above.
+    prisma.alert.count({ where: { parentId: parent.id, read: false } }),
     prisma.activityEvent.findMany({
       where: { childId: { in: kidIds }, type: { in: ["app_open", "web_visit", "search", "blocked"] } },
       orderBy: { ts: "desc" },
       take: 8,
       select: { id: true, childId: true, type: true, title: true, ts: true },
     }),
-    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
-    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d14, lt: d7 } } }),
-    prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
-    prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
+    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
+    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: prevFrom, lt: curFrom } } }),
+    prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
+    prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
     prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
   ]);
   const usageMap = new Map(usageToday.map((u) => [u.childId, u._sum.seconds ?? 0]));
@@ -132,7 +133,7 @@ export default async function OverviewPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Tile icon={Clock} label={tt.overview.screenTimeToday} value={formatDuration(totalToday)} tint="bg-brand-50 text-brand-600" />
         <Tile icon={Smartphone} label={tt.overview.devicesOnline} value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" href="/dashboard/devices" />
-        <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" href="/dashboard/alerts" />
+        <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(unreadCount)} tint="bg-amber-50 text-amber-600" href="/dashboard/alerts" />
       </div>
 
       {/* This-week insights */}
