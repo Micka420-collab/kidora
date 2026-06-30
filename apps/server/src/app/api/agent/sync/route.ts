@@ -7,6 +7,7 @@ import { scanText } from "@/lib/keywords";
 import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
+import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -357,16 +358,25 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 7. persist alerts + push critical ones to the parent's devices
+  // 7. persist alerts (honouring the parent's muted types; safety types are
+  //    never muted) + push critical ones to the parent's devices
   if (alerts.length) {
-    await prisma.alert.createMany({ data: alerts });
-    const critical = alerts.filter((a) => a.severity === "critical");
-    if (critical.length) {
-      sendPushToParent(parentId, {
-        title: `Kidora — alerte (${device.child.name})`,
-        body: critical[0].message,
-        url: `/dashboard/children/${childId}`,
-      }).catch(() => {});
+    const parentPrefs = await prisma.parent.findUnique({
+      where: { id: parentId },
+      select: { alertPrefs: true },
+    });
+    const muted = parseMutedTypes(parentPrefs?.alertPrefs);
+    const kept = alerts.filter((a) => !isAlertMuted(muted, a.type));
+    if (kept.length) {
+      await prisma.alert.createMany({ data: kept });
+      const critical = kept.filter((a) => a.severity === "critical");
+      if (critical.length) {
+        sendPushToParent(parentId, {
+          title: `Kidora — alerte (${device.child.name})`,
+          body: critical[0].message,
+          url: `/dashboard/children/${childId}`,
+        }).catch(() => {});
+      }
     }
   }
 
