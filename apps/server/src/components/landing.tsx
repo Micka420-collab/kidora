@@ -232,7 +232,9 @@ export function Landing() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.32 }}
             className="mt-4 text-sm text-white/50"
           >
-            Démo : <code className="rounded bg-white/10 px-1.5 py-0.5">demo@kidora.app</code> / <code className="rounded bg-white/10 px-1.5 py-0.5">kidora1234</code>
+            <Link href="/login?demo=1" className="font-semibold text-white/90 underline-offset-2 hover:underline">Tester la démo →</Link>
+            <span className="mx-2 text-white/30">·</span>
+            <code className="rounded bg-white/10 px-1.5 py-0.5">demo@kidora.app</code> / <code className="rounded bg-white/10 px-1.5 py-0.5">kidora1234</code>
           </motion.p>
         </motion.div>
 
