@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert as RNAlert, Animated, Easing } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert as RNAlert, Animated, Easing, Image } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
@@ -189,7 +189,13 @@ export default function ChildMode() {
 
         <View style={s.shieldWrap}>
           <Animated.View style={[s.halo, haloStyle]} />
-          <Text style={s.shield}>{paused ? "⏸" : bedtime ? "🌙" : "🛡️"}</Text>
+          <Image
+            source={require("../assets/mascot.png")}
+            style={[s.mascot, (paused || bedtime) && { opacity: 0.85 }]}
+            resizeMode="contain"
+            accessibilityLabel="Mascotte Kidora"
+          />
+          {(paused || bedtime) && <Text style={s.mascotBadge}>{paused ? "⏸" : "🌙"}</Text>}
         </View>
 
         <Text style={s.title}>{paused ? "Pause demandée par un parent" : "Tu es protégé·e ✨"}</Text>
@@ -286,9 +292,10 @@ const s = StyleSheet.create({
   content: { alignItems: "center", width: "100%" },
   badge: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, marginBottom: 28 },
   badgeText: { fontWeight: "700" },
-  shieldWrap: { width: 140, height: 140, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-  halo: { position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "#a5b4fc" },
-  shield: { fontSize: 76 },
+  shieldWrap: { width: 148, height: 148, alignItems: "center", justifyContent: "center", marginBottom: 8 },
+  halo: { position: "absolute", width: 122, height: 122, borderRadius: 61, backgroundColor: "#a5b4fc" },
+  mascot: { width: 140, height: 140 },
+  mascotBadge: { position: "absolute", bottom: 2, right: 6, fontSize: 30 },
   title: { fontSize: 22, fontWeight: "800", textAlign: "center", color: "#fff" },
   desc: { color: "#c7d2fe", textAlign: "center", marginTop: 12, lineHeight: 20, maxWidth: 320 },
   sos: { marginTop: 28, backgroundColor: "#ef4444", paddingHorizontal: 44, paddingVertical: 20, borderRadius: 18, alignItems: "center", minWidth: 240, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
