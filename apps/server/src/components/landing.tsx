@@ -3,10 +3,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useEffect, type MouseEvent } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
-  ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check,
+  ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check, ChevronDown,
 } from "lucide-react";
 
 const features = [
@@ -68,6 +68,33 @@ const stats = [
   { to: 3, suffix: "", label: "plateformes protégées" },
   { to: 100, suffix: " %", label: "conforme RGPD" },
   { to: 24, suffix: "/7", label: "veille en continu" },
+];
+
+const faqs = [
+  {
+    q: "Sur quels appareils Kidora fonctionne-t-il ?",
+    a: "Sur PC Windows (agent installable en MSI), ainsi que sur Android et iPhone via l'app Kidora Kids. Vous pilotez tout depuis un tableau de bord web unique, sur ordinateur ou mobile.",
+  },
+  {
+    q: "Mes données familiales sont-elles en sécurité ?",
+    a: "Oui. Kidora est auto-hébergeable (vos données restent sur votre serveur), chiffre les données sensibles au repos, propose la double authentification (2FA/TOTP), vérifie les mots de passe contre les fuites connues (HIBP) et respecte le RGPD : export et suppression de compte en un clic.",
+  },
+  {
+    q: "Mon enfant sait-il qu'il est protégé ?",
+    a: "Oui, et c'est volontaire. L'app Kids affiche clairement à l'enfant qu'il est protégé, le temps qu'il lui reste et l'heure du coucher. Kidora privilégie la confiance et le dialogue plutôt que la surveillance cachée.",
+  },
+  {
+    q: "Comment fonctionne la détection de risque par IA ?",
+    a: "Kidora analyse les messages et recherches pour repérer des signaux de grooming, de harcèlement ou d'auto-mutilation, et alerte immédiatement le parent. L'objectif est de prévenir, pas d'espionner chaque conversation.",
+  },
+  {
+    q: "Combien ça coûte ?",
+    a: "Vous pouvez commencer gratuitement, sans carte bancaire. Kidora est open source — le code est public et auditable.",
+  },
+  {
+    q: "Comment installer Kidora ?",
+    a: "Créez votre compte, ajoutez un enfant, puis installez l'agent sur son appareil avec un simple jeton d'enrôlement. Quelques minutes suffisent pour tout configurer.",
+  },
 ];
 
 const reveal: Variants = {
@@ -340,6 +367,16 @@ export function Landing() {
         </motion.div>
       </section>
 
+      {/* FAQ */}
+      <section className="mx-auto max-w-3xl px-6 py-16">
+        <SectionTitle eyebrow="Questions" title="Vous vous demandez peut-être…" />
+        <div className="mt-10 space-y-3">
+          {faqs.map((f, i) => (
+            <FaqItem key={f.q} q={f.q} a={f.a} index={i} />
+          ))}
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="mx-auto max-w-6xl px-6 pb-24 pt-6">
         <motion.div
@@ -370,6 +407,46 @@ export function Landing() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.div
+      custom={index}
+      variants={reveal}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: "-60px" }}
+      className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]"
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-base font-semibold transition hover:bg-white/[0.03]"
+      >
+        {q}
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.25 }} className="shrink-0 text-brand-200">
+          <ChevronDown size={20} />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <p className="px-5 pb-5 text-sm leading-relaxed text-white/70">{a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
