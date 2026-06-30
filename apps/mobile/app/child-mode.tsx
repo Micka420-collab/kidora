@@ -193,6 +193,13 @@ export default function ChildMode() {
 
   return (
     <LinearGradient colors={["#4f46e5", "#3730a3", "#1e1b4b"]} style={s.container}>
+      <Sparkle style={{ top: 70, left: 36 }} delay={0} size={16} />
+      <Sparkle style={{ top: 120, right: 44 }} delay={520} size={11} />
+      <Sparkle style={{ top: 210, left: 26 }} delay={1100} size={9} />
+      <Sparkle style={{ bottom: 170, right: 36 }} delay={300} size={13} />
+      <Sparkle style={{ bottom: 120, left: 54 }} delay={860} size={10} />
+      <Sparkle style={{ bottom: 90, right: 64 }} delay={1500} size={8} />
+
       <Animated.View style={[s.content, { opacity: fade, transform: [{ translateY: slide }] }]}>
         <View style={[s.badge, { backgroundColor: paused ? "rgba(254,243,199,0.95)" : active ? "rgba(220,252,231,0.95)" : "rgba(254,226,226,0.95)" }]}>
           <Text style={[s.badgeText, { color: paused ? "#b45309" : active ? "#15803d" : "#b91c1c" }]}>{status}</Text>
@@ -312,6 +319,37 @@ export default function ChildMode() {
         </Pressable>
       </Animated.View>
     </LinearGradient>
+  );
+}
+
+// Soft twinkling sparkle for the background ambiance (pure Animated, no assets).
+function Sparkle({ style, delay, size = 10 }: { style: object; delay: number; size?: number }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(a, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(a, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [a, delay]);
+  return (
+    <Animated.Text
+      style={[
+        {
+          position: "absolute",
+          fontSize: size,
+          opacity: a.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.9] }),
+          transform: [{ scale: a.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1.15] }) }],
+        },
+        style,
+      ]}
+    >
+      ✨
+    </Animated.Text>
   );
 }
 
