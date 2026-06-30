@@ -126,7 +126,9 @@ const DOMAIN_CATEGORY: Record<string, Category> = {
 
 // Substring signals for sensitive categories (defensive defaults).
 const SENSITIVE_SIGNALS: { match: RegExp; category: Category }[] = [
-  { match: /porn|xxx|sex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
+  // NB: `sex` is anchored on a word boundary so legitimate names like
+  // essex.com / sussex.ac.uk / middlesex.gov.uk are NOT mis-flagged as adult.
+  { match: /porn|xxx|\bsex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
   { match: /casino|bet365|pokerstars|gambl|betting|roulette|1xbet|stake\.com/i, category: "gambling" },
   { match: /tinder|grindr|badoo|bumble|adultfriend|ashleymadison/i, category: "dating" },
   { match: /\b(cocaine|cannabis|weed-shop|buy-drugs)\b/i, category: "drugs" },

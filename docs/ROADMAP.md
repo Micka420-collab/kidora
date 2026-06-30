@@ -59,6 +59,7 @@
 - [x] Routines / profils horaires (école/devoirs) — bloquent des apps sur une plage ; appliqué dynamiquement par le moteur de policy
 
 ### Agent Windows
+- [x] Catégoriseur de domaines (`lib/categories.ts`) — correctif faux positifs : le signal « adulte » `sex` est ancré sur une limite de mot (essex.com / sussex.ac.uk / middlesex.gov.uk ne sont plus classés « adulte »), `sex.com`/`sexcam.net` toujours détectés ; tests de régression
 - [x] Filtrage web par catégorie au niveau DNS (proxy local) plutôt que hosts — mini-resolveur sinkhole en Node pur (`lib/dns-proxy.js` + `lib/dns.js` codec + `lib/domains.js` catégoriseur), bascule le DNS système sur 127.0.0.1 (admin) ; bloque par **catégorie** (même domaines inconnus via signaux mots-clés), liste de domaines + sous-domaines, `blockUnknown`, **SafeSearch** par CNAME ; forward upstream (1.1.1.1) ; remonte les blocages en `webVisits` ; fallback `hosts` + restauration DNS à l'arrêt/crash ; **22 tests verts** (décisions, codec, proxy live avec faux upstream)
 - [x] Écran de blocage en superposition (au lieu du verrouillage complet) — overlay plein écran branché Kidora (`overlay.ps1`, multi-écrans, topmost, piloté par fichier d'état) affiché par l'enforcer sur pause/coucher/limite ; **se retire automatiquement** quand la condition se lève (machine à états par transitions) ; teardown fiable par balayage ligne de commande (testé : show/hide réel, 0 orphelin) ; capteur auto-résilient ; `LockWorkStation` conservé pour la commande distante `lock`
 - [x] Capture d'écran à la demande (commande `screenshot`) — capture PowerShell, upload gardé par auth, galerie dans le dashboard
@@ -74,7 +75,7 @@
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation
-- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, chiffrement) — **75 tests verts** ; *Playwright dashboard à venir*
+- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, chiffrement) — **88 tests verts** ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [x] Migration Postgres + déploiement Vercel de référence — adapter auto Postgres (cf. plus haut) + déploiement **un clic** : `vercel.json` (`framework`, `buildCommand: vercel-build`, crons), script `vercel-build` (= `db:push` + `next build` → schéma Postgres **créé au build**, idempotent), **bouton « Deploy with Vercel »** (root `apps/server` pré-réglé, prompts d'env) dans le README + `DEPLOYMENT.md` (bouton, import manuel, étapes), seed démo documenté
 - [x] i18n (FR/EN) — navigation + tous les onglets (vue d'ensemble, apps, web, temps d'écran, activité, rapports, localisation, **appareils**) + paramètres + alertes + onboarding ; *quelques sous-cartes mineures restent en FR*

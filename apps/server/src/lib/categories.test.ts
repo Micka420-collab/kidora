@@ -39,6 +39,19 @@ describe("categorizeDomain", () => {
     expect(categorizeDomain("megacasino-bet.io")).toBe("gambling");
   });
 
+  it("matches 'sex' on a word boundary (true positives kept)", () => {
+    expect(categorizeDomain("sex.com")).toBe("adult");
+    expect(categorizeDomain("sexcam.net")).toBe("adult");
+    expect(categorizeDomain("sex-tube.net")).toBe("adult");
+  });
+
+  it("does NOT mis-flag legitimate names containing 'sex'", () => {
+    // Regression: 'sex' as a bare substring used to flag these as adult.
+    expect(categorizeDomain("essex.com")).toBe("unknown");
+    expect(categorizeDomain("sussex.ac.uk")).toBe("unknown");
+    expect(categorizeDomain("middlesex.gov.uk")).toBe("unknown");
+  });
+
   it("returns unknown for unrecognized domains", () => {
     expect(categorizeDomain("my-random-blog.dev")).toBe("unknown");
   });
