@@ -116,6 +116,11 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 </button>
               </div>
               {mode === "register" && <StrengthMeter value={password} />}
+              {mode === "login" && (
+                <div className="mt-1.5 text-right">
+                  <Link href="/forgot" className="text-xs font-medium text-muted hover:text-brand-600">Mot de passe oublié ?</Link>
+                </div>
+              )}
             </div>
 
             {needs2fa && (
