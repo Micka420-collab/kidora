@@ -43,13 +43,14 @@ export function Screen({
 
 // ── Card ───────────────────────────────────────────────────────────────
 export function Card({
-  children, style, onPress, elevation = 1, padded = true,
+  children, style, onPress, elevation = 1, padded = true, accessibilityLabel,
 }: {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   onPress?: () => void;
   elevation?: number;
   padded?: boolean;
+  accessibilityLabel?: string;
 }) {
   const { c, shadow } = useTheme();
   const body = (
@@ -71,7 +72,12 @@ export function Card({
   );
   if (!onPress) return body;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
+    >
       {body}
     </Pressable>
   );
