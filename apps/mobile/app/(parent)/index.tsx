@@ -180,7 +180,7 @@ function AlertRow({ alert }: { alert: Alert }) {
   const meta = alertMeta(alert.type);
   const tone = meta.tone === "danger" ? c.danger : meta.tone === "warn" ? c.warn : c.info;
   return (
-    <Card padded>
+    <Card padded onPress={() => router.push(`/child/${alert.childId}`)} accessibilityLabel={`Alerte ${alert.child.name} : ${alert.message}`}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
         <IconBubble icon={meta.icon} color={tone} size={38} />
         <View style={{ flex: 1 }}>
