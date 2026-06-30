@@ -245,17 +245,25 @@ export default function ChildDetail() {
             {/* location */}
             <View style={{ gap: space.sm }}>
               <H2>Localisation</H2>
-              <Card>
+              <Card onPress={() => router.push(`/child/${id}/location`)}>
                 {live?.location ? (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
                     <IconBubble icon="location" color={c.danger} size={42} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 14, fontWeight: "700", color: c.text }} numberOfLines={2}>{live.location.address ?? `${live.location.lat.toFixed(4)}, ${live.location.lng.toFixed(4)}`}</Text>
-                      <Muted>Mis à jour {relativeTime(live.location.ts)}</Muted>
+                      <Muted>Mis à jour {relativeTime(live.location.ts)} · historique & zones</Muted>
                     </View>
+                    <Ionicons name="chevron-forward" size={16} color={c.textFaint} />
                   </View>
                 ) : (
-                  <Muted>Aucune position récente.</Muted>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+                    <IconBubble icon="location" color={c.textFaint} size={42} />
+                    <View style={{ flex: 1 }}>
+                      <Muted>Aucune position récente.</Muted>
+                      <Muted style={{ fontSize: 11 }}>Voir l&apos;historique & les zones de sécurité</Muted>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={c.textFaint} />
+                  </View>
                 )}
               </Card>
             </View>
