@@ -109,7 +109,7 @@ export const parent = {
   async screenTimeRule(id: string) {
     return req<{ screenTime: ScreenTimeRuleRaw | null }>(`/api/children/${id}/screentime`, { headers: await this.authHeader() });
   },
-  async setScreenTimeRule(id: string, data: { enabled?: boolean; dailyLimits?: Record<string, number> }) {
+  async setScreenTimeRule(id: string, data: { enabled?: boolean; dailyLimits?: Record<string, number>; bedtimes?: Bedtime[] }) {
     return req<{ screenTime: ScreenTimeRuleRaw }>(`/api/children/${id}/screentime`, { method: "PUT", body: data, headers: await this.authHeader() });
   },
   async alerts() {
@@ -252,6 +252,7 @@ export type Geofence = { id: string; name: string; lat: number; lng: number; rad
 export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
 // Raw screen-time rule as stored (dailyLimits/bedtimes are JSON strings).
 export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtimes: string };
+export type Bedtime = { days: string[]; start: string; end: string };
 export type AppAction = "allow" | "block" | "limit";
 export type AppRule = { id: string; appId: string; appName: string; action: AppAction; dailyLimitMinutes: number | null; category: string | null };
 export type WatchedKeyword = { id: string; term: string; createdAt: string };
