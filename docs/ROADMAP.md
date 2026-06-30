@@ -41,6 +41,9 @@
 - [x] **Double authentification (2FA / TOTP)** : implémentation RFC 6238 sans dépendance (`lib/totp.ts`, base32 + HMAC-SHA1), enrôlement par QR (`otpauth://`, QR via `qrcode`), endpoints enroll/verify/disable, **challenge au login**, carte d'activation dans Paramètres ; **comparaison à temps constant** (`timingSafeEqual`) ; 8 tests dont les **vecteurs officiels RFC 6238** (T=59 → 287082…) et les bornes de fenêtre (0/1/2)
 - [x] **Protection anti-brute-force** : verrouillage progressif après 5 échecs de connexion (clé email+IP, durée croissante 30 s→15 min, oubli après 30 min, reset au succès) + message convivial + `Retry-After` ; 3 tests verts
 
+## ☁️ Déploiement
+- [x] **Build Vercel robuste** (`scripts/vercel-build.mjs`) : l'ancien `vercel-build = db:push && next build` faisait **planter tout le build** si `DATABASE_URL` était absente en prod → aucun déploiement → **404 `NOT_FOUND` opaque**. Le nouveau script ne lance `prisma db push` que si `DATABASE_URL` est configurée ; sinon il **saute** la synchro (avertissement clair) et **déploie quand même** le site (un échec reste visible si l'URL est *présente mais invalide*). `DEPLOYMENT.md` : section **Dépannage 404** (Root Directory `apps/server`, env Production, branche de prod, domaine)
+
 ## 📦 Distribution
 - [x] Installeur **Linux/Ubuntu** en une commande (`install.sh`)
 - [x] **Release GitHub v1.0.0** (archives source téléchargeables) + section Téléchargement & Configuration requise dans le README
