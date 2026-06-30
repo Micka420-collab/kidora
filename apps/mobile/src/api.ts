@@ -61,6 +61,9 @@ export const parent = {
   async messages(id: string) {
     return req<{ messages: Message[] }>(`/api/children/${id}/messages`, { headers: await this.authHeader() });
   },
+  async screenshots(id: string, limit = 12) {
+    return req<{ screenshots: Screenshot[] }>(`/api/children/${id}/screenshots?limit=${limit}`, { headers: await this.authHeader() });
+  },
   async webVisits(id: string, take = 100) {
     return req<{ visits: WebVisit[] }>(`/api/children/${id}/web-visits?take=${take}`, { headers: await this.authHeader() });
   },
@@ -247,6 +250,7 @@ export type Report = {
 export type Video = { id: string; title: string; channel: string | null; url: string | null; source: string; platform: string; ts: string };
 export type Message = { id: string; app: string; direction: "in" | "out"; contact: string | null; body: string; ts: string };
 export type WebVisit = { id: string; domain: string; url: string | null; title: string | null; category: string | null; blocked: boolean; ts: string };
+export type Screenshot = { id: string; dataUrl: string; createdAt: string };
 export type LocationPing = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
 export type Geofence = { id: string; name: string; lat: number; lng: number; radius: number; notifyOnEnter: boolean; notifyOnExit: boolean };
 export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
