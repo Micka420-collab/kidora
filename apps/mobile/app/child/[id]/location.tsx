@@ -1,11 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
-import { View, Text, ScrollView, RefreshControl, Linking } from "react-native";
+import { View, Text, ScrollView, RefreshControl, TextInput, Pressable, Linking, Alert as RNAlert } from "react-native";
 import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { parent, type LocationPing, type Geofence } from "@/api";
 import { useTheme, relativeTime, space, radius } from "@/theme";
-import { Card, Muted, H2, Pill, Empty, Skeleton, IconBubble, ErrorState } from "@/ui";
+import { Card, Muted, H2, Pill, Btn, Empty, Skeleton, IconBubble, ErrorState } from "@/ui";
 import { Header } from "./videos";
+
+const RADII = [100, 150, 300, 500];
 
 // Great-circle distance in metres (small local helper — no native deps).
 function metersBetween(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -43,6 +46,9 @@ export default function Location() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [zoneName, setZoneName] = useState("");
+  const [zoneRadius, setZoneRadius] = useState(150);
+  const [adding, setAdding] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -56,6 +62,33 @@ export default function Location() {
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  async function createZone() {
+    if (!id || !latest || zoneName.trim().length < 1) return;
+    setAdding(true);
+    try {
+      const r = await parent.addGeofence(id, { name: zoneName.trim(), lat: latest.lat, lng: latest.lng, radius: zoneRadius });
+      setFences((fs) => [...fs, r.geofence]);
+      setZoneName("");
+      RNAlert.alert("Kidora", `Zone « ${r.geofence.name} » créée ✅`);
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Création impossible");
+    } finally { setAdding(false); }
+  }
+
+  function confirmDeleteZone(f: Geofence) {
+    RNAlert.alert("Supprimer la zone", `Supprimer « ${f.name} » ?`, [
+      { text: "Annuler", style: "cancel" },
+      { text: "Supprimer", style: "destructive", onPress: () => deleteZone(f) },
+    ]);
+  }
+  async function deleteZone(f: Geofence) {
+    if (!id) return;
+    const prev = fences;
+    setFences((fs) => fs.filter((x) => x.id !== f.id));
+    try { await parent.deleteGeofence(id, f.id); }
+    catch { setFences(prev); RNAlert.alert("Erreur", "Suppression impossible"); }
+  }
 
   const here = useMemo(() => fenceContaining(latest, fences), [latest, fences]);
   const history = latest ? pings.slice(1) : pings;
@@ -94,9 +127,9 @@ export default function Location() {
             </Card>
 
             {/* safe zones */}
-            {fences.length > 0 && (
-              <View style={{ gap: space.sm }}>
-                <H2>Zones de sécurité</H2>
+            <View style={{ gap: space.sm }}>
+              <H2>Zones de sécurité</H2>
+              {fences.length > 0 && (
                 <Card>
                   {fences.map((f, i) => (
                     <View key={f.id} style={{ flexDirection: "row", alignItems: "center", gap: space.md, marginTop: i ? space.md : 0, paddingTop: i ? space.md : 0, borderTopWidth: i ? 1 : 0, borderTopColor: c.border }}>
@@ -106,11 +139,40 @@ export default function Location() {
                         <Muted style={{ fontSize: 12 }}>Rayon {f.radius} m{here?.id === f.id ? " · ici en ce moment" : ""}</Muted>
                       </View>
                       {here?.id === f.id ? <Pill label="Présent" tone="success" /> : null}
+                      <Pressable onPress={() => confirmDeleteZone(f)} hitSlop={10} accessibilityLabel={`Supprimer ${f.name}`} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, marginLeft: 4 })}>
+                        <Ionicons name="trash-outline" size={18} color={c.textFaint} />
+                      </Pressable>
                     </View>
                   ))}
                 </Card>
-              </View>
-            )}
+              )}
+
+              {/* create a zone at the child's current position */}
+              <Card>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: c.text, marginBottom: 2 }}>Créer une zone ici</Text>
+                <Muted style={{ fontSize: 12 }}>Centrée sur la position actuelle de l&apos;enfant. Vous serez alerté aux entrées/sorties.</Muted>
+                <TextInput
+                  style={{ marginTop: space.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 46, fontSize: 15 }}
+                  placeholder="Nom (ex. Maison, École)" placeholderTextColor={c.textFaint}
+                  value={zoneName} onChangeText={setZoneName} accessibilityLabel="Nom de la zone"
+                />
+                <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.sm }}>
+                  {RADII.map((r) => {
+                    const on = zoneRadius === r;
+                    return (
+                      <Pressable key={r} onPress={() => setZoneRadius(r)} accessibilityLabel={`Rayon ${r} m`} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+                        <View style={{ alignItems: "center", paddingVertical: 9, borderRadius: radius.md, backgroundColor: on ? c.tint : c.surfaceAlt, borderWidth: 1, borderColor: on ? c.primary + "66" : c.border }}>
+                          <Text style={{ fontSize: 12.5, fontWeight: "800", color: on ? c.primary : c.textMuted }}>{r} m</Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                <View style={{ marginTop: space.md }}>
+                  <Btn title="Créer la zone" icon="add-circle" loading={adding} disabled={zoneName.trim().length < 1} onPress={createZone} full />
+                </View>
+              </Card>
+            </View>
 
             {/* history */}
             <View style={{ gap: space.sm }}>
