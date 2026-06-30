@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
-import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff, Download } from "lucide-react";
+import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff, Download, Hourglass } from "lucide-react";
 
 type Alert = {
   id: string;
@@ -27,6 +27,7 @@ const ICONS: Record<string, typeof ShieldAlert> = {
   new_app: AppWindow,
   panic: ShieldAlert,
   device_offline: WifiOff,
+  time_request: Hourglass,
 };
 
 type Filter = "all" | "unread" | "critical" | "warning";
