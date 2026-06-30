@@ -58,10 +58,18 @@ passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 ### 3. Schéma Postgres — automatique
 
 Le `buildCommand` de `vercel.json` est `npm run vercel-build`
-(= `db:push` + `next build`) : à **chaque build**, Prisma synchronise le schéma
-sur la base (`prisma db push`, idempotent) puis l'app est compilée. **Aucune
-étape manuelle** — il suffit que `DATABASE_URL` soit présente au build (cas par
-défaut sur Vercel).
+(`scripts/vercel-build.mjs`) : à **chaque build**, si `DATABASE_URL` est
+configurée, Prisma synchronise le schéma sur la base (`prisma db push`,
+idempotent) puis l'app est compilée. **Aucune étape manuelle** — il suffit que
+`DATABASE_URL` soit présente au build (cas par défaut sur Vercel).
+
+> **Robustesse** : si `DATABASE_URL` **n'est pas** définie, le build **n'échoue
+> plus** — il **saute** `db:push` (avec un avertissement clair dans les logs) et
+> déploie quand même le site. Les pages liées à la base échoueront à l'exécution,
+> mais vous obtenez un déploiement (et un message d'erreur explicite) au lieu
+> d'un **404 `NOT_FOUND` opaque** dû à un build planté. Si `DATABASE_URL` **est**
+> définie mais que le push échoue (identifiants/réseau), le build échoue
+> volontairement — c'est une vraie erreur à corriger.
 
 Compte démo (optionnel, une fois) :
 
@@ -82,6 +90,30 @@ redéploie), ou la CLI :
 cd apps/server
 vercel deploy --prod          # npm i -g vercel ; root = apps/server
 ```
+
+### Dépannage — l'URL `*.vercel.app` renvoie `404: NOT_FOUND`
+
+Un **404 `NOT_FOUND` servi par `Server: Vercel`** (en-tête `X-Vercel-Error: NOT_FOUND`)
+n'est **pas** le 404 de l'app : le nom de domaine **ne pointe vers aucun
+déploiement**. Causes habituelles et correctifs :
+
+1. **Aucun déploiement *production* réussi.** Le domaine de prod n'est attribué
+   qu'au dernier déploiement **production** (les previews ont des URLs
+   `*-git-<branche>` / `*-<hash>`). Vérifiez *Deployments* : s'ils sont tous en
+   **Error**, ouvrez les **Build Logs**.
+2. **`No Next.js version detected`** dans les logs → **Root Directory** mal réglé.
+   *Settings → General → Root Directory = `apps/server`*.
+3. **`Environment variable not found: DATABASE_URL`** (ou connexion DB refusée) →
+   ajoutez `DATABASE_URL` (Postgres joignable) **et** `AUTH_SECRET` dans l'env
+   **Production**, puis redéployez. *(Depuis le build robuste, l'absence de
+   `DATABASE_URL` ne plante plus le build — mais une URL invalide, si.)*
+4. **Mauvaise branche de production.** *Settings → Git → Production Branch = `main`*.
+5. **Domaine non attribué.** *Settings → Domains* : vérifiez qu'un domaine est
+   bien rattaché à la Production.
+
+> En monorepo, le projet Vercel doit cibler **`apps/server`** (le `package.json`
+> contenant Next.js). Le bouton « Deploy » du README pré-règle ce dossier ; un
+> import manuel doit le régler à la main.
 
 ## Rapports hebdomadaires par email
 

@@ -7,7 +7,7 @@
     "build": "next build",
     "prebuild": "npm run db:generate",
     "postinstall": "npm run db:generate",
-    "vercel-build": "npm run db:push && next build",
+    "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
