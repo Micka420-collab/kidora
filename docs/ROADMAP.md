@@ -4,7 +4,7 @@
 
 Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 correctifs vérifiés** (#208–#227), `main` resté vert. Corrigés :
 - **Robustesse API** : `?days=` NaN ne 500 plus (report/usage/cron) ; horodatages agent assainis (`safeDate`) ; `commandResults` borné + status enum ; **anti-flood d'alertes** (cap + dédup par sync) ; histogramme d'activité **conscient du fuseau** ; fenêtres insights **égales (7 j)** ; `formatDuration` ne rend plus « 1 h 60 ».
-- **Sécurité** : crons **fail-closed** sans `CRON_SECRET` ; **timing du login égalisé** (anti-énumération) ; **rate-limit 2FA** ; **suppression de compte ré-authentifiée** (mdp + TOTP) ; **secret TOTP chiffré au repos** ; **révocation de session** (`tokenVersion`, déconnexion globale après reset/changement de mdp).
+- **Sécurité** : crons **fail-closed** sans `CRON_SECRET` ; **timing du login égalisé** (anti-énumération) ; **rate-limit 2FA** ; **suppression de compte ré-authentifiée** (mdp + TOTP) ; **secret TOTP chiffré au repos** ; **révocation de session** (`tokenVersion`, déconnexion globale après reset/changement de mdp) ; expiry du token de vérif email ; **codes de secours 2FA** (récupération à usage unique, web + mobile).
 - **Agent** : **DNS/hosts restaurés** à l'arrêt/désinstallation (SIGTERM + désinstalleur) ; **coucher nocturne** respecte le jour de début ; **socket DNS upstream unique** multiplexé (anti-épuisement de ports) ; télémétrie de blocage non tronquée.
 - **Commandes** : un **broadcast** (verrou/localiser/capture/message) atteint **tous** les appareils (fan-out), plus un seul.
 - **Géoloc** : ping précédent **scopé à l'appareil** (fin des fausses alertes entrée/sortie).
