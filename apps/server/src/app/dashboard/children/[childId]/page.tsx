@@ -52,6 +52,7 @@ export default async function ChildOverview({
   const limitToday = (limits[todayWeekday()] ?? 0) + bonusMin;
   const limitSecs = limitToday * 60;
   const pct = limitSecs ? Math.min(100, Math.round((totalToday / limitSecs) * 100)) : 0;
+  const remainingSecs = limitSecs - totalToday;
   const bedtimes = safeParse<{ days: string[]; start: string; end: string }[]>(screenTime?.bedtimes, []);
   const inBedtime = isBedtimeNow(bedtimes);
   const maxDay = Math.max(1, ...[...byDay.values()]);
@@ -76,6 +77,13 @@ export default async function ChildOverview({
               <div className="mt-1.5 text-xs text-muted">
                 Limite : {formatDuration(limitSecs)} · {pct}%
                 {bonusMin > 0 && <span className="text-emerald-600"> (dont +{bonusMin} min bonus)</span>}
+              </div>
+              <div className={`mt-1 text-sm font-semibold ${remainingSecs > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {remainingSecs > 0
+                  ? `Il reste ${formatDuration(remainingSecs)}`
+                  : remainingSecs === 0
+                    ? "Limite atteinte"
+                    : `Limite dépassée de ${formatDuration(-remainingSecs)}`}
               </div>
             </>
           ) : (
