@@ -41,6 +41,35 @@ function safeParse<T>(raw: string | null | undefined, fallback: T): T {
   }
 }
 
+export type ScreenTimeToday = {
+  enabled: boolean;
+  limitMinutes: number; // today's base daily limit (0 = no limit set)
+  bonusMinutes: number; // extra minutes granted for today
+  totalMinutes: number; // limit + bonus (0 when there is no base limit)
+};
+
+/**
+ * Pure: today's screen-time allowance from the raw ScreenTime row and the
+ * already-summed bonus minutes. With no base limit the day is "free time", so
+ * totalMinutes stays 0 even if bonus was granted.
+ */
+export function computeScreenTimeToday(
+  screenTime: { enabled: boolean; dailyLimits: string } | null | undefined,
+  bonusMinutes: number,
+  weekday: string = todayWeekday(),
+): ScreenTimeToday {
+  const enabled = screenTime?.enabled ?? false;
+  const limits = safeParse<Record<string, number>>(screenTime?.dailyLimits, {});
+  const limitMinutes = enabled ? Math.max(0, limits[weekday] ?? 0) : 0;
+  const bonus = enabled ? Math.max(0, bonusMinutes) : 0;
+  return {
+    enabled,
+    limitMinutes,
+    bonusMinutes: bonus,
+    totalMinutes: limitMinutes > 0 ? limitMinutes + bonus : 0,
+  };
+}
+
 /** Build the full enforcement policy a device agent should apply. */
 export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   const child = await prisma.child.findUnique({

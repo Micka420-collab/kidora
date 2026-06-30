@@ -47,7 +47,7 @@ export const parent = {
     return req<{ children: Child[] }>("/api/children", { headers: await this.authHeader() });
   },
   async child(id: string) {
-    return req<{ child: ChildDetail }>(`/api/children/${id}`, { headers: await this.authHeader() });
+    return req<{ child: ChildDetail; screenTimeToday?: ScreenTimeToday }>(`/api/children/${id}`, { headers: await this.authHeader() });
   },
   async live(id: string) {
     return req<Live>(`/api/children/${id}/live`, { headers: await this.authHeader() });
@@ -121,6 +121,7 @@ export type Child = {
   _count?: { alerts: number };
 };
 export type ChildDetail = Child & { webFilter: unknown };
+export type ScreenTimeToday = { enabled: boolean; limitMinutes: number; bonusMinutes: number; totalMinutes: number };
 export type Live = {
   online: boolean;
   paused: boolean;
