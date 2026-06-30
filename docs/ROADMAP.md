@@ -1,5 +1,21 @@
 # Roadmap Kidora
 
+## 🛡️ Audit & durcissement (nuit du 2026-07-01)
+
+Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 correctifs vérifiés** (#208–#227), `main` resté vert. Corrigés :
+- **Robustesse API** : `?days=` NaN ne 500 plus (report/usage/cron) ; horodatages agent assainis (`safeDate`) ; `commandResults` borné + status enum ; **anti-flood d'alertes** (cap + dédup par sync) ; histogramme d'activité **conscient du fuseau** ; fenêtres insights **égales (7 j)** ; `formatDuration` ne rend plus « 1 h 60 ».
+- **Sécurité** : crons **fail-closed** sans `CRON_SECRET` ; **timing du login égalisé** (anti-énumération) ; **rate-limit 2FA** ; **suppression de compte ré-authentifiée** (mdp + TOTP) ; **secret TOTP chiffré au repos** ; **révocation de session** (`tokenVersion`, déconnexion globale après reset/changement de mdp).
+- **Agent** : **DNS/hosts restaurés** à l'arrêt/désinstallation (SIGTERM + désinstalleur) ; **coucher nocturne** respecte le jour de début ; **socket DNS upstream unique** multiplexé (anti-épuisement de ports) ; télémétrie de blocage non tronquée.
+- **Commandes** : un **broadcast** (verrou/localiser/capture/message) atteint **tous** les appareils (fan-out), plus un seul.
+- **Géoloc** : ping précédent **scopé à l'appareil** (fin des fausses alertes entrée/sortie).
+- **Client** : plus de spinner/bouton bloqué sur erreur réseau (routines, temps d'écran, alertes, demandes de temps) ; `routines-card` ne plante plus sur JSON malformé.
+
+**Reste à décider/faire** (suivi, non bloquant) :
+- [ ] **Fuseau horaire bout-en-bout** : `AppUsage.date` est local (agent) mais le « aujourd'hui » serveur + `localDate` agent + bonus (`TimeGrant.date`) sont en **UTC** → décalage près de minuit. Nécessite un modèle de fuseau (par appareil/enfant) — décision produit.
+- [ ] **Idempotence du sync + ack des commandes** : un retry après réponse perdue peut re-compter l'usage ; les commandes non-idempotentes (message) ne doivent être appliquées qu'une fois → clé d'idempotence agent + ack at-least-once.
+- [ ] **Anti-bruteforce robuste en prod** : le limiteur/verrou est en mémoire (par-instance sur serverless) et l'IP vient du XFF (spoofable) → store partagé (Redis/KV) + IP de confiance.
+- [ ] **Mineurs** : expiry du token de vérification d'email ; ré-vérification d'email au changement d'adresse.
+
 ## ✅ Fait (v1.0 — fondations fonctionnelles)
 
 - [x] Modèle de données complet (parents, enfants, appareils, règles, télémétrie)
