@@ -38,15 +38,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  // Prefill the demo credentials when arriving from a "Tester la démo" link
-  // (/login?demo=1). Read from window so we don't need a Suspense boundary.
+  // Read URL flags on login: demo prefill (/login?demo=1) and the
+  // email-verification result (/login?verified=1|0). window-based → no Suspense.
   useEffect(() => {
     if (mode !== "login") return;
-    if (new URLSearchParams(window.location.search).get("demo") != null) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") != null) {
       setEmail("demo@kidora.app");
       setPassword("kidora1234");
     }
+    const v = params.get("verified");
+    if (v === "1") setNotice("Adresse email vérifiée ✅ Vous pouvez vous connecter.");
+    else if (v === "0") setNotice("Lien de vérification invalide ou expiré.");
   }, [mode]);
 
   async function submit(e: React.FormEvent) {
@@ -140,6 +145,9 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               </div>
             )}
 
+            {notice && (
+              <div className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</div>
+            )}
             {error && (
               <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
             )}
