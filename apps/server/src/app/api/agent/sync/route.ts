@@ -8,7 +8,7 @@ import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
-import { safeDate } from "@/lib/ingest";
+import { safeDate, capAlerts } from "@/lib/ingest";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -373,7 +373,9 @@ export async function POST(req: NextRequest) {
       select: { alertPrefs: true },
     });
     const muted = parseMutedTypes(parentPrefs?.alertPrefs);
-    const kept = alerts.filter((a) => !isAlertMuted(muted, a.type));
+    // Collapse a flood (one sync can produce 100s of blocked-attempt/new-app
+    // events) into a capped, de-duplicated set before muting + persisting.
+    const kept = capAlerts(alerts).filter((a) => !isAlertMuted(muted, a.type));
     if (kept.length) {
       await prisma.alert.createMany({ data: kept });
       const critical = kept.filter((a) => a.severity === "critical");
