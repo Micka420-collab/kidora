@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Smartphone, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
@@ -24,7 +26,7 @@ export default async function ChildOverview({
   const dates = Array.from({ length: 7 }, (_, i) => dateStr(6 - i));
   const today = dateStr(0);
 
-  const [usage, screenTime, recent, grants] = await Promise.all([
+  const [usage, screenTime, recent, grants, deviceCount] = await Promise.all([
     prisma.appUsage.findMany({ where: { childId, date: { in: dates } } }),
     prisma.screenTimeRule.findUnique({ where: { childId } }),
     prisma.activityEvent.findMany({
@@ -34,6 +36,7 @@ export default async function ChildOverview({
       include: { device: { select: { name: true } } },
     }),
     prisma.timeGrant.findMany({ where: { childId, date: today } }),
+    prisma.device.count({ where: { childId } }),
   ]);
   const bonusMin = grants.reduce((a, g) => a + g.minutes, 0);
 
@@ -59,6 +62,21 @@ export default async function ChildOverview({
 
   return (
     <div className="space-y-6">
+      {deviceCount === 0 && (
+        <div className="card flex flex-col items-start gap-3 border-brand-200 bg-brand-50/60 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-700"><Smartphone size={20} /></span>
+            <div>
+              <div className="font-semibold">Aucun appareil connecté</div>
+              <div className="text-sm text-muted">Installez l&apos;agent Kidora (PC, Android ou iPhone) pour commencer la protection.</div>
+            </div>
+          </div>
+          <Link href={`/dashboard/children/${childId}/devices`} className="btn btn-primary shrink-0">
+            Ajouter un appareil <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
+
       <LiveNow childId={childId} />
 
       <div className="grid gap-5 lg:grid-cols-3">
