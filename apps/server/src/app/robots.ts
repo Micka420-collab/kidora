@@ -1,8 +1,8 @@
 import type { MetadataRoute } from "next";
-import { siteUrl } from "@/lib/site";
+import { requestOrigin } from "@/lib/site";
 
-export default function robots(): MetadataRoute.Robots {
-  const base = siteUrl();
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const base = await requestOrigin();
   return {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/dashboard", "/api/"] },
