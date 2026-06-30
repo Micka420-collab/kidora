@@ -256,8 +256,12 @@ export async function POST(req: NextRequest) {
 
   // 5. location + geofence transitions
   if (body.location) {
+    // Compare against THIS device's previous ping, not the child's latest across
+    // all devices — otherwise a child with two location-reporting devices (phone
+    // out, tablet at home) sees `prev` alternate between places and fires
+    // spurious enter/exit alerts.
     const prev = await prisma.locationPing.findFirst({
-      where: { childId },
+      where: { childId, deviceId: device.id },
       orderBy: { ts: "desc" },
     });
     await prisma.locationPing.create({
