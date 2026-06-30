@@ -239,7 +239,10 @@ export default function ChildDetail() {
               <NavCard icon="logo-youtube" color="#ef4444" label="Vidéos YouTube" onPress={() => router.push(`/child/${id}/videos`)} />
               <NavCard icon="chatbubbles" color={c.primary} label="Messages" onPress={() => router.push(`/child/${id}/messages`)} />
             </View>
-            <NavCard icon="globe" color={c.info} label="Historique de navigation web" onPress={() => router.push(`/child/${id}/web`)} />
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <NavCard icon="globe" color={c.info} label="Historique web" onPress={() => router.push(`/child/${id}/web`)} />
+              <NavCard icon="pulse" color={c.success} label="Activité" onPress={() => router.push(`/child/${id}/activity`)} />
+            </View>
 
             {/* weekly trend */}
             <Card>
