@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { passwordStrength } from "@/lib/password-strength";
@@ -76,7 +77,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     <div className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2 text-2xl font-extrabold">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-600 text-white">K</span>
+          <Image src="/kidora-mark.svg" alt="" width={40} height={40} priority unoptimized />
           Kidora
         </Link>
 
