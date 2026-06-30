@@ -148,6 +148,11 @@ export type Policy = {
   paused: boolean;
   blockedDomains: string[];
   appRules: unknown[];
-  screenTime?: { enabled: boolean; dailyLimits: Record<string, number>; bonusMinutesToday?: number };
+  screenTime?: {
+    enabled: boolean;
+    dailyLimits: Record<string, number>;
+    bonusMinutesToday?: number;
+    bedtimes?: { days: string[]; start: string; end: string }[];
+  };
 };
 export type Command = { id: string; type: string; payload: Record<string, unknown> };
