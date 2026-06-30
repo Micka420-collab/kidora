@@ -6,6 +6,7 @@ import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
 import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
+import { geofenceTransition } from "@/lib/geo";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -87,18 +88,6 @@ const syncSchema = z.object({
     .optional(),
   panic: z.boolean().optional(),
 });
-
-function haversine(aLat: number, aLng: number, bLat: number, bLng: number): number {
-  const R = 6371000;
-  const dLat = ((bLat - aLat) * Math.PI) / 180;
-  const dLng = ((bLng - aLng) * Math.PI) / 180;
-  const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((aLat * Math.PI) / 180) *
-      Math.cos((bLat * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
 
 export async function POST(req: NextRequest) {
   const device = await getDeviceFromRequest(req);
@@ -278,13 +267,14 @@ export async function POST(req: NextRequest) {
       },
     });
     const fences = await prisma.geofence.findMany({ where: { childId } });
+    const now = { lat: body.location.lat, lng: body.location.lng };
+    const prevLoc = prev ? { lat: prev.lat, lng: prev.lng } : null;
     for (const f of fences) {
-      const nowIn = haversine(body.location.lat, body.location.lng, f.lat, f.lng) <= f.radius;
-      const wasIn = prev ? haversine(prev.lat, prev.lng, f.lat, f.lng) <= f.radius : false;
-      if (nowIn && !wasIn && f.notifyOnEnter) {
+      const transition = geofenceTransition(prevLoc, now, f);
+      if (transition === "enter") {
         alerts.push({ parentId, childId, type: "geofence", severity: "info", message: `Arrivée à « ${f.name} »` });
       }
-      if (!nowIn && wasIn && f.notifyOnExit) {
+      if (transition === "exit") {
         alerts.push({ parentId, childId, type: "geofence", severity: "info", message: `Départ de « ${f.name} »` });
       }
     }
