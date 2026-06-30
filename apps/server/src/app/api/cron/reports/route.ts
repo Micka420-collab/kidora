@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { json, apiError } from "@/lib/http";
 import { sendWeeklyReports } from "@/lib/report-mailer";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,15 +9,15 @@ export const dynamic = "force-dynamic";
 // Vercel Cron automatically sends `Authorization: Bearer $CRON_SECRET` when the
 // CRON_SECRET env var is set. We accept that, or the same secret as `?key=`.
 function authorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    // No secret configured: allow only outside production (local testing).
-    return process.env.NODE_ENV !== "production";
-  }
   const auth = req.headers.get("authorization") ?? "";
   const bearer = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
   const key = new URL(req.url).searchParams.get("key") ?? "";
-  return bearer === secret || key === secret;
+  return isCronAuthorized({
+    secret: process.env.CRON_SECRET,
+    isProduction: process.env.NODE_ENV === "production",
+    bearer,
+    key,
+  });
 }
 
 // GET /api/cron/reports?days=7&dryRun=1 — send the weekly usage email to
