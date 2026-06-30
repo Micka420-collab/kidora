@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { generateSecret, verifyTotp, otpauthURL } from "@/lib/totp";
+import { encrypt, decrypt } from "@/lib/crypto";
 import { rateLimit } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 
@@ -50,8 +51,9 @@ export async function POST(req: NextRequest) {
         return apiError("La 2FA est déjà active. Désactivez-la d'abord pour la reconfigurer.", 400);
       }
       // Generate a fresh pending secret (2FA stays disabled until verified).
+      // Stored encrypted at rest; the QR/otpauth still carries the plaintext.
       const secret = generateSecret();
-      await prisma.parent.update({ where: { id: parent.id }, data: { totpSecret: secret, totpEnabled: false } });
+      await prisma.parent.update({ where: { id: parent.id }, data: { totpSecret: encrypt(secret), totpEnabled: false } });
       const uri = otpauthURL(secret, parent.email);
       const qr = await QRCode.toDataURL(uri, { margin: 1, width: 240 });
       return json({ secret, otpauth: uri, qr });
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     if (action === "verify") {
       if (!parent.totpSecret) return apiError("Commencez par configurer la 2FA.", 400);
-      if (!verifyTotp(parent.totpSecret, code ?? "")) return apiError("Code invalide. Réessayez.", 401);
+      if (!verifyTotp(decrypt(parent.totpSecret), code ?? "")) return apiError("Code invalide. Réessayez.", 401);
       await prisma.parent.update({ where: { id: parent.id }, data: { totpEnabled: true } });
       await audit(parent.id, "2fa.enable");
       return json({ enabled: true });
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     // disable — require a valid current code to turn it off.
     if (!parent.totpEnabled) return json({ enabled: false });
-    if (!parent.totpSecret || !verifyTotp(parent.totpSecret, code ?? "")) {
+    if (!parent.totpSecret || !verifyTotp(decrypt(parent.totpSecret), code ?? "")) {
       return apiError("Code invalide.", 401);
     }
     await prisma.parent.update({ where: { id: parent.id }, data: { totpEnabled: false, totpSecret: null } });

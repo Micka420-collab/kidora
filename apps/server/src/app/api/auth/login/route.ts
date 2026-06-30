@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, dummyVerify } from "@/lib/password";
 import { verifyTotp } from "@/lib/totp";
+import { decrypt } from "@/lib/crypto";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
 import { rateLimit, clientIp, loginLockStatus, recordLoginFailure, clearLoginFailures } from "@/lib/ratelimit";
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     if (!code) {
       return Response.json({ twoFactor: true, error: "Code de vérification requis." }, { status: 401 });
     }
-    if (!verifyTotp(parent.totpSecret, code)) {
+    if (!verifyTotp(decrypt(parent.totpSecret), code)) {
       recordLoginFailure(lockKey);
       return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
     }
