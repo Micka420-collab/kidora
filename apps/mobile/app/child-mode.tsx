@@ -29,8 +29,14 @@ export default function ChildMode() {
   const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
   const [welcome, setWelcome] = useState(false); // first-launch greeting banner
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Per-app cumulative-usage baseline, persisted so it survives app restarts —
+  // otherwise the first sync after a cold start would resend the whole day's
+  // cumulative usage as a "delta" and the server would double-count it.
   const prevUsage = useRef<Record<string, number>>({});
+  const usageDate = useRef<string | null>(null);
   const prevBonus = useRef<number | null>(null);
+  const sosInFlight = useRef(false);
+  const reqInFlight = useRef(false);
   const grantTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const welcomeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,7 +60,22 @@ export default function ChildMode() {
         storage.set("kidsWelcomed", "1").catch(() => undefined);
       }
     }).catch(() => undefined);
-    start();
+    // Restore the usage baseline before the first sync so a restart doesn't
+    // resend the day's cumulative usage as a delta.
+    (async () => {
+      try {
+        const raw = await storage.get("kidsUsageBaseline");
+        const today = new Date().toISOString().slice(0, 10);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { date?: string; perApp?: Record<string, number> };
+          if (parsed?.date === today && parsed.perApp) {
+            prevUsage.current = parsed.perApp;
+            usageDate.current = today;
+          }
+        }
+      } catch { /* start fresh */ }
+      start();
+    })();
     return () => {
       if (timer.current) clearInterval(timer.current);
       if (grantTimer.current) clearTimeout(grantTimer.current);
@@ -129,6 +150,8 @@ export default function ChildMode() {
         setNeedsUsagePerm(!granted);
         if (granted) {
           const today = new Date().toISOString().slice(0, 10);
+          // New local day → reset the baseline (native cumulative resets at midnight).
+          if (usageDate.current !== today) { prevUsage.current = {}; usageDate.current = today; }
           const entries = await AppUsage.getUsageToday();
           let totalToday = 0;
           for (const e of entries) {
@@ -139,6 +162,8 @@ export default function ChildMode() {
             if (delta > 0) usage.push({ appId: e.packageName, appName: e.appName, date: today, seconds: delta });
           }
           setUsedTodaySec(totalToday);
+          // Persist the baseline so a restart doesn't double-count.
+          storage.set("kidsUsageBaseline", JSON.stringify({ date: today, perApp: prevUsage.current })).catch(() => undefined);
         }
       }
 
@@ -152,7 +177,10 @@ export default function ChildMode() {
       // today's screen-time allowance (daily limit for this weekday + bonus granted)
       const st = res.policy.screenTime;
       const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
-      setLimitMin(st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) + (st.bonusMinutesToday ?? 0) : 0);
+      // Bonus only extends an EXISTING limit — a free-time day (no base limit)
+      // stays free even after a grant (mirrors the server's computeScreenTimeToday).
+      const baseMin = st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) : 0;
+      setLimitMin(baseMin > 0 ? baseMin + (st?.bonusMinutesToday ?? 0) : 0);
       // Celebrate when a parent grants extra time (bonus went up since last sync).
       const bonus = st?.enabled ? (st.bonusMinutesToday ?? 0) : 0;
       if (prevBonus.current != null && bonus > prevBonus.current) {
@@ -165,6 +193,9 @@ export default function ChildMode() {
       }
       prevBonus.current = bonus;
       setPendingReq(res.pendingTimeRequest ? res.pendingTimeRequest.minutes : null);
+      // Request resolved (approved → grant branch above, or denied → no pending
+      // request and no bonus change): clear the lingering "sent" state.
+      if (!res.pendingTimeRequest) setReqStatus((s) => (s === "sent" ? "idle" : s));
       setBedtime(isBedtimeNow(st?.bedtimes));
       setBedtimeAt(nextBedtimeStart(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
@@ -175,6 +206,8 @@ export default function ChildMode() {
   }
 
   async function triggerSOS() {
+    if (sosInFlight.current) return; // ignore rapid double-taps → no alert spam
+    sosInFlight.current = true;
     try {
       let location: { lat: number; lng: number; accuracy?: number } | undefined;
       try {
@@ -185,10 +218,12 @@ export default function ChildMode() {
       RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
     } catch {
       RNAlert.alert("Erreur", "Impossible d'envoyer le SOS. Réessaie.");
-    }
+    } finally { sosInFlight.current = false; }
   }
 
   async function requestTime(minutes: number) {
+    if (reqInFlight.current) return; // ignore double-taps → no duplicate request
+    reqInFlight.current = true;
     setReqStatus("sending");
     setPickTime(false);
     try {
@@ -203,7 +238,7 @@ export default function ChildMode() {
     } catch {
       setReqStatus("idle");
       RNAlert.alert("Oups", "La demande n'est pas partie. Réessaie dans un instant.");
-    }
+    } finally { reqInFlight.current = false; }
   }
 
   async function unlink() {
