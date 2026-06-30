@@ -38,7 +38,8 @@ export function PushToggle() {
       if (perm !== "granted") throw new Error("Permission refusée");
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const { publicKey } = await api.get<{ publicKey: string }>("/api/push/vapid");
+      const { publicKey } = await api.get<{ publicKey: string | null }>("/api/push/vapid");
+      if (!publicKey) throw new Error("Notifications push non configurées sur le serveur.");
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
