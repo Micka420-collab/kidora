@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +7,12 @@ import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ToastProvider } from "@/components/toast";
+
+// Private area — keep it out of search indexes (defense-in-depth alongside
+// robots.txt, which only asks crawlers not to fetch).
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,
