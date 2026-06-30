@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
-import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff } from "lucide-react";
+import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff, Download } from "lucide-react";
 
 type Alert = {
   id: string;
@@ -74,6 +74,20 @@ export default function AlertsPage() {
     await api.patch("/api/alerts", { ids: [id] });
     router.refresh();
   }
+  function exportCsv() {
+    const rows = [
+      ["Date", "Enfant", "Type", "Sévérité", "Message", "Lu"],
+      ...visible.map((a) => [a.ts, a.child.name, a.type, a.severity, a.message, a.read ? "oui" : "non"]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "kidora-alertes.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-5">
@@ -82,7 +96,10 @@ export default function AlertsPage() {
           <h1 className="text-2xl font-bold">{t.alerts.title}</h1>
           <p className="text-sm text-muted">{t.alerts.subtitle}</p>
         </div>
-        <button className="btn btn-outline" onClick={markAll}><CheckCheck size={16} /> {t.alerts.markAllRead}</button>
+        <div className="flex gap-2">
+          {alerts.length > 0 && <button className="btn btn-outline" onClick={exportCsv}><Download size={16} /> CSV</button>}
+          <button className="btn btn-outline" onClick={markAll}><CheckCheck size={16} /> {t.alerts.markAllRead}</button>
+        </div>
       </div>
 
       {!loading && alerts.length > 0 && (
