@@ -80,6 +80,12 @@ export const parent = {
   async grantTime(id: string, minutes: number) {
     return req<{ ok: true; granted: number }>(`/api/children/${id}/time-requests`, { method: "POST", body: { minutes }, headers: await this.authHeader() });
   },
+  async timeRequests(id: string) {
+    return req<{ requests: TimeRequest[]; bonusMinutesToday: number }>(`/api/children/${id}/time-requests`, { headers: await this.authHeader() });
+  },
+  async respondTimeRequest(id: string, requestId: string, action: "approve" | "deny") {
+    return req<{ ok: true }>(`/api/children/${id}/time-requests`, { method: "PATCH", body: { id: requestId, action }, headers: await this.authHeader() });
+  },
   async logout() {
     await storage.clearAll();
   },
@@ -122,6 +128,7 @@ export type Child = {
 };
 export type ChildDetail = Child & { webFilter: unknown };
 export type ScreenTimeToday = { enabled: boolean; limitMinutes: number; bonusMinutes: number; totalMinutes: number };
+export type TimeRequest = { id: string; minutes: number; reason: string | null; status: "pending" | "approved" | "denied"; createdAt: string };
 export type Live = {
   online: boolean;
   paused: boolean;
