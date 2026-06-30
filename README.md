@@ -14,7 +14,7 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
 [![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-234%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-261%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
@@ -176,7 +176,7 @@ npx expo start              # Expo Go (compagnon + localisation) ; EAS pour l'en
 ## 🧪 Qualité
 ```bash
 cd apps/server
-npm test          # 171 tests unitaires (Vitest)
+npm test          # 261 tests (Vitest, dont tests d'intégration du moteur de politique)
 npm run build     # build de production (Turbopack)
 ```
 
