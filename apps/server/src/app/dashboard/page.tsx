@@ -8,6 +8,7 @@ import { FamilyPause } from "@/components/family-pause";
 import { Onboarding } from "@/components/onboarding";
 import { ChildrenGrid, type ChildCardData } from "@/components/children-grid";
 import { CATEGORY_META, type Category } from "@/lib/categories";
+import { isDeviceOnline } from "@/lib/device-status";
 import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
 
 function today() {
@@ -44,7 +45,7 @@ export default async function OverviewPage() {
   });
 
   const totalDevices = kids.reduce((a, k) => a + k.devices.length, 0);
-  const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => d.online).length, 0);
+  const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => isDeviceOnline(d)).length, 0);
   const totalToday = [...usageMap.values()].reduce((a, b) => a + b, 0);
 
   const childCards: ChildCardData[] = kids.map((k) => ({
@@ -53,7 +54,7 @@ export default async function OverviewPage() {
     avatar: k.avatar,
     paused: k.paused,
     deviceCount: k.devices.length,
-    onlineCount: k.devices.filter((d) => d.online).length,
+    onlineCount: k.devices.filter((d) => isDeviceOnline(d)).length,
     secondsToday: usageMap.get(k.id) ?? 0,
   }));
 

@@ -3,6 +3,7 @@ import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleChildWhere } from "@/lib/guard";
 import { relativeTime } from "@/lib/format";
+import { isDeviceOnline } from "@/lib/device-status";
 import { Monitor, Smartphone, Circle, Battery, ArrowRight } from "lucide-react";
 
 export default async function AllDevicesPage() {
@@ -14,7 +15,7 @@ export default async function AllDevicesPage() {
   });
 
   const allDevices = kids.flatMap((k) => k.devices);
-  const online = allDevices.filter((d) => d.online).length;
+  const online = allDevices.filter((d) => isDeviceOnline(d)).length;
 
   return (
     <div className="space-y-6">
@@ -51,7 +52,7 @@ export default async function AllDevicesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 font-medium">
                         {d.name}
-                        <Circle size={8} className={d.online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300"} />
+                        <Circle size={8} className={isDeviceOnline(d) ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300"} />
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted">
                         <span className="capitalize">{d.platform}</span>

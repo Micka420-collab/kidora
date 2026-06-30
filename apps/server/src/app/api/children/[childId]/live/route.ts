@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { json } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
+import { isDeviceOnline } from "@/lib/device-status";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -23,11 +24,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       prisma.child.findUnique({ where: { id: childId }, select: { paused: true } }),
     ]);
 
-    // "online" if any device reported in the last 2 minutes
+    // "online" if any device reported within the liveness window
     const now = Date.now();
-    const onlineDevice = devices.find(
-      (d) => d.online && d.lastSeen && now - d.lastSeen.getTime() < 2 * 60_000,
-    );
+    const onlineDevice = devices.find((d) => isDeviceOnline(d, now));
     const lastSeen = devices
       .map((d) => d.lastSeen?.getTime() ?? 0)
       .reduce((a, b) => Math.max(a, b), 0);
