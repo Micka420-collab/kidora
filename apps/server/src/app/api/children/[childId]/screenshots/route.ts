@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { json } from "@/lib/http";
+import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { decrypt } from "@/lib/crypto";
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const parent = await requireParent();
     const { childId } = await ctx.params;
     await requireOwnedChild(parent.id, childId);
-    const limit = Math.min(Number(new URL(req.url).searchParams.get("limit") ?? 12), 20);
+    const limit = clampLimit(new URL(req.url).searchParams.get("limit"), 12, 20);
     const rows = await prisma.screenshot.findMany({
       where: { childId },
       orderBy: { createdAt: "desc" },
