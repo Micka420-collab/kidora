@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { json } from "@/lib/http";
+import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 
 type Ctx = { params: Promise<{ childId: string }> };
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     await requireOwnedChild(parent.id, childId);
 
     const url = new URL(req.url);
-    const days = Math.min(Number(url.searchParams.get("days") ?? 7), 31);
+    // clampLimit guards NaN/negative (?days=abc no longer yields an empty trend).
+    const days = clampLimit(url.searchParams.get("days"), 7, 31);
 
     const dates: string[] = [];
     for (let i = days - 1; i >= 0; i--) {

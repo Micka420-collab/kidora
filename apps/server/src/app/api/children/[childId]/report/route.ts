@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { json } from "@/lib/http";
+import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { buildChildReport, dateStr } from "@/lib/report";
 import { hourHistogram } from "@/lib/hourly";
@@ -14,7 +14,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const { childId } = await ctx.params;
     await requireOwnedChild(parent.id, childId);
 
-    const days = Math.min(Math.max(Number(new URL(req.url).searchParams.get("days") ?? 7), 1), 31);
+    // clampLimit guards NaN/negative/oversized (?days=abc no longer 500s).
+    const days = clampLimit(new URL(req.url).searchParams.get("days"), 7, 31);
     const report = await buildChildReport(childId, days);
 
     // Total screen time over the *previous* equal-length window, for a delta;
