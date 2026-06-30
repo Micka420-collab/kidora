@@ -33,21 +33,22 @@ Une **landing animée** accueille les visiteurs non connectés : défilement ave
 
 | Domaine | Détail |
 |---|---|
-| ⏱️ **Temps d'écran** | Limites quotidiennes par jour, heures du coucher, **pause instantanée** (par enfant ou familiale), **temps bonus** (demandes de l'enfant + octroi parental) |
+| ⏱️ **Temps d'écran** | Limites quotidiennes par jour, heures du coucher, **pause instantanée ou programmée** (30 min/1 h/2 h, reprise auto — par enfant ou familiale), **temps bonus** (demandes de l'enfant + octroi parental) |
 | 🗓️ **Routines** | Profils horaires (ex. heures d'école) qui bloquent automatiquement certaines apps |
 | 🌐 **Filtrage web** | Blocage par **catégorie** (adulte, jeux d'argent, violence, drogues, rencontres…), SafeSearch forcé, listes blanche/noire |
-| 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, détection des nouvelles apps |
+| 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, **usage du jour vs limite**, détection des nouvelles apps |
 | 🔍 **Mots-clés sensibles** | Alerte si des termes à risque (automutilation, violence…) ou personnalisés apparaissent dans les recherches |
 | 🛡️ **Détection de risque (IA)** | Analyse des **messages** & recherches : score de risque pondéré détectant **grooming/prédation**, automutilation, harcèlement → alertes par sévérité |
 | ▶️ **Vidéos & Messages** | **Vidéos YouTube** regardées (PC + téléphone, avec miniatures) et **SMS** reçus/envoyés, avec **export CSV** |
 | 🌐 **Historique de navigation** | Derniers sites visités par enfant (catégorie, blocages signalés, export CSV) |
 | 📍 **Localisation** | Position temps réel, historique, **zones de sécurité (géofences)** avec alertes entrée/sortie |
-| 📊 **Rapports** | Usage par app / catégorie, tendance, **export CSV**, période mémorisée |
+| 📊 **Rapports & insights** | Usage par app / catégorie, tendance, **delta vs période précédente**, **activité par heure**, **insights hebdo** (vue d'ensemble), **export CSV**, période mémorisée |
 | 📸 **Captures d'écran** | À la demande (Windows), **chiffrées au repos** (AES-256-GCM) |
-| 🎮 **Actions à distance** | Verrouiller un appareil, envoyer un message |
+| 🎮 **Actions à distance** | Verrouiller, localiser, capture d'écran, envoyer un message (**web & mobile**) |
 | 👨‍👩‍👧 **Multi-tuteurs** | Inviter un co-parent (accès partagé, révocable) |
-| 🔔 **Notifications** | **Web push** pour les alertes critiques |
-| 🔐 **Sécurité & RGPD** | JWT httpOnly, bcrypt, **2FA/TOTP**, rate-limiting, **CSP** + en-têtes durcis, **force de mot de passe + détection de fuite (HIBP)**, journal d'audit, export & suppression de compte |
+| 🔔 **Notifications** | **Web push** + **préférences par type d'alerte** (sécurité toujours active) + **alerte « appareil hors-ligne »** (anti-tamper) |
+| 🔐 **Sécurité & comptes** | JWT httpOnly, bcrypt, **2FA/TOTP**, **mot de passe oublié / réinitialisation**, **vérification d'email**, changement mdp/email, **anti-brute-force**, rate-limiting, **CSP** + en-têtes durcis, **force de mot de passe + fuite (HIBP)**, journal d'audit |
+| ♻️ **RGPD & rétention** | Export & suppression de compte, **nettoyage automatique** des données (rétention configurable) |
 | 🌍 **Bilingue** | Interface FR / EN |
 
 ## 🏗️ Architecture
