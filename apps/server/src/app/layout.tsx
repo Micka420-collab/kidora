@@ -26,13 +26,13 @@ export const metadata: Metadata = {
     siteName: "Kidora",
     title: "Kidora — Contrôle parental bienveillant",
     description,
-    images: [{ url: "/hero.jpg", width: 1280, height: 714, alt: "Kidora — la mascotte veille sur les appareils de la famille" }],
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "Kidora — la mascotte veille sur les appareils de la famille" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Kidora — Contrôle parental bienveillant",
     description,
-    images: ["/hero.jpg"],
+    images: ["/og.jpg"],
   },
 };
 
