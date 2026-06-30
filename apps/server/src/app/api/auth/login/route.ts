@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/password";
+import { verifyPassword, dummyVerify } from "@/lib/password";
 import { verifyTotp } from "@/lib/totp";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     where: { email: email.toLowerCase() },
   });
   if (!parent) {
+    await dummyVerify(password); // equalize timing so a missing account isn't faster
     recordLoginFailure(lockKey);
     return apiError("Email ou mot de passe incorrect", 401);
   }
