@@ -40,25 +40,27 @@ export default async function OverviewPage() {
     include: { devices: true },
   });
 
-  const usageToday = await prisma.appUsage.groupBy({
-    by: ["childId"],
-    where: { childId: { in: kids.map((k) => k.id) }, date: today() },
-    _sum: { seconds: true },
-  });
+  const kidIds = kids.map((k) => k.id);
+  // Independent queries run in parallel.
+  const [usageToday, topApps, recentAlerts] = await Promise.all([
+    prisma.appUsage.groupBy({
+      by: ["childId"],
+      where: { childId: { in: kidIds }, date: today() },
+      _sum: { seconds: true },
+    }),
+    prisma.appUsage.groupBy({
+      by: ["category"],
+      where: { childId: { in: kidIds }, date: today() },
+      _sum: { seconds: true },
+    }),
+    prisma.alert.findMany({
+      where: { parentId: parent.id },
+      orderBy: { ts: "desc" },
+      take: 6,
+      include: { child: { select: { name: true, avatar: true } } },
+    }),
+  ]);
   const usageMap = new Map(usageToday.map((u) => [u.childId, u._sum.seconds ?? 0]));
-
-  const topApps = await prisma.appUsage.groupBy({
-    by: ["category"],
-    where: { childId: { in: kids.map((k) => k.id) }, date: today() },
-    _sum: { seconds: true },
-  });
-
-  const recentAlerts = await prisma.alert.findMany({
-    where: { parentId: parent.id },
-    orderBy: { ts: "desc" },
-    take: 6,
-    include: { child: { select: { name: true, avatar: true } } },
-  });
 
   const totalDevices = kids.reduce((a, k) => a + k.devices.length, 0);
   const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => isDeviceOnline(d)).length, 0);
