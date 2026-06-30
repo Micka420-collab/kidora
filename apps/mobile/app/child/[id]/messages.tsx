@@ -4,7 +4,7 @@ import { useLocalSearchParams, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { parent, type Message } from "@/api";
 import { useTheme, relativeTime, space, radius } from "@/theme";
-import { Empty, Skeleton } from "@/ui";
+import { Empty, Skeleton, ErrorState } from "@/ui";
 import { Header } from "./videos";
 
 export default function Messages() {
@@ -13,11 +13,12 @@ export default function Messages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
-    try { setMessages((await parent.messages(id)).messages); }
-    catch { /* ignore */ } finally { setLoading(false); setRefreshing(false); }
+    try { setMessages((await parent.messages(id)).messages); setError(false); }
+    catch { setError(true); } finally { setLoading(false); setRefreshing(false); }
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -35,6 +36,8 @@ export default function Messages() {
       >
         {loading ? (
           [0, 1, 2, 3].map((i) => <Skeleton key={i} height={48} />)
+        ) : error ? (
+          <ErrorState onRetry={() => { setLoading(true); load(); }} />
         ) : messages.length === 0 ? (
           <Empty icon="chatbubbles" title="Aucun message" subtitle="Les SMS envoyés et reçus sur le téléphone apparaîtront ici (nécessite l'app Kids avec la permission SMS)." />
         ) : (

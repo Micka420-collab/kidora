@@ -6,7 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, type Child, type Live, type Report } from "@/api";
 import { useTheme, formatDuration, relativeTime, categoryMeta, space, radius } from "@/theme";
-import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Empty, Skeleton } from "@/ui";
+import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Empty, Skeleton, ErrorState } from "@/ui";
 
 const WD = ["D", "L", "M", "M", "J", "V", "S"];
 
@@ -19,6 +19,7 @@ export default function ChildDetail() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -31,7 +32,8 @@ export default function ChildDetail() {
       setChild(ch);
       setLive(lv);
       setReport(rp);
-    } catch { /* ignore */ } finally {
+      setError(false);
+    } catch { setError(true); } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -98,6 +100,8 @@ export default function ChildDetail() {
           <>
             <Skeleton height={80} /><Skeleton height={160} /><Skeleton height={120} />
           </>
+        ) : error && !child ? (
+          <ErrorState onRetry={() => { setLoading(true); load(); }} />
         ) : (
           <>
             {/* quick actions */}

@@ -255,6 +255,33 @@ export function Empty({ icon, title, subtitle }: { icon: string; title: string; 
   );
 }
 
+// ── Error state (failed load, with retry) ─────────────────────────────
+export function ErrorState({
+  onRetry,
+  title = "Connexion impossible",
+  subtitle = "Impossible de charger les données. Vérifiez votre connexion, puis réessayez.",
+  icon = "cloud-offline",
+}: {
+  onRetry?: () => void;
+  title?: string;
+  subtitle?: string;
+  icon?: string;
+}) {
+  const { c } = useTheme();
+  return (
+    <View accessibilityRole="alert" style={{ alignItems: "center", paddingVertical: space.xxl, gap: 10 }}>
+      <IconBubble icon={icon} color={c.danger} size={56} />
+      <Text style={{ fontSize: 16, fontWeight: "700", color: c.text, marginTop: 4 }}>{title}</Text>
+      <Text style={{ fontSize: 13, color: c.textMuted, textAlign: "center", maxWidth: 260 }}>{subtitle}</Text>
+      {onRetry && (
+        <View style={{ marginTop: 6 }}>
+          <Btn title="Réessayer" icon="refresh" variant="secondary" onPress={onRetry} />
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Skeleton ───────────────────────────────────────────────────────────
 export function Skeleton({ height = 16, width = "100%", style }: { height?: number; width?: number | `${number}%`; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
