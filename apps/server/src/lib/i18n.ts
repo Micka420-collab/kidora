@@ -42,6 +42,11 @@ const fr = {
     markAllRead: "Tout marquer comme lu",
     markRead: "Marquer lu",
     empty: "Aucune alerte. Tout va bien ! ✅",
+    filterAll: "Toutes",
+    filterUnread: "Non lues",
+    filterCritical: "Critiques",
+    filterWarning: "Avertissements",
+    noneForFilter: "Aucune alerte pour ce filtre.",
   },
   tabs: {
     overview: "Vue d'ensemble",
@@ -235,6 +240,11 @@ const en: typeof fr = {
     markAllRead: "Mark all as read",
     markRead: "Mark read",
     empty: "No alerts. All good! ✅",
+    filterAll: "All",
+    filterUnread: "Unread",
+    filterCritical: "Critical",
+    filterWarning: "Warnings",
+    noneForFilter: "No alerts for this filter.",
   },
   tabs: {
     overview: "Overview",
