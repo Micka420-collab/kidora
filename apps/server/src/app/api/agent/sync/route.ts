@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
     data: {
       online: body.online ?? true,
       lastSeen: new Date(),
+      offlineNotified: false, // device is reporting again → re-arm the offline alert
       ...(body.battery !== undefined && { battery: body.battery }),
       ...(body.agentVersion && { agentVersion: body.agentVersion }),
     },

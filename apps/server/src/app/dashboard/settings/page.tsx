@@ -98,6 +98,7 @@ export default async function SettingsPage() {
             blocked_attempt: t.nt_blocked_attempt,
             geofence: t.nt_geofence,
             keyword: t.nt_keyword,
+            device_offline: t.nt_device_offline,
           },
         }}
       />

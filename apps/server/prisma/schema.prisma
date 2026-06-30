@@ -177,6 +177,7 @@ model Device {
   agentVersion String?
   battery      Int? // 0-100
   online       Boolean   @default(false)
+  offlineNotified Boolean @default(false) // a "device offline" alert was already sent for the current outage
   createdAt    DateTime  @default(now())
 
   child          Child           @relation(fields: [childId], references: [id], onDelete: Cascade)

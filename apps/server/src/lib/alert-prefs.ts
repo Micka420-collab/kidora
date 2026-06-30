@@ -6,6 +6,7 @@ export const MUTABLE_ALERT_TYPES = [
   "blocked_attempt",
   "geofence",
   "keyword",
+  "device_offline",
 ] as const;
 
 export type MutableAlertType = (typeof MUTABLE_ALERT_TYPES)[number];
