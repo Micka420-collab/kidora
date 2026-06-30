@@ -70,6 +70,15 @@ export const parent = {
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async appRules(id: string) {
+    return req<{ rules: AppRule[]; usageToday?: Record<string, number> }>(`/api/children/${id}/rules/apps`, { headers: await this.authHeader() });
+  },
+  async setAppRule(id: string, data: { appId: string; appName: string; action: AppAction; dailyLimitMinutes?: number | null }) {
+    return req<{ rule: AppRule }>(`/api/children/${id}/rules/apps`, { method: "PUT", body: data, headers: await this.authHeader() });
+  },
+  async deleteAppRule(id: string, appId: string) {
+    return req<{ ok: true }>(`/api/children/${id}/rules/apps?appId=${encodeURIComponent(appId)}`, { method: "DELETE", headers: await this.authHeader() });
+  },
   async setWebFilter(id: string, data: { safeSearch?: boolean; blockUnknown?: boolean; blockedCategories?: string[] }) {
     return req<{ webFilter: { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string } }>(`/api/children/${id}/webfilter`, { method: "PUT", body: data, headers: await this.authHeader() });
   },
@@ -210,6 +219,8 @@ export type Geofence = { id: string; name: string; lat: number; lng: number; rad
 export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
 // Raw screen-time rule as stored (dailyLimits/bedtimes are JSON strings).
 export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtimes: string };
+export type AppAction = "allow" | "block" | "limit";
+export type AppRule = { id: string; appId: string; appName: string; action: AppAction; dailyLimitMinutes: number | null; category: string | null };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {
