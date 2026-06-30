@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildInsights, type InsightsInput } from "./insights";
+import { buildInsights, weekWindows, type InsightsInput } from "./insights";
 
 const base: InsightsInput = {
   thisWeekSeconds: 3600,
@@ -49,5 +49,25 @@ describe("buildInsights", () => {
   it("ignores zero-second category/day", () => {
     const r = buildInsights({ ...base, topCategory: { category: "games", seconds: 0 } });
     expect(r.map((i) => i.key)).not.toContain("topCategory");
+  });
+});
+
+describe("weekWindows", () => {
+  // Fixed instant: 2026-06-30T12:00:00Z
+  const now = Date.UTC(2026, 5, 30, 12, 0, 0);
+  const w = weekWindows(now);
+
+  it("current window starts 6 days ago (7 dates incl. today)", () => {
+    expect(w.curFrom).toBe("2026-06-24"); // 24,25,26,27,28,29,30 = 7 dates
+  });
+
+  it("previous window is the 7 dates before it (no overlap, no gap)", () => {
+    expect(w.prevFrom).toBe("2026-06-17"); // 17..23 = 7 dates
+    expect(w.prevTo).toBe("2026-06-24"); // exclusive → last prev date is the 23rd
+  });
+
+  it("the two windows are contiguous and equal length", () => {
+    // prevTo (exclusive) equals curFrom (inclusive) → adjacent, identical 7-date spans
+    expect(w.prevTo).toBe(w.curFrom);
   });
 });

@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { json } from "@/lib/http";
 import { requireParent, withGuard, accessibleChildWhere } from "@/lib/guard";
-import { buildInsights } from "@/lib/insights";
-import { ymd } from "@/lib/retention";
+import { buildInsights, weekWindows } from "@/lib/insights";
 
 // GET /api/insights — family "this week" insights (screen time + delta, top
 // category, busiest day, alerts). Mirrors the dashboard overview, for the
@@ -17,15 +16,15 @@ export async function GET() {
     const kidIds = kids.map((k) => k.id);
 
     const now = Date.now();
-    const d7 = ymd(new Date(now - 7 * 86400_000));
-    const d14 = ymd(new Date(now - 14 * 86400_000));
+    // Equal-length 7-day windows so the week-over-week delta isn't biased.
+    const { curFrom, prevFrom, prevTo } = weekWindows(now);
     const weekAgo = new Date(now - 7 * 86400_000);
 
     const [thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
-      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
-      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d14, lt: d7 } } }),
-      prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
-      prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
+      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
+      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: prevFrom, lt: prevTo } } }),
+      prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
+      prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
       prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
     ]);
 
