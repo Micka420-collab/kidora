@@ -30,6 +30,7 @@ export default function ChildMode() {
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
   const pulse = useRef(new Animated.Value(0)).current; // 0→1 loop for the halo
+  const float = useRef(new Animated.Value(0)).current; // 0→1 loop: mascot idle float/breathe
   const sosScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -43,6 +44,13 @@ export default function ChildMode() {
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+      ]),
+    ).start();
+    // mascot idle: gentle float up/down + breathe (keeps the app feeling alive)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(float, { toValue: 1, duration: 1900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 1900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     ).start();
 
@@ -160,6 +168,12 @@ export default function ChildMode() {
     transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }) }],
     opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
   };
+  const mascotAnim = {
+    transform: [
+      { translateY: float.interpolate({ inputRange: [0, 1], outputRange: [0, -10] }) },
+      { scale: float.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) },
+    ],
+  };
 
   // ── Screen-time logic (kid-friendly) ──
   const limitSec = limitMin * 60;
@@ -189,12 +203,14 @@ export default function ChildMode() {
 
         <View style={s.shieldWrap}>
           <Animated.View style={[s.halo, haloStyle]} />
-          <Image
-            source={require("../assets/mascot.png")}
-            style={[s.mascot, (paused || bedtime) && { opacity: 0.85 }]}
-            resizeMode="contain"
-            accessibilityLabel="Mascotte Kidora"
-          />
+          <Animated.View style={mascotAnim}>
+            <Image
+              source={require("../assets/mascot.png")}
+              style={[s.mascot, (paused || bedtime) && { opacity: 0.85 }]}
+              resizeMode="contain"
+              accessibilityLabel="Mascotte Kidora"
+            />
+          </Animated.View>
           {(paused || bedtime) && <Text style={s.mascotBadge}>{paused ? "⏸" : "🌙"}</Text>}
         </View>
 
