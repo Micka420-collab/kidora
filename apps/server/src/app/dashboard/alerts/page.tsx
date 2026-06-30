@@ -26,11 +26,14 @@ const ICONS: Record<string, typeof ShieldAlert> = {
   panic: ShieldAlert,
 };
 
+type Filter = "all" | "unread" | "critical" | "warning";
+
 export default function AlertsPage() {
   const router = useRouter();
   const { t } = useT();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<Filter>("all");
 
   async function load() {
     const res = await api.get<{ alerts: Alert[] }>("/api/alerts");
@@ -38,6 +41,25 @@ export default function AlertsPage() {
     setLoading(false);
   }
   useEffect(() => { load(); }, []);
+
+  const counts = {
+    all: alerts.length,
+    unread: alerts.filter((a) => !a.read).length,
+    critical: alerts.filter((a) => a.severity === "critical").length,
+    warning: alerts.filter((a) => a.severity === "warning").length,
+  };
+  const matchesFilter = (a: Alert) =>
+    filter === "all" ? true
+    : filter === "unread" ? !a.read
+    : a.severity === filter;
+  const visible = alerts.filter(matchesFilter);
+
+  const FILTERS: { key: Filter; label: string }[] = [
+    { key: "all", label: t.alerts.filterAll },
+    { key: "unread", label: t.alerts.filterUnread },
+    { key: "critical", label: t.alerts.filterCritical },
+    { key: "warning", label: t.alerts.filterWarning },
+  ];
 
   async function markAll() {
     setAlerts((as) => as.map((a) => ({ ...a, read: true })));
@@ -60,6 +82,27 @@ export default function AlertsPage() {
         <button className="btn btn-outline" onClick={markAll}><CheckCheck size={16} /> {t.alerts.markAllRead}</button>
       </div>
 
+      {!loading && alerts.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map((f) => {
+            const active = filter === f.key;
+            const n = counts[f.key];
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                aria-pressed={active}
+                className={`badge border px-3 py-1.5 text-xs transition ${
+                  active ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-white text-muted hover:bg-slate-50"
+                }`}
+              >
+                {f.label} <span className={active ? "opacity-90" : "opacity-60"}>{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>
       ) : alerts.length === 0 ? (
@@ -67,9 +110,14 @@ export default function AlertsPage() {
           <ShieldAlert size={28} />
           <p>{t.alerts.empty}</p>
         </div>
+      ) : visible.length === 0 ? (
+        <div className="card grid place-items-center gap-2 py-16 text-center text-muted">
+          <ShieldAlert size={28} />
+          <p>{t.alerts.noneForFilter}</p>
+        </div>
       ) : (
         <div className="card divide-y">
-          {alerts.map((a) => {
+          {visible.map((a) => {
             const Icon = ICONS[a.type] ?? ShieldAlert;
             const tint = a.severity === "critical" ? "bg-red-50 text-red-500" : a.severity === "warning" ? "bg-amber-50 text-amber-500" : "bg-brand-50 text-brand-500";
             return (

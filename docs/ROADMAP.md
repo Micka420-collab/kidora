@@ -57,6 +57,7 @@
 - [x] **Export CSV par liste** : vidéos, messages et navigation web exportables en CSV (boutons « Exporter CSV » sur les onglets Vidéos/Messages, endpoint `/export?type=`), helper `lib/csv` RFC 4180 + **anti-injection de formule** (CSV injection) + BOM UTF-8 pour Excel — 11 tests unitaires
 - [x] Multi-tuteurs : inviter un co-parent par email (accès partagé aux enfants, révocable) — contrôle d'accès propriétaire/tuteur
 - [x] Notifications **web push** pour les alertes critiques (VAPID, service worker, abonnement, envoi auto) — *Expo push mobile à venir*
+- [x] **Filtres d'alertes (dashboard)** : puces Toutes / Non lues / Critiques / Avertissements avec compteurs en direct, filtrage côté client, état vide dédié par filtre, `aria-pressed`, bilingue FR/EN, mode sombre
 - [x] Routines / profils horaires (école/devoirs) — bloquent des apps sur une plage ; appliqué dynamiquement par le moteur de policy
 
 ### Agent Windows
