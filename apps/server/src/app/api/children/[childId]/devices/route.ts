@@ -5,6 +5,7 @@ import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { randomToken } from "@/lib/password";
 import { sortDevicesByActivity } from "@/lib/devices-sort";
+import { isDeviceOnline } from "@/lib/device-status";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -17,8 +18,11 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       where: { childId },
       orderBy: { createdAt: "asc" },
     });
-    // Surface the most relevant devices first: online, then recently seen.
-    return json({ devices: sortDevicesByActivity(devices) });
+    // Derive `online` from recency (the stored flag never resets to false),
+    // then surface the most relevant devices first: online, then recently seen.
+    const now = Date.now();
+    const withStatus = devices.map((d) => ({ ...d, online: isDeviceOnline(d, now) }));
+    return json({ devices: sortDevicesByActivity(withStatus) });
   });
 }
 

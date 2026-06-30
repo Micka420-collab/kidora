@@ -65,6 +65,7 @@
 - [x] **Alertes cliquables** : chaque alerte (page Alertes + « Alertes récentes » de la vue d'ensemble) renvoie vers la fiche de l'enfant concerné ; la zone texte est un lien, le bouton « marquer lu » reste séparé (pas de conflit d'interaction)
 - [x] **Recherche d'enfants (vue d'ensemble)** : champ de filtre par nom (composant client `ChildrenGrid`) qui n'apparaît qu'au-delà de 3 enfants, état « aucun résultat », bilingue FR/EN
 - [x] **Tri des appareils par activité** : helper pur `sortDevicesByActivity` (en ligne d'abord, puis vu le plus récemment, puis le plus ancien créé ; jamais-vu en dernier) appliqué à la liste des appareils d'un enfant — 5 tests unitaires
+- [x] **Correctif « en ligne pour toujours »** : le booléen `device.online` était mis à `true` à l'enroll/sync mais **jamais remis à `false`** → un appareil éteint restait « En ligne ». Statut désormais **dérivé de la récence** (`lib/device-status.ts` `isDeviceOnline`, fenêtre 2 min) appliqué de façon cohérente (`/live`, route liste appareils, vue d'ensemble compteur+cartes, page Appareils globale) — 6 tests unitaires
 - [x] **Cohérence i18n vue d'ensemble** : textes auparavant codés en dur en français (« Catégories aujourd'hui », « Actif/Hors ligne », « En pause », « X appareils · Y en ligne », « … aujourd'hui ») câblés sur le dictionnaire (`overview.*` + `common.active/offline/paused`) ; `ChildrenGrid` utilise `useT` — vue d'ensemble entièrement bilingue FR/EN
 - [x] Routines / profils horaires (école/devoirs) — bloquent des apps sur une plage ; appliqué dynamiquement par le moteur de policy
 
@@ -86,7 +87,7 @@
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation
-- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, **formatage durées/temps relatif**, **géofencing (haversine + transitions)**, **HIBP k-anonymity (fetch mocké, fail-open)**, **tri des appareils**, **auth cron**, chiffrement) — **148 tests verts** ; *Playwright dashboard à venir*
+- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, **formatage durées/temps relatif**, **géofencing (haversine + transitions)**, **HIBP k-anonymity (fetch mocké, fail-open)**, **tri des appareils**, **auth cron**, chiffrement) — **154 tests verts** ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [x] Migration Postgres + déploiement Vercel de référence — adapter auto Postgres (cf. plus haut) + déploiement **un clic** : `vercel.json` (`framework`, `buildCommand: vercel-build`, crons), script `vercel-build` (= `db:push` + `next build` → schéma Postgres **créé au build**, idempotent), **bouton « Deploy with Vercel »** (root `apps/server` pré-réglé, prompts d'env) dans le README + `DEPLOYMENT.md` (bouton, import manuel, étapes), seed démo documenté
 - [x] i18n (FR/EN) — navigation + tous les onglets (vue d'ensemble, apps, web, temps d'écran, activité, rapports, localisation, **appareils**) + paramètres + alertes + onboarding ; *quelques sous-cartes mineures restent en FR*
