@@ -61,4 +61,16 @@ describe("buildPolicy (integration)", () => {
     expect(p.screenTime.dailyLimits.mon).toBe(90);
     expect(p.webFilter.blockedCategories).toContain("adult");
   });
+
+  it("reflects a timed pause as the effective paused state", async () => {
+    expect((await buildPolicy(childId)).paused).toBe(false);
+
+    await prisma.child.update({ where: { id: childId }, data: { pausedUntil: new Date(Date.now() + 60_000) } });
+    expect((await buildPolicy(childId)).paused).toBe(true); // future → paused
+
+    await prisma.child.update({ where: { id: childId }, data: { pausedUntil: new Date(Date.now() - 60_000) } });
+    expect((await buildPolicy(childId)).paused).toBe(false); // expired → not paused
+
+    await prisma.child.update({ where: { id: childId }, data: { pausedUntil: null } });
+  });
 });
