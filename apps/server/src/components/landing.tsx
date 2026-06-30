@@ -413,12 +413,41 @@ export function Landing() {
         </motion.div>
       </section>
 
-      <footer className="border-t border-white/10 py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 text-sm text-white/50 sm:flex-row">
-          <span>Kidora — Conçu pour les familles. 🛡️</span>
-          <a href="https://github.com/Micka420-collab/kidora" className="inline-flex items-center gap-1.5 transition hover:text-white" target="_blank" rel="noreferrer">
-            <ExternalLink size={15} /> Open source
-          </a>
+      <footer className="border-t border-white/10 py-12">
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-2 text-lg font-extrabold">
+              <Image src="/kidora-mark.svg" alt="" width={28} height={28} unoptimized /> Kidora
+            </div>
+            <p className="mt-3 max-w-xs text-sm text-white/55">
+              Un bouclier qui abrite un cœur — protéger sans surveiller à l'excès.
+              Windows, Android & iPhone, depuis un seul tableau de bord.
+            </p>
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white/80">Produit</h4>
+            <ul className="mt-3 space-y-2 text-sm text-white/55">
+              <li><a href="#features" className="transition hover:text-white">Fonctionnalités</a></li>
+              <li><a href="#showcase" className="transition hover:text-white">En profondeur</a></li>
+              <li><a href="#faq" className="transition hover:text-white">FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-white/80">Compte</h4>
+            <ul className="mt-3 space-y-2 text-sm text-white/55">
+              <li><Link href="/register" className="transition hover:text-white">Créer un compte</Link></li>
+              <li><Link href="/login" className="transition hover:text-white">Se connecter</Link></li>
+              <li>
+                <a href="https://github.com/Micka420-collab/kidora" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 transition hover:text-white">
+                  <ExternalLink size={14} /> Open source
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-2 border-t border-white/10 px-6 pt-6 text-xs text-white/40 sm:flex-row">
+          <span>© Kidora — Conçu pour les familles. 🛡️</span>
+          <span>Outil de contrôle parental — usage autorisé entre parent et enfant mineur.</span>
         </div>
       </footer>
     </div>
