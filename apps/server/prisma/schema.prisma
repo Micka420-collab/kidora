@@ -22,8 +22,9 @@ model Parent {
   role         String   @default("owner") // owner | guardian
   weeklyReportEmail Boolean @default(true) // receive the weekly usage summary by email
   alertPrefs   String  @default("[]") // JSON array of muted alert types (safety types never muted)
-  totpSecret   String?  // base32 TOTP secret (set during 2FA enrolment)
+  totpSecret   String?  // base32 TOTP secret (set during 2FA enrolment, encrypted at rest)
   totpEnabled  Boolean  @default(false) // 2FA active
+  tokenVersion Int      @default(0) // bump to invalidate all existing sessions (logout everywhere)
   resetToken       String?   @unique // password-reset token (hashed-random)
   resetTokenExpiry DateTime? // reset token validity
   emailVerified    Boolean   @default(false) // email confirmed (auto-true when SMTP is off)

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
+import { signSession, setSessionCookie } from "@/lib/auth";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { passwordPolicyError, isPasswordBreached } from "@/lib/password-policy";
 import { audit } from "@/lib/audit";
@@ -48,10 +49,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await prisma.parent.update({
+    // Bump tokenVersion to log out every OTHER session, then re-issue this one's
+    // cookie so the parent who just changed their password stays logged in here.
+    const updated = await prisma.parent.update({
       where: { id: parent.id },
-      data: { passwordHash: await hashPassword(newPassword) },
+      data: { passwordHash: await hashPassword(newPassword), tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
     });
+    await setSessionCookie(await signSession({ parentId: parent.id, email: parent.email, tokenVersion: updated.tokenVersion }));
     await audit(parent.id, "account.password_change", "Mot de passe modifié");
     return json({ ok: true });
   });
