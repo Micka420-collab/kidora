@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/client";
 import { WEEKDAYS } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
@@ -28,7 +28,7 @@ export function RoutinesCard({ childId }: { childId: string }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(empty);
 
-  async function load() {
+  const load = useCallback(async () => {
     const [r, a] = await Promise.all([
       api.get<{ routines: Routine[] }>(`/api/children/${childId}/routines`),
       api.get<{ rules: AppRule[] }>(`/api/children/${childId}/rules/apps`),
@@ -36,8 +36,8 @@ export function RoutinesCard({ childId }: { childId: string }) {
     setRoutines(r.routines);
     setApps(a.rules);
     setLoading(false);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();

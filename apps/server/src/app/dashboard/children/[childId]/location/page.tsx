@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
@@ -19,11 +19,11 @@ export default function LocationTab() {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", lat: "", lng: "", radius: "150" });
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await api.get<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] }>(`/api/children/${childId}/location`);
     setData(res);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function locateNow() {
     setLocating(true);

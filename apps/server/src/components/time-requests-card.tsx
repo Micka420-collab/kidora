@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatMinutes } from "@/lib/format";
@@ -14,12 +14,12 @@ export function TimeRequestsCard({ childId }: { childId: string }) {
   const [bonus, setBonus] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await api.get<{ requests: Req[]; bonusMinutesToday: number }>(`/api/children/${childId}/time-requests`);
     setRequests(res.requests);
     setBonus(res.bonusMinutesToday);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function grant(minutes: number) {
     setBusy(true);
