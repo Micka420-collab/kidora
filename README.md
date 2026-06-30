@@ -14,7 +14,7 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
 [![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-40%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-171%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
@@ -31,8 +31,10 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 | 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, détection des nouvelles apps |
 | 🔍 **Mots-clés sensibles** | Alerte si des termes à risque (automutilation, violence…) ou personnalisés apparaissent dans les recherches |
 | 🛡️ **Détection de risque (IA)** | Analyse des **messages** & recherches : score de risque pondéré détectant **grooming/prédation**, automutilation, harcèlement → alertes par sévérité |
+| ▶️ **Vidéos & Messages** | **Vidéos YouTube** regardées (PC + téléphone, avec miniatures) et **SMS** reçus/envoyés, avec **export CSV** |
+| 🌐 **Historique de navigation** | Derniers sites visités par enfant (catégorie, blocages signalés, export CSV) |
 | 📍 **Localisation** | Position temps réel, historique, **zones de sécurité (géofences)** avec alertes entrée/sortie |
-| 📊 **Rapports** | Usage par app / catégorie, tendance, **export CSV** |
+| 📊 **Rapports** | Usage par app / catégorie, tendance, **export CSV**, période mémorisée |
 | 📸 **Captures d'écran** | À la demande (Windows), **chiffrées au repos** (AES-256-GCM) |
 | 🎮 **Actions à distance** | Verrouiller un appareil, envoyer un message |
 | 👨‍👩‍👧 **Multi-tuteurs** | Inviter un co-parent (accès partagé, révocable) |
@@ -146,7 +148,7 @@ npx expo start              # Expo Go (compagnon + localisation) ; EAS pour l'en
 ## 🧪 Qualité
 ```bash
 cd apps/server
-npm test          # 40 tests unitaires (Vitest)
+npm test          # 171 tests unitaires (Vitest)
 npm run build     # build de production (Turbopack)
 ```
 
