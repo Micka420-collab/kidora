@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, MessageSquare, ArrowDownLeft, ArrowUpRight, Download } from "lucide-react";
 
 type Message = {
@@ -19,14 +20,20 @@ export default function MessagesTab() {
   const { childId } = useParams<{ childId: string }>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     api.get<{ messages: Message[] }>(`/api/children/${childId}/messages`)
       .then((r) => setMessages(r.messages))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
+  if (error) return <ErrorCard onRetry={load} />;
 
   const received = messages.filter((m) => m.direction === "in").length;
   const sent = messages.length - received;
