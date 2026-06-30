@@ -295,9 +295,10 @@ export default function ChildMode() {
           </View>
         ) : usedTodaySec != null ? (
           <View style={s.stCard}>
+            <Image source={require("../assets/freetime.png")} style={s.freetimeImg} resizeMode="contain" accessibilityLabel="Temps libre : joue et amuse-toi" />
             <Text style={s.stRemain}>☀️  Temps libre aujourd'hui</Text>
-            <Text style={s.stMeta}>{formatDuration(usedTodaySec)} d'écran jusqu'ici</Text>
-            <Text style={s.stCheer}>Pense à faire des pauses 💚</Text>
+            <Text style={s.stMeta}>Pas de limite — profite et amuse-toi !</Text>
+            <Text style={s.stCheer}>{formatDuration(usedTodaySec)} d'écran · pense à bouger 💚</Text>
           </View>
         ) : null}
 
@@ -445,6 +446,7 @@ const s = StyleSheet.create({
   bedtimeSoonText: { color: "#c7d2fe", fontWeight: "600", fontSize: 12.5 },
   stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
   rewardStar: { width: 66, height: 66, marginBottom: 4 },
+  freetimeImg: { width: 92, height: 92, marginBottom: 2 },
   stRemain: { color: "#fff", fontWeight: "800", fontSize: 19 },
   stTrack: { marginTop: 12, width: "100%", height: 12, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.22)", overflow: "hidden" },
   stFill: { height: "100%", borderRadius: 999 },
