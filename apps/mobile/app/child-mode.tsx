@@ -25,8 +25,11 @@ export default function ChildMode() {
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevUsage = useRef<Record<string, number>>({});
+  const prevBonus = useRef<number | null>(null);
+  const grantTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Animations ──
   const fade = useRef(new Animated.Value(0)).current;
@@ -43,6 +46,7 @@ export default function ChildMode() {
     start();
     return () => {
       if (timer.current) clearInterval(timer.current);
+      if (grantTimer.current) clearTimeout(grantTimer.current);
       sub.remove();
     };
     // eslint-disable-next-line
@@ -137,6 +141,17 @@ export default function ChildMode() {
       const st = res.policy.screenTime;
       const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
       setLimitMin(st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) + (st.bonusMinutesToday ?? 0) : 0);
+      // Celebrate when a parent grants extra time (bonus went up since last sync).
+      const bonus = st?.enabled ? (st.bonusMinutesToday ?? 0) : 0;
+      if (prevBonus.current != null && bonus > prevBonus.current) {
+        setGranted(bonus - prevBonus.current);
+        setReqStatus("idle");
+        pop.setValue(0);
+        Animated.spring(pop, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
+        if (grantTimer.current) clearTimeout(grantTimer.current);
+        grantTimer.current = setTimeout(() => setGranted(null), 10_000);
+      }
+      prevBonus.current = bonus;
       setBedtime(isBedtimeNow(st?.bedtimes));
       setBedtimeAt(nextBedtimeStart(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
@@ -297,6 +312,18 @@ export default function ChildMode() {
           </Animated.View>
         </Pressable>
 
+        {granted != null && (
+          <Animated.View
+            style={[
+              s.granted,
+              { opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] },
+            ]}
+          >
+            <Text style={s.grantedEmoji}>🎉</Text>
+            <Text style={s.grantedText}>Tes parents t&apos;ont accordé +{granted} min !</Text>
+          </Animated.View>
+        )}
+
         {/* Demander plus de temps d'écran à ses parents (vraie demande → alerte parent) */}
         {reqStatus === "sent" ? (
           <Animated.View
@@ -424,6 +451,9 @@ const s = StyleSheet.create({
   timeChipText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
   timeGhost: { paddingHorizontal: 14, paddingVertical: 14 },
   timeGhostText: { color: "rgba(255,255,255,0.7)", fontWeight: "700" },
+  granted: { marginTop: 16, backgroundColor: "rgba(187,247,208,0.96)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, alignItems: "center" },
+  grantedEmoji: { fontSize: 26, marginBottom: 2 },
+  grantedText: { color: "#166534", fontWeight: "800", textAlign: "center" },
   timeSent: { marginTop: 16, backgroundColor: "rgba(220,252,231,0.95)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, alignItems: "center" },
   timeSentEmoji: { fontSize: 26, marginBottom: 2 },
   timeSentText: { color: "#15803d", fontWeight: "800", textAlign: "center" },
