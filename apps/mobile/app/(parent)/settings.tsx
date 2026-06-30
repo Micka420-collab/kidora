@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TextInput, Switch, Alert as RNAlert } from "react-native";
+import { View, Text, ScrollView, TextInput, Switch, Image, Alert as RNAlert } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -30,6 +30,12 @@ export default function Settings() {
   const [emailBusy, setEmailBusy] = useState(false);
   const [muted, setMuted] = useState<string[] | null>(null);
   const [mutable, setMutable] = useState<string[]>([]);
+  const [tfaEnabled, setTfaEnabled] = useState<boolean | null>(null);
+  const [tfaQr, setTfaQr] = useState<string | null>(null);
+  const [tfaSecret, setTfaSecret] = useState<string | null>(null);
+  const [tfaCode, setTfaCode] = useState("");
+  const [tfaBusy, setTfaBusy] = useState(false);
+  const [tfaDisarm, setTfaDisarm] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -40,8 +46,59 @@ export default function Settings() {
         setMuted(p.mutedTypes);
         setMutable(p.mutableTypes);
       } catch { /* prefs unavailable — hide the card */ }
+      try {
+        const s = await parent.twoFactorStatus();
+        setTfaEnabled(s.enabled);
+      } catch { /* 2FA status unavailable — hide the card */ }
     })();
   }, []);
+
+  async function startEnroll() {
+    setTfaBusy(true);
+    try {
+      const r = await parent.twoFactorEnroll();
+      setTfaQr(r.qr);
+      setTfaSecret(r.secret);
+      setTfaCode("");
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Impossible de démarrer la 2FA");
+    } finally {
+      setTfaBusy(false);
+    }
+  }
+
+  async function confirmEnroll() {
+    if (tfaCode.length < 6) return;
+    setTfaBusy(true);
+    try {
+      await parent.twoFactorVerify(tfaCode.trim());
+      setTfaEnabled(true);
+      setTfaQr(null);
+      setTfaSecret(null);
+      setTfaCode("");
+      RNAlert.alert("Kidora", "Double authentification activée ✅");
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Code invalide");
+    } finally {
+      setTfaBusy(false);
+    }
+  }
+
+  async function disable2fa() {
+    if (tfaCode.trim().length < 6) return;
+    setTfaBusy(true);
+    try {
+      await parent.twoFactorDisable(tfaCode.trim());
+      setTfaEnabled(false);
+      setTfaDisarm(false);
+      setTfaCode("");
+      RNAlert.alert("Kidora", "Double authentification désactivée.");
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Code invalide");
+    } finally {
+      setTfaBusy(false);
+    }
+  }
 
   async function toggleNotif(type: string) {
     if (!muted) return;
@@ -161,6 +218,58 @@ export default function Settings() {
                 </View>
               ))}
             </View>
+          </Card>
+        )}
+
+        {tfaEnabled !== null && (
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: c.text }}>🔐 Double authentification</Text>
+              {tfaEnabled && <Text style={{ fontSize: 12, fontWeight: "700", color: c.success }}>Activée ✓</Text>}
+            </View>
+            <Muted>Un code à usage unique (Google Authenticator, Authy…) en plus du mot de passe.</Muted>
+
+            {tfaEnabled ? (
+              tfaDisarm ? (
+                <View style={{ marginTop: space.md }}>
+                  <TextInput
+                    style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 18, letterSpacing: 6, textAlign: "center" }}
+                    placeholder="123456" placeholderTextColor={c.textFaint} keyboardType="number-pad" maxLength={6}
+                    value={tfaCode} onChangeText={setTfaCode} accessibilityLabel="Code de confirmation"
+                  />
+                  <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>
+                    <View style={{ flex: 1 }}><Btn title="Annuler" variant="ghost" onPress={() => { setTfaDisarm(false); setTfaCode(""); }} full /></View>
+                    <View style={{ flex: 1 }}><Btn title="Désactiver" variant="danger" loading={tfaBusy} disabled={tfaCode.trim().length < 6} onPress={disable2fa} full /></View>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: space.md }}>
+                  <Btn title="Désactiver la 2FA" variant="danger" icon="lock-open" onPress={() => { setTfaCode(""); setTfaDisarm(true); }} full />
+                </View>
+              )
+            ) : tfaQr ? (
+              <View style={{ marginTop: space.md, alignItems: "center" }}>
+                <Text style={{ fontSize: 13, color: c.text, alignSelf: "stretch", marginBottom: space.sm }}>1. Scannez ce QR code dans votre application d&apos;authentification :</Text>
+                <Image source={{ uri: tfaQr }} style={{ width: 200, height: 200, borderRadius: radius.md, backgroundColor: "#fff" }} accessibilityLabel="QR code 2FA" />
+                {tfaSecret && (
+                  <Text selectable style={{ fontSize: 12, color: c.textFaint, marginTop: space.sm, fontFamily: "monospace" }}>{tfaSecret}</Text>
+                )}
+                <Text style={{ fontSize: 13, color: c.text, alignSelf: "stretch", marginTop: space.md, marginBottom: space.sm }}>2. Saisissez le code à 6 chiffres généré :</Text>
+                <TextInput
+                  style={{ alignSelf: "stretch", backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 18, letterSpacing: 6, textAlign: "center" }}
+                  placeholder="123456" placeholderTextColor={c.textFaint} keyboardType="number-pad" maxLength={6}
+                  value={tfaCode} onChangeText={setTfaCode} accessibilityLabel="Code de vérification"
+                />
+                <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md, alignSelf: "stretch" }}>
+                  <View style={{ flex: 1 }}><Btn title="Annuler" variant="ghost" onPress={() => { setTfaQr(null); setTfaSecret(null); setTfaCode(""); }} full /></View>
+                  <View style={{ flex: 1 }}><Btn title="Activer" icon="checkmark" loading={tfaBusy} disabled={tfaCode.trim().length < 6} onPress={confirmEnroll} full /></View>
+                </View>
+              </View>
+            ) : (
+              <View style={{ marginTop: space.md }}>
+                <Btn title="Activer la 2FA" icon="shield-checkmark" loading={tfaBusy} onPress={startEnroll} full />
+              </View>
+            )}
           </Card>
         )}
 
