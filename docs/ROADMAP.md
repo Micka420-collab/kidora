@@ -52,7 +52,9 @@
 - [x] **Protection anti-brute-force** : verrouillage progressif après 5 échecs de connexion (clé email+IP, durée croissante 30 s→15 min, oubli après 30 min, reset au succès) + message convivial + `Retry-After` ; 3 tests verts
 - [x] **Gestion de compte complète** : **changement de mot de passe** (vérif de l'actuel + politique force + HIBP + audit) et **d'email** (confirmé par mot de passe, cookie de session rafraîchi) depuis les Réglages, **rate-limités** (10/15 min/parent+IP)
 - [x] **Préférences de notification par type d'alerte** : le parent peut **muter** les alertes bruyantes (nouvelle app, limite, tentative bloquée, zone, mot-clé) ; **sécurité (SOS, risque IA) toujours active** ; `Parent.alertPrefs` + migration, filtrage au `sync`, lib pure testée
-- [x] **Pause programmée** : couper Internet **30 min / 1 h / 2 h** avec **reprise automatique** (`Child.pausedUntil`, état effectif dans la policy + `live`, helper pur testé) en plus de la pause indéfinie
+- [x] **Pause programmée** (web + mobile + **familiale**) : couper Internet **30 min / 1 h / 2 h** avec **reprise automatique** (`Child.pausedUntil`, état effectif dans la policy + `live` + overview, helper pur testé) en plus de la pause indéfinie
+- [x] **Alerte « appareil hors-ligne »** (anti-tamper) : cron horaire détecte un agent qui ne répond plus depuis `OFFLINE_ALERT_HOURS` (def 12 h) → alerte + push, **une fois par panne** (`Device.offlineNotified`), type mutable
+- [x] **Usage vs limite par app** (onglet Apps) : barre « X / Y aujourd'hui » colorée par app limitée · **delta de temps d'écran vs période précédente** sur les rapports · libellés du journal d'audit **bilingues**
 - [x] **Insights « cette semaine »** (vue d'ensemble) : temps d'écran + **delta vs semaine précédente**, catégorie n°1, jour le plus actif, alertes — agrégé famille, `buildInsights` pur testé, bilingue
 - [x] **Échelle / ops** : **nettoyage automatique des données** (cron quotidien `/api/cron/cleanup`, `RETENTION_DAYS` def 90, dry-run) · index `Alert(parentId, ts)` · `/api/health` sans fuite de métriques (+ latence DB) · **ESLint 100% propre** (0 warning)
 
