@@ -115,6 +115,29 @@ déploiement**. Causes habituelles et correctifs :
 > contenant Next.js). Le bouton « Deploy » du README pré-règle ce dossier ; un
 > import manuel doit le régler à la main.
 
+### Dépannage — l'app redirige vers `vercel.com/sso` (302, page de connexion Vercel)
+
+Si l'URL répond **`302` vers `https://vercel.com/sso-api?...`** (et pose un cookie
+`_vercel_sso_nonce`), le déploiement **fonctionne** mais il est **privé** : la
+**Protection de Déploiement Vercel** (*Vercel Authentication*) est active, donc
+seuls les membres de l'équipe connectés y accèdent — le public est renvoyé vers
+la connexion Vercel.
+
+➡️ **Correctif (rend l'app publique) :** *Project → Settings → **Deployment
+Protection** → Vercel Authentication* → mettre sur **Disabled** (ou *Only Preview
+Deployments* pour ne protéger que les previews). La prod devient alors publique
+sur `https://<project>-<team>.vercel.app`.
+
+### Dépannage — un domaine `*.vercel.app` précis tombe en 404 mais un autre marche
+
+Vercel attribue plusieurs domaines `*.vercel.app` ; un **alias auto-généré**
+(p. ex. `monprojet-<mot>.vercel.app`) peut avoir été **retiré** (→ 404) alors que
+le domaine canonique `monprojet-<team>.vercel.app` fonctionne. Utilisez l'URL
+listée dans *Settings → Domains* (rubrique **Production**), ou **ré-ajoutez** le
+domaine voulu / **ajoutez un domaine personnalisé** et rattachez-le à la
+Production. ⚠️ Vérifiez aussi que le `*.vercel.app` visé **n'appartient pas à un
+autre projet** (les noms `*.vercel.app` courts sont uniques globalement).
+
 ## Rapports hebdomadaires par email
 
 Chaque semaine, Kidora peut envoyer à chaque parent un résumé d'usage de sa
