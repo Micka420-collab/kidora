@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useSpring, type Variants } from "framer-motion";
+import { useRef, type MouseEvent } from "react";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
   ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check,
@@ -83,6 +83,21 @@ export function Landing() {
   const heroTextY = useTransform(scrollY, [0, 600], [0, 80]);
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
   const mascotY = useTransform(scrollY, [0, 1200], [0, -160]);
+
+  // Interactive 3D tilt on the hero card (mouse-follow, spring-smoothed).
+  const tiltXRaw = useMotionValue(0);
+  const tiltYRaw = useMotionValue(0);
+  const tiltX = useSpring(tiltXRaw, { stiffness: 150, damping: 18, mass: 0.4 });
+  const tiltY = useSpring(tiltYRaw, { stiffness: 150, damping: 18, mass: 0.4 });
+  function onHeroMove(e: MouseEvent<HTMLDivElement>) {
+    const r = e.currentTarget.getBoundingClientRect();
+    tiltYRaw.set(((e.clientX - r.left) / r.width - 0.5) * 14);
+    tiltXRaw.set(((e.clientY - r.top) / r.height - 0.5) * -14);
+  }
+  function onHeroLeave() {
+    tiltXRaw.set(0);
+    tiltYRaw.set(0);
+  }
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#0b1020] text-white">
@@ -166,20 +181,40 @@ export function Landing() {
           </motion.p>
         </motion.div>
 
-        {/* hero illustration with scroll parallax + tilt */}
+        {/* hero illustration — scroll parallax + interactive mouse-follow 3D tilt */}
         <motion.div
           style={{ y: heroImgY, scale: heroImgScale }}
           initial={{ opacity: 0, y: 60, rotateX: 18 }}
           animate={{ opacity: 1, y: 0, rotateX: 0 }}
           transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="relative mx-auto mt-14 max-w-4xl [transform-style:preserve-3d]"
+          className="mx-auto mt-14 max-w-4xl [perspective:1400px]"
         >
-          <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-brand-500/40 to-fuchsia-500/30 blur-2xl" />
-          <Image
-            src="/hero.jpg" alt="Kidora — la mascotte veille sur les appareils de la famille"
-            width={1280} height={714} priority
-            className="w-full rounded-[1.6rem] border border-white/10 shadow-2xl shadow-black/50"
-          />
+          <motion.div
+            onMouseMove={onHeroMove}
+            onMouseLeave={onHeroLeave}
+            style={{ rotateX: tiltX, rotateY: tiltY }}
+            className="relative [transform-style:preserve-3d]"
+          >
+            <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-brand-500/40 to-fuchsia-500/30 blur-2xl" />
+            <Image
+              src="/hero.jpg" alt="Kidora — la mascotte veille sur les appareils de la famille"
+              width={1280} height={714} priority
+              className="w-full rounded-[1.6rem] border border-white/10 shadow-2xl shadow-black/50"
+            />
+            {/* floating glass chips at different depths → real 3D parallax on tilt */}
+            <motion.div
+              style={{ translateZ: 70 }}
+              className="absolute -left-4 top-8 hidden rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2 text-sm font-semibold shadow-xl backdrop-blur-md sm:flex sm:items-center sm:gap-2"
+            >
+              <ShieldCheck size={16} className="text-emerald-300" /> 0 menace aujourd'hui
+            </motion.div>
+            <motion.div
+              style={{ translateZ: 110 }}
+              className="absolute -right-3 bottom-10 hidden rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2 text-sm font-semibold shadow-xl backdrop-blur-md sm:flex sm:items-center sm:gap-2"
+            >
+              <Clock size={16} className="text-amber-300" /> Coucher · 21:00
+            </motion.div>
+          </motion.div>
         </motion.div>
 
         {/* floating mascot */}
