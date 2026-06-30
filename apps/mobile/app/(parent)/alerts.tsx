@@ -77,6 +77,7 @@ function AlertItem({ alert }: { alert: Alert }) {
     <Card
       padded
       onPress={() => router.push(`/child/${alert.childId}`)}
+      accessibilityLabel={`Alerte ${alert.child.name} : ${alert.message}`}
       style={alert.read ? undefined : { borderColor: tone + "55", borderWidth: 1 }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>

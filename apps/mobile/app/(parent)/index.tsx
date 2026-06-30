@@ -145,7 +145,7 @@ function ChildCard({ child }: { child: Enriched }) {
     : online ? "En ligne" : `Vu ${relativeTime(child.live?.lastSeen ?? child.devices[0]?.lastSeen ?? null)}`;
 
   return (
-    <Card onPress={() => router.push(`/child/${child.id}`)} padded>
+    <Card onPress={() => router.push(`/child/${child.id}`)} padded accessibilityLabel={`Voir ${child.name} — ${subtitle}`}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
         <Avatar emoji={child.avatar} online={online} size={54} />
         <View style={{ flex: 1, gap: 4 }}>
