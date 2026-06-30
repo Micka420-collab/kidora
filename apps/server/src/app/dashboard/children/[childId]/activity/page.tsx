@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatDate } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, AppWindow, Globe, Search, MonitorPlay, Ban } from "lucide-react";
 
 type Event = {
@@ -38,13 +39,18 @@ export default function ActivityTab() {
   const [events, setEvents] = useState<Event[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
+    setError(false);
     api
       .get<{ events: Event[] }>(`/api/children/${childId}/activity?limit=150${filter ? `&type=${filter}` : ""}`)
-      .then((r) => { setEvents(r.events); setLoading(false); });
+      .then((r) => setEvents(r.events))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
   }, [childId, filter]);
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-4">
@@ -62,6 +68,8 @@ export default function ActivityTab() {
 
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>
+      ) : error ? (
+        <ErrorCard onRetry={load} />
       ) : events.length === 0 ? (
         <div className="card p-10 text-center text-muted">{t.empty}</div>
       ) : (
