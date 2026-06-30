@@ -8,13 +8,16 @@ export async function getServer(): Promise<string> {
   return (await storage.get("server")) || DEFAULT_SERVER;
 }
 
-/** Error carrying the HTTP status so callers can tell a real 401 from a 5xx/network blip. */
+/** Error carrying the HTTP status + parsed body so callers can tell a real 401
+ *  from a 5xx/network blip and inspect flags like `twoFactor`. */
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  body: unknown;
+  constructor(message: string, status: number, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -32,17 +35,17 @@ async function req<T>(
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Erreur ${res.status}`, res.status);
+  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Erreur ${res.status}`, res.status, data);
   return data as T;
 }
 
 // ── Parent companion (token sent as session cookie header) ──
 export const parent = {
-  async login(email: string, password: string, server?: string) {
+  async login(email: string, password: string, server?: string, code?: string) {
     if (server) await storage.set("server", server.replace(/\/$/, ""));
     const res = await req<{ id: string; name: string; token: string }>("/api/auth/login", {
       method: "POST",
-      body: { email, password },
+      body: { email, password, ...(code ? { code } : {}) },
     });
     await storage.set("parentToken", res.token);
     await storage.set("parentName", res.name);

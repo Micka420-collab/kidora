@@ -5,7 +5,7 @@ import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { parent, childAgent, getServer } from "@/api";
+import { parent, childAgent, getServer, ApiError } from "@/api";
 import { useTheme, space, radius } from "@/theme";
 import { Btn } from "@/ui";
 
@@ -19,6 +19,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [token, setToken] = useState("");
+  const [needs2fa, setNeeds2fa] = useState(false);
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
@@ -38,11 +40,19 @@ export default function Login() {
         await childAgent.enroll(token.trim(), srv, { model: "Mobile", agentVersion: "1.0.0" });
         router.replace("/child-mode");
       } else {
-        await parent.login(email.trim(), password, srv);
+        await parent.login(email.trim(), password, srv, needs2fa ? code.trim() : undefined);
         router.replace("/(parent)");
       }
     } catch (e) {
-      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Connexion impossible");
+      const body = e instanceof ApiError ? (e.body as { twoFactor?: boolean } | undefined) : undefined;
+      if (body?.twoFactor) {
+        // 2FA challenge: reveal the code field. Only alert if a code was actually
+        // tried and rejected (the first attempt just surfaces the prompt).
+        setNeeds2fa(true);
+        if (code.trim()) RNAlert.alert("Code incorrect", e instanceof Error ? e.message : "Code de vérification invalide.");
+      } else {
+        RNAlert.alert("Erreur", e instanceof Error ? e.message : "Connexion impossible");
+      }
     } finally {
       setBusy(false);
     }
@@ -90,10 +100,15 @@ export default function Login() {
                     </Pressable>
                   </View>
                 </Field>
+                {needs2fa && (
+                  <Field icon="shield-checkmark-outline">
+                    <TextInput style={inputStyle} placeholder="Code 2FA ou code de secours" placeholderTextColor={c.textFaint} autoCapitalize="characters" autoCorrect={false} maxLength={12} value={code} onChangeText={setCode} accessibilityLabel="Code de double authentification" autoFocus />
+                  </Field>
+                )}
               </>
             )}
 
-            <Btn title={isChild ? "Connecter l'appareil" : "Se connecter"} icon="arrow-forward" loading={busy} onPress={submit} full />
+            <Btn title={isChild ? "Connecter l'appareil" : needs2fa ? "Vérifier" : "Se connecter"} icon="arrow-forward" loading={busy} onPress={submit} full />
 
             <Text style={{ color: c.textFaint, fontSize: 13, textAlign: "center", marginTop: 4 }}>
               {isChild ? "Le jeton est dans l'app parent : enfant → Appareils." : "Démo : demo@kidora.app / kidora1234"}
