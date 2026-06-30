@@ -84,7 +84,7 @@
 - [ ] Géofences natives + alertes locales
 
 ### Qualité / industrialisation
-- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, **formatage durées/temps relatif**, **géofencing (haversine + transitions)**, **HIBP k-anonymity (fetch mocké, fail-open)**, **tri des appareils**, **auth cron**, chiffrement) — **137 tests verts** ; *Playwright dashboard à venir*
+- [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, **formatage durées/temps relatif**, **géofencing (haversine + transitions)**, **HIBP k-anonymity (fetch mocké, fail-open)**, **tri des appareils**, **auth cron**, chiffrement) — **141 tests verts** ; *Playwright dashboard à venir*
 - [x] Rate limiting (auth) + journal d'audit des actions du compte (visible dans Paramètres)
 - [x] Migration Postgres + déploiement Vercel de référence — adapter auto Postgres (cf. plus haut) + déploiement **un clic** : `vercel.json` (`framework`, `buildCommand: vercel-build`, crons), script `vercel-build` (= `db:push` + `next build` → schéma Postgres **créé au build**, idempotent), **bouton « Deploy with Vercel »** (root `apps/server` pré-réglé, prompts d'env) dans le README + `DEPLOYMENT.md` (bouton, import manuel, étapes), seed démo documenté
 - [x] i18n (FR/EN) — navigation + tous les onglets (vue d'ensemble, apps, web, temps d'écran, activité, rapports, localisation, **appareils**) + paramètres + alertes + onboarding ; *quelques sous-cartes mineures restent en FR*
