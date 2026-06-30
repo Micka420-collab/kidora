@@ -14,12 +14,20 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
 [![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-171%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-186%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
 
 ---
+
+## 🎨 Page d'accueil
+
+Une **landing animée** accueille les visiteurs non connectés : défilement avec **parallaxe et profondeur 3D**, hero qui s'incline vers le curseur, illustrations générées et **scrollytelling** présentant chaque pilier, compteurs animés, FAQ — le tout respectueux de `prefers-reduced-motion`. Les comptes déjà connectés sont redirigés vers le tableau de bord.
+
+<div align="center">
+<img src="apps/server/public/hero.jpg" alt="Page d'accueil Kidora" width="760" />
+</div>
 
 ## ✨ Fonctionnalités
 
