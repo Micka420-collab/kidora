@@ -16,6 +16,21 @@ function fmtClock(iso: string): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+function platformIcon(platform: string): string {
+  const p = platform.toLowerCase();
+  if (p.includes("android")) return "logo-android";
+  if (p.includes("ios") || p.includes("iphone") || p.includes("ipad")) return "logo-apple";
+  if (p.includes("win")) return "logo-windows";
+  return "hardware-chip";
+}
+
+function batteryMeta(level: number | null, c: { success: string; warn: string; danger: string }): { icon: string; col: string; label: string } | null {
+  if (level == null) return null;
+  const col = level <= 15 ? c.danger : level <= 40 ? c.warn : c.success;
+  const icon = level <= 15 ? "battery-dead" : level <= 50 ? "battery-half" : "battery-full";
+  return { icon, col, label: `${level}%` };
+}
+
 export default function ChildDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { c, gradient } = useTheme();
@@ -189,6 +204,34 @@ export default function ChildDetail() {
                   {stToday && stToday.bonusMinutes > 0 ? ` · +${stToday.bonusMinutes} min bonus` : ""}
                 </Muted>
               </Card>
+            )}
+
+            {/* devices */}
+            {(child?.devices?.length ?? 0) > 0 && (
+              <View style={{ gap: space.sm }}>
+                <H2>Appareils</H2>
+                <Card>
+                  {child!.devices.map((d, i) => {
+                    const dOnline = isDeviceOnline(d);
+                    const bat = batteryMeta(d.battery, c);
+                    return (
+                      <View key={d.id} style={{ flexDirection: "row", alignItems: "center", gap: space.md, marginTop: i ? space.md : 0, paddingTop: i ? space.md : 0, borderTopWidth: i ? 1 : 0, borderTopColor: c.border }}>
+                        <IconBubble icon={platformIcon(d.platform)} color={dOnline ? c.success : c.textFaint} size={38} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: "700", color: c.text }} numberOfLines={1}>{d.name}</Text>
+                          <Muted style={{ fontSize: 12 }}>{dOnline ? "En ligne" : `Vu ${relativeTime(d.lastSeen)}`}</Muted>
+                        </View>
+                        {bat && (
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <Ionicons name={bat.icon as keyof typeof Ionicons.glyphMap} size={15} color={bat.col} />
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: bat.col }}>{bat.label}</Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </Card>
+              </View>
             )}
 
             {/* videos + messages + web history shortcuts */}
