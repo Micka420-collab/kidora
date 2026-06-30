@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
-import { Pause, Play, Smartphone, Monitor, Loader2, Battery } from "lucide-react";
+import { Pause, Play, Smartphone, Monitor, Loader2, Battery, Clock } from "lucide-react";
 
 type Device = {
   id: string;
@@ -13,25 +13,35 @@ type Device = {
   battery: number | null;
 };
 
+// Defined at module scope so the Date call stays out of the component render.
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+const PRESETS = [
+  { label: "30 min", minutes: 30 },
+  { label: "1 h", minutes: 60 },
+  { label: "2 h", minutes: 120 },
+];
+
 export function ChildHeader({
   child,
   devices,
 }: {
-  child: { id: string; name: string; avatar: string | null; paused: boolean };
+  child: { id: string; name: string; avatar: string | null; paused: boolean; pausedUntil: string | null };
   devices: Device[];
 }) {
   const router = useRouter();
   const [paused, setPaused] = useState(child.paused);
+  const [until, setUntil] = useState(child.pausedUntil);
   const [loading, setLoading] = useState(false);
 
-  async function togglePause() {
+  async function act(body: { paused?: boolean; untilMinutes?: number }) {
     setLoading(true);
     try {
-      const res = await api.post<{ paused: boolean }>(
-        `/api/children/${child.id}/pause`,
-        { paused: !paused },
-      );
-      setPaused(res.paused);
+      const res = await api.post<{ paused: boolean; pausedUntil: string | null }>(`/api/children/${child.id}/pause`, body);
+      setPaused(res.paused || !!res.pausedUntil);
+      setUntil(res.pausedUntil);
       router.refresh();
     } finally {
       setLoading(false);
@@ -48,7 +58,11 @@ export function ChildHeader({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{child.name}</h1>
-              {paused && <span className="badge bg-amber-100 text-amber-700">⏸ En pause</span>}
+              {paused && (
+                <span className="badge bg-amber-100 text-amber-700">
+                  ⏸ En pause{until ? ` · jusqu'à ${formatTime(until)}` : ""}
+                </span>
+              )}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               {devices.length === 0 && <span className="text-sm text-muted">Aucun appareil</span>}
@@ -66,14 +80,30 @@ export function ChildHeader({
           </div>
         </div>
 
-        <button
-          onClick={togglePause}
-          disabled={loading}
-          className={`btn ${paused ? "btn-primary" : "btn-danger"}`}
-        >
-          {loading ? <Loader2 size={16} className="spinner" /> : paused ? <Play size={16} /> : <Pause size={16} />}
-          {paused ? "Reprendre" : "Pause Internet"}
-        </button>
+        {paused ? (
+          <button onClick={() => act({ paused: false })} disabled={loading} className="btn btn-primary">
+            {loading ? <Loader2 size={16} className="spinner" /> : <Play size={16} />}
+            Reprendre
+          </button>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            {PRESETS.map((p) => (
+              <button
+                key={p.minutes}
+                onClick={() => act({ untilMinutes: p.minutes })}
+                disabled={loading}
+                title={`Pause ${p.label}`}
+                className="btn btn-ghost border"
+              >
+                <Clock size={14} /> {p.label}
+              </button>
+            ))}
+            <button onClick={() => act({ paused: true })} disabled={loading} className="btn btn-danger">
+              {loading ? <Loader2 size={16} className="spinner" /> : <Pause size={16} />}
+              Pause Internet
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

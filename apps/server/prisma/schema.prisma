@@ -84,7 +84,8 @@ model Child {
   name      String
   birthDate DateTime?
   avatar    String? // emoji or url
-  paused    Boolean   @default(false) // internet/app pause "right now"
+  paused    Boolean   @default(false) // internet/app pause "right now" (indefinite)
+  pausedUntil DateTime? // timed pause: effectively paused until this instant
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

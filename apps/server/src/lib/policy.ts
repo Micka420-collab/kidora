@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { DEFAULT_BLOCKLIST } from "./categories";
 import { isBedtimeNow, todayWeekday } from "./schedule";
+import { isPausedNow } from "./pause";
 
 // Re-exported for existing importers.
 export { isBedtimeNow, todayWeekday };
@@ -136,7 +137,7 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   return {
     childId: child.id,
     childName: child.name,
-    paused: child.paused,
+    paused: isPausedNow(child.paused, child.pausedUntil),
     generatedAt: new Date().toISOString(),
     screenTime: {
       enabled: child.screenTime?.enabled ?? false,
