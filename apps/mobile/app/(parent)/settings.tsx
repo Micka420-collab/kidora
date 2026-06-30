@@ -36,6 +36,7 @@ export default function Settings() {
   const [tfaCode, setTfaCode] = useState("");
   const [tfaBusy, setTfaBusy] = useState(false);
   const [tfaDisarm, setTfaDisarm] = useState(false);
+  const [tfaBackupCodes, setTfaBackupCodes] = useState<string[] | null>(null);
   const [guardians, setGuardians] = useState<Guardian[] | null>(null);
   const [coEmail, setCoEmail] = useState("");
   const [coBusy, setCoBusy] = useState(false);
@@ -106,11 +107,12 @@ export default function Settings() {
     if (tfaCode.length < 6) return;
     setTfaBusy(true);
     try {
-      await parent.twoFactorVerify(tfaCode.trim());
+      const r = await parent.twoFactorVerify(tfaCode.trim());
       setTfaEnabled(true);
       setTfaQr(null);
       setTfaSecret(null);
       setTfaCode("");
+      setTfaBackupCodes(r.backupCodes ?? null);
       RNAlert.alert("Kidora", "Double authentification activée ✅");
     } catch (e) {
       RNAlert.alert("Erreur", e instanceof Error ? e.message : "Code invalide");
@@ -264,12 +266,26 @@ export default function Settings() {
             </View>
             <Muted>Un code à usage unique (Google Authenticator, Authy…) en plus du mot de passe.</Muted>
 
-            {tfaEnabled ? (
+            {tfaBackupCodes ? (
+              <View style={{ marginTop: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: c.warnSoft, borderWidth: 1, borderColor: c.warn + "55" }}>
+                <Text style={{ fontSize: 14, fontWeight: "800", color: c.text, marginBottom: 4 }}>🔑 Vos codes de secours</Text>
+                <Muted style={{ fontSize: 12 }}>À conserver précieusement : chacun sert une seule fois pour vous connecter ou désactiver la 2FA si vous perdez votre application. Ils ne seront plus affichés.</Muted>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginTop: space.sm }}>
+                  {tfaBackupCodes.map((bc) => (
+                    <Text key={bc} selectable style={{ fontFamily: "monospace", fontSize: 14, fontWeight: "700", color: c.text, backgroundColor: c.surface, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.sm, letterSpacing: 1 }}>{bc}</Text>
+                  ))}
+                </View>
+                <View style={{ marginTop: space.md }}>
+                  <Btn title="J'ai noté ces codes" icon="checkmark" onPress={() => setTfaBackupCodes(null)} full />
+                </View>
+              </View>
+            ) : tfaEnabled ? (
               tfaDisarm ? (
                 <View style={{ marginTop: space.md }}>
+                  <Muted style={{ fontSize: 12, marginBottom: space.sm }}>Saisissez un code de votre application ou un code de secours.</Muted>
                   <TextInput
-                    style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 18, letterSpacing: 6, textAlign: "center" }}
-                    placeholder="123456" placeholderTextColor={c.textFaint} keyboardType="number-pad" maxLength={6}
+                    style={{ backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 16, letterSpacing: 3, textAlign: "center" }}
+                    placeholder="Code 2FA ou de secours" placeholderTextColor={c.textFaint} autoCapitalize="characters" maxLength={12}
                     value={tfaCode} onChangeText={setTfaCode} accessibilityLabel="Code de confirmation"
                   />
                   <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>

@@ -14,6 +14,7 @@ export function TwoFactorCard() {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[] | null>(null);
 
   useEffect(() => {
     api.get<Status>("/api/account/2fa").then((s) => setEnabled(s.enabled)).catch(() => setEnabled(false));
@@ -28,8 +29,9 @@ export function TwoFactorCard() {
   async function verify() {
     setBusy(true); setMsg(null);
     try {
-      await api.post("/api/account/2fa", { action: "verify", code });
+      const r = await api.post<{ enabled: boolean; backupCodes?: string[] }>("/api/account/2fa", { action: "verify", code });
       setEnabled(true); setEnroll(null); setCode(""); setMsg("Double authentification activée ✅");
+      setBackupCodes(r.backupCodes ?? null);
     } catch (e) { setMsg(e instanceof Error ? e.message : "Code invalide"); }
     finally { setBusy(false); }
   }
@@ -37,9 +39,12 @@ export function TwoFactorCard() {
     setBusy(true); setMsg(null);
     try {
       await api.post("/api/account/2fa", { action: "disable", code });
-      setEnabled(false); setCode(""); setMsg("Double authentification désactivée.");
+      setEnabled(false); setCode(""); setBackupCodes(null); setMsg("Double authentification désactivée.");
     } catch (e) { setMsg(e instanceof Error ? e.message : "Code invalide"); }
     finally { setBusy(false); }
+  }
+  function copyCodes() {
+    if (backupCodes) navigator.clipboard?.writeText(backupCodes.join("\n")).catch(() => {});
   }
 
   return (
@@ -51,14 +56,29 @@ export function TwoFactorCard() {
         Protégez votre compte avec un code temporaire (Google Authenticator, Authy, 1Password…).
       </p>
 
-      {enabled === null ? (
+      {backupCodes ? (
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-800">🔑 Vos codes de secours (à conserver précieusement)</p>
+          <p className="text-xs text-amber-700">
+            Chaque code ne sert qu&apos;une fois et vous permet de vous connecter ou de désactiver la 2FA si vous perdez votre application d&apos;authentification. Ils ne seront plus affichés.
+          </p>
+          <ul className="grid grid-cols-2 gap-1.5 font-mono text-sm">
+            {backupCodes.map((c) => (<li key={c} className="rounded bg-white px-2 py-1 text-center tracking-wider">{c}</li>))}
+          </ul>
+          <div className="flex gap-2">
+            <button className="btn btn-outline py-1.5 text-sm" onClick={copyCodes}>Copier</button>
+            <button className="btn btn-primary py-1.5 text-sm" onClick={() => setBackupCodes(null)}>J&apos;ai noté ces codes</button>
+          </div>
+        </div>
+      ) : enabled === null ? (
         <Loader2 size={16} className="spinner text-muted" />
       ) : enabled ? (
         <div className="space-y-3">
           <span className="badge bg-emerald-100 text-emerald-700">Activée</span>
+          <p className="text-xs text-muted">Pour désactiver, saisissez un code de votre application <em>ou</em> un code de secours.</p>
           <div className="flex flex-wrap items-end gap-2">
-            <input className="input w-40 tracking-widest" inputMode="numeric" maxLength={6} placeholder="Code à 6 chiffres" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
-            <button className="btn btn-outline" onClick={disable} disabled={busy || code.length !== 6}>Désactiver</button>
+            <input className="input w-48 tracking-widest" autoCapitalize="characters" maxLength={12} placeholder="Code 2FA ou de secours" value={code} onChange={(e) => setCode(e.target.value)} />
+            <button className="btn btn-outline" onClick={disable} disabled={busy || code.trim().length < 6}>Désactiver</button>
           </div>
         </div>
       ) : enroll ? (

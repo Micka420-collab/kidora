@@ -24,6 +24,7 @@ model Parent {
   alertPrefs   String  @default("[]") // JSON array of muted alert types (safety types never muted)
   totpSecret   String?  // base32 TOTP secret (set during 2FA enrolment, encrypted at rest)
   totpEnabled  Boolean  @default(false) // 2FA active
+  totpBackupCodes String @default("[]") // JSON array of sha256 hashes of unused one-time recovery codes
   tokenVersion Int      @default(0) // bump to invalidate all existing sessions (logout everywhere)
   resetToken       String?   @unique // password-reset token (hashed-random)
   resetTokenExpiry DateTime? // reset token validity

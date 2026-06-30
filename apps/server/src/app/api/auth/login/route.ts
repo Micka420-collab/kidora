@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword, dummyVerify } from "@/lib/password";
 import { verifyTotp } from "@/lib/totp";
 import { decrypt } from "@/lib/crypto";
+import { consumeBackupCode, parseBackupHashes } from "@/lib/backup-codes";
 import { signSession, setSessionCookie } from "@/lib/auth";
 import { apiError, json, readJson } from "@/lib/http";
 import { rateLimit, clientIp, loginLockStatus, recordLoginFailure, clearLoginFailures } from "@/lib/ratelimit";
@@ -56,15 +57,22 @@ export async function POST(req: NextRequest) {
     return apiError("Email ou mot de passe incorrect", 401);
   }
 
-  // Second factor (TOTP) when enabled.
+  // Second factor (TOTP, or a one-time backup/recovery code) when enabled.
   if (parent.totpEnabled && parent.totpSecret) {
     const { code } = parsed.data;
     if (!code) {
       return Response.json({ twoFactor: true, error: "Code de vérification requis." }, { status: 401 });
     }
-    if (!verifyTotp(decrypt(parent.totpSecret), code)) {
-      recordLoginFailure(lockKey);
-      return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
+    if (verifyTotp(decrypt(parent.totpSecret), code)) {
+      // ok
+    } else {
+      // Fall back to a recovery code; consume it so it can't be reused.
+      const remaining = consumeBackupCode(code, parseBackupHashes(parent.totpBackupCodes));
+      if (remaining === null) {
+        recordLoginFailure(lockKey);
+        return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
+      }
+      await prisma.parent.update({ where: { id: parent.id }, data: { totpBackupCodes: JSON.stringify(remaining) } });
     }
   }
 
