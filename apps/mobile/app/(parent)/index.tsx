@@ -4,10 +4,10 @@ import { useFocusEffect, router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { parent, type Child, type Live, type Alert } from "@/api";
+import { parent, ApiError, type Child, type Live, type Alert } from "@/api";
 import { useTheme, relativeTime, radius, space, alertMeta, formatDuration } from "@/theme";
 import { isDeviceOnline } from "@/device";
-import { Card, Avatar, PulseDot, Pill, Muted, SectionHeader, Empty, Skeleton, IconBubble } from "@/ui";
+import { Card, Avatar, PulseDot, Pill, Muted, SectionHeader, Empty, Skeleton, IconBubble, ErrorState } from "@/ui";
 
 type Enriched = Child & { live?: Live };
 
@@ -23,6 +23,7 @@ export default function Home() {
   const [kids, setKids] = useState<Enriched[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number } | null>(null);
@@ -45,8 +46,15 @@ export default function Home() {
       const pendingReqs = a.alerts.filter((x) => x.type === "time_request" && !x.read);
       setTimeReq({ count: pendingReqs.length, childId: pendingReqs[0]?.childId ?? null });
       setWeek(ins);
-    } catch {
-      router.replace("/login");
+      setError(false);
+    } catch (e) {
+      // Only a real auth failure should eject to login — a 5xx or flaky network
+      // shows a retryable error instead of spuriously logging the parent out.
+      if (e instanceof ApiError && e.status === 401) {
+        router.replace("/login");
+      } else {
+        setError(true);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,6 +96,10 @@ export default function Home() {
           {loading ? (
             <View style={{ padding: space.lg, gap: space.md }}>
               {[0, 1].map((i) => <Skeleton key={i} height={92} />)}
+            </View>
+          ) : error ? (
+            <View style={{ padding: space.lg }}>
+              <ErrorState onRetry={() => { setLoading(true); load(); }} />
             </View>
           ) : (
             <ChildList kids={kids} alerts={alerts} week={week} timeReq={timeReq} reload={load} refreshing={refreshing} setRefreshing={setRefreshing} />
