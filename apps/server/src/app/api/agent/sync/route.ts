@@ -8,6 +8,7 @@ import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
+import { safeDate } from "@/lib/ingest";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -82,7 +83,8 @@ const syncSchema = z.object({
     })
     .optional(),
   commandResults: z
-    .array(z.object({ id: z.string(), status: z.string(), result: z.string().optional() }))
+    .array(z.object({ id: z.string(), status: z.enum(["done", "failed"]), result: z.string().max(2000).optional() }))
+    .max(200)
     .optional(),
   timeRequest: z
     .object({ minutes: z.number().int().min(5).max(480), reason: z.string().max(200).optional() })
@@ -125,7 +127,7 @@ export async function POST(req: NextRequest) {
         detail: e.detail,
         category: e.category,
         blocked: e.blocked ?? false,
-        ts: e.ts ? new Date(e.ts) : new Date(),
+        ts: safeDate(e.ts),
       })),
     });
     for (const e of body.events) {
@@ -189,7 +191,7 @@ export async function POST(req: NextRequest) {
         title: w.title,
         category: w.category,
         blocked: w.blocked ?? false,
-        ts: w.ts ? new Date(w.ts) : new Date(),
+        ts: safeDate(w.ts),
       })),
     });
     for (const w of body.webVisits) {
@@ -216,7 +218,7 @@ export async function POST(req: NextRequest) {
         title: v.title,
         channel: v.channel,
         url: v.url,
-        ts: v.ts ? new Date(v.ts) : new Date(),
+        ts: safeDate(v.ts),
       })),
     });
   }
@@ -231,7 +233,7 @@ export async function POST(req: NextRequest) {
         direction: m.direction,
         contact: m.contact,
         body: m.body,
-        ts: m.ts ? new Date(m.ts) : new Date(),
+        ts: safeDate(m.ts),
       })),
     });
     // Scan each message for risk signals (grooming, self-harm, bullying…).
