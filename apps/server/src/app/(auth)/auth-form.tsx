@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
@@ -37,6 +37,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [needs2fa, setNeeds2fa] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Prefill the demo credentials when arriving from a "Tester la démo" link
+  // (/login?demo=1). Read from window so we don't need a Suspense boundary.
+  useEffect(() => {
+    if (mode !== "login") return;
+    if (new URLSearchParams(window.location.search).get("demo") != null) {
+      setEmail("demo@kidora.app");
+      setPassword("kidora1234");
+    }
+  }, [mode]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
