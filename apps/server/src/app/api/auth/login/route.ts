@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   }
 
   clearLoginFailures(lockKey);
-  const token = await signSession({ parentId: parent.id, email: parent.email });
+  const token = await signSession({ parentId: parent.id, email: parent.email, tokenVersion: parent.tokenVersion });
   await setSessionCookie(token);
   await audit(parent.id, "login", undefined, ip);
 

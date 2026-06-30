@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.parent.update({ where: { id: parent.id }, data: { email } });
     // Refresh the session cookie so its email claim stays in sync.
-    await setSessionCookie(await signSession({ parentId: parent.id, email }));
+    await setSessionCookie(await signSession({ parentId: parent.id, email, tokenVersion: parent.tokenVersion }));
     await audit(parent.id, "account.email_change", email);
     return json({ ok: true, email });
   });

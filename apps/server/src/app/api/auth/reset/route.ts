@@ -40,7 +40,15 @@ export async function POST(req: NextRequest) {
 
   await prisma.parent.update({
     where: { id: parent.id },
-    data: { passwordHash: await hashPassword(newPassword), resetToken: null, resetTokenExpiry: null },
+    // Bump tokenVersion: a reset is the "I may be compromised" action, so every
+    // existing session (incl. an attacker's stolen token) is invalidated. The
+    // user logs in fresh afterwards.
+    data: {
+      passwordHash: await hashPassword(newPassword),
+      resetToken: null,
+      resetTokenExpiry: null,
+      tokenVersion: { increment: 1 },
+    },
   });
   await audit(parent.id, "account.password_reset", "Mot de passe réinitialisé");
   return json({ ok: true });
