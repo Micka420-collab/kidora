@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRef, useState, useEffect, type MouseEvent } from "react";
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
 import {
@@ -97,6 +98,9 @@ const faqs = [
   },
 ];
 
+// WebGL hero accent — client-only so it never touches SSR/the server build.
+const Hero3D = dynamic(() => import("./hero3d").then((m) => m.Hero3D), { ssr: false });
+
 const reveal: Variants = {
   hidden: { opacity: 0, y: 48, rotateX: -10 },
   show: (i: number = 0) => ({
@@ -180,6 +184,12 @@ export function Landing() {
 
       {/* hero */}
       <section ref={heroRef} className="relative mx-auto max-w-6xl px-6 pt-12 pb-24 text-center [perspective:1200px]">
+        {/* live WebGL orb behind the hero (decorative, client-only) */}
+        {!reduce && (
+          <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] opacity-60 [mask-image:radial-gradient(58%_58%_at_50%_38%,black,transparent)]">
+            <Hero3D />
+          </div>
+        )}
         <motion.div style={{ y: heroTextY, opacity: heroOpacity }}>
           <motion.div
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
