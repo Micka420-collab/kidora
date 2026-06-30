@@ -340,6 +340,16 @@ export function Landing() {
         </motion.div>
       </section>
 
+      {/* product preview */}
+      <section className="mx-auto max-w-5xl px-6 py-16">
+        <SectionTitle
+          eyebrow="Un seul endroit"
+          title="Tout votre foyer, en un coup d'œil"
+          subtitle="Activité en direct, temps d'écran, localisation et alertes — sur tous les appareils, depuis un tableau de bord clair."
+        />
+        <ProductPreview />
+      </section>
+
       {/* features */}
       <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16 [perspective:1400px]">
         <SectionTitle
@@ -584,6 +594,32 @@ function Counter({ to, suffix = "", duration = 1.4 }: { to: number; suffix?: str
       {val}
       {suffix}
     </span>
+  );
+}
+
+function ProductPreview() {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [60, -40]);
+  const rotateX = useTransform(scrollYProgress, [0, 1], [10, -5]);
+  const chips = ["Activité en direct", "Temps d'écran", "Localisation & zones", "Alertes & SOS", "Rapports"];
+
+  return (
+    <div ref={ref} className="mt-10 [perspective:1500px]">
+      <motion.div style={{ y, rotateX }} className="relative mx-auto max-w-4xl [transform-style:preserve-3d]">
+        <div className="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-tr from-brand-500/30 to-fuchsia-500/20 blur-2xl" />
+        <Image
+          src="/dashboard.jpg" alt="Aperçu du tableau de bord Kidora — graphiques, jauges, carte et zones de sécurité"
+          width={1100} height={684}
+          className="w-full rounded-[1.4rem] border border-white/10 shadow-2xl shadow-black/50"
+        />
+      </motion.div>
+      <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2.5">
+        {chips.map((t) => (
+          <span key={t} className="rounded-full border border-white/12 bg-white/5 px-3.5 py-1.5 text-sm text-white/75">{t}</span>
+        ))}
+      </div>
+    </div>
   );
 }
 
