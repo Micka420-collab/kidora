@@ -85,20 +85,16 @@ export default async function OverviewPage() {
         {kids.length === 0 ? (
           <Onboarding t={tt.onboarding} />
         ) : (
-          <ChildrenGrid
-            items={childCards}
-            searchPlaceholder={tt.overview.searchChildren}
-            noMatch={tt.overview.noChildMatch}
-          />
+          <ChildrenGrid items={childCards} />
         )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Category breakdown */}
         <div className="card p-5">
-          <h2 className="mb-4 text-lg font-semibold">Catégories aujourd'hui</h2>
+          <h2 className="mb-4 text-lg font-semibold">{tt.overview.categoriesToday}</h2>
           {topApps.filter((t) => t._sum.seconds).length === 0 ? (
-            <p className="text-sm text-muted">Aucune activité enregistrée aujourd'hui.</p>
+            <p className="text-sm text-muted">{tt.overview.noActivityToday}</p>
           ) : (
             <div className="space-y-3">
               {topApps

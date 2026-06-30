@@ -37,6 +37,11 @@ const fr = {
     allGood: "Aucune alerte. Tout va bien ! ✅",
     searchChildren: "Rechercher un enfant…",
     noChildMatch: "Aucun enfant ne correspond.",
+    categoriesToday: "Catégories aujourd'hui",
+    noActivityToday: "Aucune activité enregistrée aujourd'hui.",
+    today: "aujourd'hui",
+    devicesWord: "appareils",
+    onlineWord: "en ligne",
   },
   alerts: {
     title: "Alertes",
@@ -237,6 +242,11 @@ const en: typeof fr = {
     allGood: "No alerts. All good! ✅",
     searchChildren: "Search a child…",
     noChildMatch: "No child matches.",
+    categoriesToday: "Categories today",
+    noActivityToday: "No activity recorded today.",
+    today: "today",
+    devicesWord: "devices",
+    onlineWord: "online",
   },
   alerts: {
     title: "Alerts",

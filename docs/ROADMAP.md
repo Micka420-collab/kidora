@@ -64,6 +64,7 @@
 - [x] **Filtres d'alertes (dashboard)** : puces Toutes / Non lues / Critiques / Avertissements avec compteurs en direct, filtrage côté client, état vide dédié par filtre, `aria-pressed`, bilingue FR/EN, mode sombre
 - [x] **Recherche d'enfants (vue d'ensemble)** : champ de filtre par nom (composant client `ChildrenGrid`) qui n'apparaît qu'au-delà de 3 enfants, état « aucun résultat », bilingue FR/EN
 - [x] **Tri des appareils par activité** : helper pur `sortDevicesByActivity` (en ligne d'abord, puis vu le plus récemment, puis le plus ancien créé ; jamais-vu en dernier) appliqué à la liste des appareils d'un enfant — 5 tests unitaires
+- [x] **Cohérence i18n vue d'ensemble** : textes auparavant codés en dur en français (« Catégories aujourd'hui », « Actif/Hors ligne », « En pause », « X appareils · Y en ligne », « … aujourd'hui ») câblés sur le dictionnaire (`overview.*` + `common.active/offline/paused`) ; `ChildrenGrid` utilise `useT` — vue d'ensemble entièrement bilingue FR/EN
 - [x] Routines / profils horaires (école/devoirs) — bloquent des apps sur une plage ; appliqué dynamiquement par le moteur de policy
 
 ### Agent Windows
