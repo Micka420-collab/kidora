@@ -14,8 +14,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const { childId } = await ctx.params;
     await requireOwnedChild(parent.id, childId);
 
+    const url = new URL(req.url);
     // clampLimit guards NaN/negative/oversized (?days=abc no longer 500s).
-    const days = clampLimit(new URL(req.url).searchParams.get("days"), 7, 31);
+    const days = clampLimit(url.searchParams.get("days"), 7, 31);
+    // Timezone offset (minutes to add to UTC) so the by-hour histogram reflects
+    // the family's local time, not the server's. Clamped to ±14h; NaN → 0 (UTC).
+    const tzRaw = Number(url.searchParams.get("tz"));
+    const tzOffset = Number.isFinite(tzRaw) ? Math.min(840, Math.max(-840, Math.trunc(tzRaw))) : 0;
     const report = await buildChildReport(childId, days);
 
     // Total screen time over the *previous* equal-length window, for a delta;
@@ -35,7 +40,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     return json({
       ...report,
       prevTotalSeconds: prevAgg._sum.seconds ?? 0,
-      byHour: hourHistogram(events.map((e) => e.ts)),
+      byHour: hourHistogram(events.map((e) => e.ts), tzOffset),
     });
   });
 }

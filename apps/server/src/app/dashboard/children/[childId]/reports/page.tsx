@@ -24,6 +24,13 @@ type Report = {
 
 const DAYS_KEY = "kidora_report_days";
 
+// Minutes to add to UTC to reach the viewer's local time (module-scope so the
+// react-hooks/purity rule doesn't flag `new Date()` in render). Sent to the
+// report API so the by-hour histogram is bucketed in the family's timezone.
+function localTzOffset(): number {
+  return -new Date().getTimezoneOffset();
+}
+
 export default function ReportsTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t: tr } = useT();
@@ -47,7 +54,7 @@ export default function ReportsTab() {
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    api.get<Report>(`/api/children/${childId}/report?days=${days}`)
+    api.get<Report>(`/api/children/${childId}/report?days=${days}&tz=${localTzOffset()}`)
       .then((r) => setReport(r))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
