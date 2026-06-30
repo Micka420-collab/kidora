@@ -51,6 +51,25 @@ Une **landing animée** accueille les visiteurs non connectés : défilement ave
 | ♻️ **RGPD & rétention** | Export & suppression de compte, **nettoyage automatique** des données (rétention configurable) |
 | 🌍 **Bilingue** | Interface FR / EN |
 
+## 📱 Application parent (mobile)
+
+L'app **Kidora Parents** (Expo / React Native) offre désormais une **parité quasi
+complète avec le tableau de bord web** — pilotez tout depuis le téléphone :
+
+| Domaine | Sur mobile |
+|---|---|
+| 👀 **Suivi enfant** | Vue d'ensemble temps réel, **historique de navigation web**, **activité par heure** + évènements, **vidéos YouTube**, **messages**, **localisation** (historique + zones), **appareils** (batterie / en ligne) |
+| ⏱️ **Temps d'écran** | **Édition des limites quotidiennes** par jour, pause instantanée/programmée (par enfant **ou familiale**), **temps bonus** & réponse aux demandes |
+| 🎮 **Applications** | **Autoriser / limiter / bloquer** chaque app + limite quotidienne |
+| 🌐 **Filtrage web** | **Catégories bloquées**, SafeSearch, blocage des sites inconnus |
+| 🔍 **Mots-clés** | **Ajout / suppression** des termes sensibles surveillés |
+| 🗓️ **Routines** | Activer / désactiver / supprimer les profils horaires |
+| 📍 **Zones de sécurité** | **Créer une géofence à la position actuelle** + suppression |
+| 🎮 **Actions à distance** | Verrouiller, localiser, message, captures |
+| 🔐 **Compte** | **2FA/TOTP**, changement mot de passe / email, **préférences de notification** |
+
+> L'app **Kidora Kids** (même binaire mobile) gère l'appareil enfant : localisation, usage, **SOS**.
+
 ## 🏗️ Architecture
 
 ```
