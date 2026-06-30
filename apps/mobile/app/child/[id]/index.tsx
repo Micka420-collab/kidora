@@ -6,6 +6,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, type Child, type Live, type Report } from "@/api";
 import { useTheme, formatDuration, relativeTime, categoryMeta, space, radius } from "@/theme";
+import { isDeviceOnline } from "@/device";
 import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Empty, Skeleton, ErrorState } from "@/ui";
 
 const WD = ["D", "L", "M", "M", "J", "V", "S"];
@@ -49,7 +50,7 @@ export default function ChildDetail() {
   }
 
   const paused = live?.paused ?? child?.paused ?? false;
-  const online = live?.online ?? child?.devices.some((d) => d.online) ?? false;
+  const online = live?.online ?? child?.devices.some((d) => isDeviceOnline(d)) ?? false;
 
   function togglePause() { act(() => parent.pause(id!, !paused)); }
   function lock() {
