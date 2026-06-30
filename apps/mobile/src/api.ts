@@ -71,6 +71,9 @@ export const parent = {
   async pause(id: string, paused: boolean) {
     return req<{ paused: boolean }>(`/api/children/${id}/pause`, { method: "POST", body: { paused }, headers: await this.authHeader() });
   },
+  async pauseFor(id: string, untilMinutes: number) {
+    return req<{ paused: boolean; pausedUntil: string | null }>(`/api/children/${id}/pause`, { method: "POST", body: { untilMinutes }, headers: await this.authHeader() });
+  },
   async familyPause(paused: boolean) {
     return req<{ paused: boolean; count: number }>("/api/family/pause", { method: "POST", body: { paused }, headers: await this.authHeader() });
   },
@@ -132,6 +135,7 @@ export type TimeRequest = { id: string; minutes: number; reason: string | null; 
 export type Live = {
   online: boolean;
   paused: boolean;
+  pausedUntil?: string | null;
   lastSeen: string | null;
   battery: number | null;
   deviceName: string | null;
