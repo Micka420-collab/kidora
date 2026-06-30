@@ -84,4 +84,16 @@ describe("buildPolicy (integration)", () => {
 
     await prisma.timeGrant.deleteMany({ where: { childId, date: today } });
   });
+
+  it("overlays an active routine's app blocks", async () => {
+    const ALL_DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+    // 00:00–24:00 every day → always active, regardless of when the test runs.
+    const routine = await prisma.routine.create({
+      data: { childId, name: "Heures d'école", enabled: true, days: JSON.stringify(ALL_DAYS), start: "00:00", end: "24:00", blockedAppIds: JSON.stringify(["roblox.exe"]) },
+    });
+    const p = await buildPolicy(childId);
+    expect(p.activeRoutines).toContain("Heures d'école");
+    expect(p.appRules.find((r: any) => r.appId === "roblox.exe")?.action).toBe("block");
+    await prisma.routine.delete({ where: { id: routine.id } });
+  });
 });
