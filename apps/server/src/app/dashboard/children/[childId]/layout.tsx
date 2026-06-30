@@ -4,6 +4,7 @@ import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleChildWhere } from "@/lib/guard";
 import { isDeviceOnline } from "@/lib/device-status";
+import { isPausedNow } from "@/lib/pause";
 import { ChildHeader } from "@/components/child-header";
 import { ChildTabs } from "@/components/child-tabs";
 
@@ -46,7 +47,8 @@ export default async function ChildLayout({
           id: child.id,
           name: child.name,
           avatar: child.avatar,
-          paused: child.paused,
+          paused: isPausedNow(child.paused, child.pausedUntil),
+          pausedUntil: child.pausedUntil ? child.pausedUntil.toISOString() : null,
         }}
         devices={child.devices.map((d) => ({
           id: d.id,

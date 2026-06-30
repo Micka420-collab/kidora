@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { json } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { isDeviceOnline } from "@/lib/device-status";
+import { isPausedNow } from "@/lib/pause";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -21,7 +22,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         include: { device: { select: { name: true } } },
       }),
       prisma.locationPing.findFirst({ where: { childId }, orderBy: { ts: "desc" } }),
-      prisma.child.findUnique({ where: { id: childId }, select: { paused: true } }),
+      prisma.child.findUnique({ where: { id: childId }, select: { paused: true, pausedUntil: true } }),
     ]);
 
     // "online" if any device reported within the liveness window
@@ -39,7 +40,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
     return json({
       online: !!onlineDevice,
-      paused: child?.paused ?? false,
+      paused: isPausedNow(child?.paused ?? false, child?.pausedUntil),
       lastSeen: lastSeen ? new Date(lastSeen).toISOString() : null,
       battery: onlineDevice?.battery ?? devices[0]?.battery ?? null,
       deviceName: onlineDevice?.name ?? null,
