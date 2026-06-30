@@ -144,9 +144,13 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         </div>
 
         {mode === "login" && (
-          <p className="mt-4 text-center text-xs text-muted">
-            Démo : demo@kidora.app / kidora1234
-          </p>
+          <button
+            type="button"
+            onClick={() => { setEmail("demo@kidora.app"); setPassword("kidora1234"); setError(null); }}
+            className="mx-auto mt-4 block text-center text-xs text-muted hover:text-brand-600"
+          >
+            Essayer avec le compte démo <span className="font-medium">(demo@kidora.app)</span>
+          </button>
         )}
       </div>
     </div>
