@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, type Alert } from "@/api";
 import { useTheme, relativeTime, alertMeta, space, radius } from "@/theme";
-import { Card, Avatar, Muted, IconBubble, Empty, Skeleton, H1 } from "@/ui";
+import { Card, Avatar, Muted, IconBubble, Empty, Skeleton, H1, ErrorState } from "@/ui";
 
 export default function Alerts() {
   const { c } = useTheme();
@@ -13,13 +13,15 @@ export default function Alerts() {
   const [unread, setUnread] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const a = await parent.alerts();
       setAlerts(a.alerts);
       setUnread(a.unread);
-    } catch { /* ignore */ } finally {
+      setError(false);
+    } catch { setError(true); } finally {
       setLoading(false);
       setRefreshing(false);
     }
@@ -55,6 +57,8 @@ export default function Alerts() {
       >
         {loading ? (
           [0, 1, 2, 3].map((i) => <Skeleton key={i} height={72} />)
+        ) : error ? (
+          <ErrorState onRetry={() => { setLoading(true); load(); }} />
         ) : alerts.length === 0 ? (
           <Empty icon="shield-checkmark" title="Aucune alerte" subtitle="Tout va bien. Les alertes (SOS, zones, limites, mots-clés) apparaîtront ici." />
         ) : (

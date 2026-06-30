@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, type Video } from "@/api";
 import { useTheme, relativeTime, youtubeThumb, space, radius } from "@/theme";
-import { Card, Muted, Pill, Empty, Skeleton, IconBubble } from "@/ui";
+import { Card, Muted, Pill, Empty, Skeleton, IconBubble, ErrorState } from "@/ui";
 
 export default function Videos() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -13,11 +13,12 @@ export default function Videos() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
-    try { setVideos((await parent.videos(id)).videos); }
-    catch { /* ignore */ } finally { setLoading(false); setRefreshing(false); }
+    try { setVideos((await parent.videos(id)).videos); setError(false); }
+    catch { setError(true); } finally { setLoading(false); setRefreshing(false); }
   }, [id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -32,6 +33,8 @@ export default function Videos() {
       >
         {loading ? (
           [0, 1, 2, 3].map((i) => <Skeleton key={i} height={72} />)
+        ) : error ? (
+          <ErrorState onRetry={() => { setLoading(true); load(); }} />
         ) : videos.length === 0 ? (
           <Empty icon="logo-youtube" title="Aucune vidéo" subtitle="Les vidéos YouTube regardées sur le téléphone et le PC apparaîtront ici." />
         ) : (
