@@ -6,6 +6,7 @@ import { requireParent, withGuard } from "@/lib/guard";
 import { clearSessionCookie } from "@/lib/auth";
 import { verifyPassword } from "@/lib/password";
 import { verifyTotp } from "@/lib/totp";
+import { decrypt } from "@/lib/crypto";
 
 const schema = z.object({
   confirm: z.literal("SUPPRIMER"),
@@ -50,7 +51,7 @@ export async function DELETE(req: NextRequest) {
       return apiError("Mot de passe incorrect", 401);
     }
     if (row.totpEnabled && row.totpSecret) {
-      if (!parsed.data.code || !verifyTotp(row.totpSecret, parsed.data.code)) {
+      if (!parsed.data.code || !verifyTotp(decrypt(row.totpSecret), parsed.data.code)) {
         return apiError("Code de vérification 2FA invalide", 401);
       }
     }
