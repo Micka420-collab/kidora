@@ -8,6 +8,7 @@ const KEYS = {
   enrollToken: "kidora.enrollToken",
   role: "kidora.role",
   kidsWelcomed: "kidora.kidsWelcomed",
+  kidsUsageBaseline: "kidora.kidsUsageBaseline",
 } as const;
 
 type Key = keyof typeof KEYS;
