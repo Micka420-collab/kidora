@@ -79,4 +79,36 @@ describe("aggregateReport", () => {
     expect(r.alerts.byType).toContainEqual({ type: "risk", count: 2 });
     expect(r.alerts.byType).toContainEqual({ type: "geofence", count: 1 });
   });
+
+  it("caps topApps at 10, ordered by total seconds desc", () => {
+    const usage = Array.from({ length: 14 }, (_, i) => ({
+      date: "2026-06-28", appId: `app${i}`, appName: `App ${i}`, category: "games", seconds: (i + 1) * 60,
+    }));
+    const r = aggregateReport({ usage, visits: [], alerts: [], dates, days: 3 });
+    expect(r.topApps).toHaveLength(10);
+    // highest first (app13 = 14*60), strictly decreasing
+    expect(r.topApps[0].appName).toBe("App 13");
+    const secs = r.topApps.map((a) => a.seconds);
+    expect([...secs].sort((a, b) => b - a)).toEqual(secs);
+  });
+
+  it("caps topDomains at 10, ordered by visit count desc", () => {
+    const visits = Array.from({ length: 12 }).flatMap((_, i) =>
+      Array.from({ length: i + 1 }, () => ({ domain: `d${i}.com`, blocked: false })),
+    );
+    const r = aggregateReport({ usage: [], visits, alerts: [], dates, days: 3 });
+    expect(r.web.topDomains).toHaveLength(10);
+    expect(r.web.topDomains[0].domain).toBe("d11.com"); // 12 visits, the most
+    const counts = r.web.topDomains.map((d) => d.count);
+    expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+  });
+
+  it("rounds the daily average", () => {
+    const r = aggregateReport({
+      usage: [{ date: "2026-06-28", appId: "x", appName: "X", category: null, seconds: 100 }],
+      visits: [], alerts: [], dates, days: 3,
+    });
+    expect(r.totalSeconds).toBe(100);
+    expect(r.avgPerDaySeconds).toBe(33); // round(100/3)
+  });
 });
