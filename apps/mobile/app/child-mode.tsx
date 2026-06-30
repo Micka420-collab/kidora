@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { childAgent } from "@/api";
+import { formatDuration } from "@/theme";
 import * as storage from "@/storage";
 import * as AppUsage from "../modules/app-usage";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
@@ -16,6 +17,9 @@ export default function ChildMode() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
+  const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
+  const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
+  const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevUsage = useRef<Record<string, number>>({});
 
@@ -72,12 +76,15 @@ export default function ChildMode() {
         if (granted) {
           const today = new Date().toISOString().slice(0, 10);
           const entries = await AppUsage.getUsageToday();
+          let totalToday = 0;
           for (const e of entries) {
+            totalToday += e.totalSeconds;
             const prev = prevUsage.current[e.packageName] ?? 0;
             const delta = Math.max(0, e.totalSeconds - prev);
             prevUsage.current[e.packageName] = e.totalSeconds;
             if (delta > 0) usage.push({ appId: e.packageName, appName: e.appName, date: today, seconds: delta });
           }
+          setUsedTodaySec(totalToday);
         }
       }
 
@@ -106,6 +113,22 @@ export default function ChildMode() {
       RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
     } catch {
       RNAlert.alert("Erreur", "Impossible d'envoyer le SOS. Réessaie.");
+    }
+  }
+
+  async function requestTime(minutes: number) {
+    setReqStatus("sending");
+    setPickTime(false);
+    try {
+      await childAgent.sync({
+        online: true,
+        timeRequest: { minutes, reason: "Demande depuis l'appareil" },
+        events: [{ type: "time_request", title: `Demande de +${minutes} min` }],
+      });
+      setReqStatus("sent");
+    } catch {
+      setReqStatus("idle");
+      RNAlert.alert("Oups", "La demande n'est pas partie. Réessaie dans un instant.");
     }
   }
 
@@ -142,11 +165,18 @@ export default function ChildMode() {
           <Text style={s.shield}>{paused ? "⏸" : "🛡️"}</Text>
         </View>
 
-        <Text style={s.title}>Kidora protège cet appareil</Text>
+        <Text style={s.title}>{paused ? "Pause demandée par un parent" : "Tu es protégé·e ✨"}</Text>
         <Text style={s.desc}>
-          Ta position est partagée avec tes parents pour ta sécurité. Tu ne peux pas
-          désactiver la protection sans leur accord.
+          {paused
+            ? "Tes parents ont mis l'appareil en pause. Ça reviendra bientôt 😊"
+            : "Kidora veille sur toi avec tes parents. Tout va bien — voici ta journée."}
         </Text>
+
+        {usedTodaySec != null && (
+          <View style={s.chip}>
+            <Text style={s.chipText}>⏱  Temps d'écran aujourd'hui : {formatDuration(usedTodaySec)}</Text>
+          </View>
+        )}
 
         <Pressable
           onPress={triggerSOS}
@@ -161,10 +191,44 @@ export default function ChildMode() {
           </Animated.View>
         </Pressable>
 
+        {/* Demander plus de temps d'écran à ses parents (vraie demande → alerte parent) */}
+        {reqStatus === "sent" ? (
+          <View style={s.timeSent}>
+            <Text style={s.timeSentText}>✓ Demande envoyée — tes parents vont décider 💜</Text>
+          </View>
+        ) : pickTime ? (
+          <View style={s.timeRow}>
+            {[15, 30].map((m) => (
+              <Pressable
+                key={m}
+                style={s.timeChip}
+                disabled={reqStatus === "sending"}
+                onPress={() => requestTime(m)}
+                accessibilityRole="button"
+                accessibilityLabel={`Demander ${m} minutes de plus`}
+              >
+                <Text style={s.timeChipText}>+{m} min</Text>
+              </Pressable>
+            ))}
+            <Pressable style={s.timeGhost} onPress={() => setPickTime(false)} accessibilityRole="button">
+              <Text style={s.timeGhostText}>Annuler</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Pressable
+            style={s.timeBtn}
+            onPress={() => setPickTime(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Demander plus de temps d'écran à mes parents"
+          >
+            <Text style={s.timeBtnText}>⏰  Demander plus de temps</Text>
+          </Pressable>
+        )}
+
         {lastSync && <Text style={s.sync}>Dernière synchro : {lastSync}</Text>}
 
         <Pressable style={s.refresh} onPress={syncNow} accessibilityRole="button">
-          <Text style={s.refreshText}>Synchroniser maintenant</Text>
+          <Text style={s.refreshText}>Actualiser</Text>
         </Pressable>
 
         {needsUsagePerm && (
@@ -194,6 +258,17 @@ const s = StyleSheet.create({
   sos: { marginTop: 28, backgroundColor: "#ef4444", paddingHorizontal: 44, paddingVertical: 20, borderRadius: 18, alignItems: "center", minWidth: 240, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   sosText: { color: "#fff", fontWeight: "800", fontSize: 26, letterSpacing: 1 },
   sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
+  chip: { marginTop: 18, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
+  chipText: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5 },
+  timeBtn: { marginTop: 16, backgroundColor: "#facc15", paddingHorizontal: 28, paddingVertical: 15, borderRadius: 16, minWidth: 240, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  timeBtnText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
+  timeRow: { marginTop: 16, flexDirection: "row", gap: 10, alignItems: "center" },
+  timeChip: { backgroundColor: "#facc15", paddingHorizontal: 22, paddingVertical: 14, borderRadius: 14, minHeight: 48, justifyContent: "center" },
+  timeChipText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
+  timeGhost: { paddingHorizontal: 14, paddingVertical: 14 },
+  timeGhostText: { color: "rgba(255,255,255,0.7)", fontWeight: "700" },
+  timeSent: { marginTop: 16, backgroundColor: "rgba(220,252,231,0.95)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13 },
+  timeSentText: { color: "#15803d", fontWeight: "800", textAlign: "center" },
   sync: { color: "#c7d2fe", marginTop: 22, fontSize: 13 },
   refresh: { marginTop: 14, backgroundColor: "rgba(255,255,255,0.15)", paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, minHeight: 48, justifyContent: "center" },
   refreshText: { color: "#fff", fontWeight: "700" },
