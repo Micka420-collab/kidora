@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
     alerts.push({
       parentId,
       childId,
-      type: "limit_reached",
+      type: "time_request", // distinct & actionable — not muted with "limit_reached"
       severity: "info",
       message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
     });

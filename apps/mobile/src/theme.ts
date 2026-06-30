@@ -130,6 +130,7 @@ export function alertMeta(type: string): { icon: string; tone: "danger" | "warn"
   if (type.includes("geofence")) return { icon: "location", tone: "warn" };
   if (type.includes("keyword")) return { icon: "search", tone: "warn" };
   if (type === "device_offline") return { icon: "cloud-offline", tone: "warn" };
+  if (type === "time_request") return { icon: "hourglass", tone: "info" };
   if (type.includes("limit")) return { icon: "time", tone: "info" };
   return { icon: "notifications", tone: "info" };
 }
