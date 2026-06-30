@@ -27,17 +27,36 @@ export function startDnsProxy(opts = {}) {
 
   const server = dgram.createSocket("udp4");
 
+  // One shared upstream socket, multiplexed by DNS transaction id (first 2
+  // bytes), rather than a fresh socket per query. System DNS routes through this
+  // proxy, so a burst of cache-miss lookups previously allocated a socket/FD per
+  // query (held ~4s) and could exhaust ephemeral ports/FDs machine-wide. This is
+  // the standard forwarder design and degrades gracefully under load.
+  const TIMEOUT_MS = 4000;
+  const MAX_PENDING = 4096; // backstop against unbounded growth under a flood
+  const pending = new Map(); // txid -> { rinfo, timer }
+  const up = dgram.createSocket("udp4");
+
+  up.on("message", (resp) => {
+    if (resp.length < 2) return;
+    const p = pending.get(resp.readUInt16BE(0));
+    if (!p) return; // unknown or already-timed-out query
+    clearTimeout(p.timer);
+    pending.delete(resp.readUInt16BE(0));
+    try { server.send(resp, p.rinfo.port, p.rinfo.address); } catch { /* ignore */ }
+  });
+  up.on("error", () => { /* keep the proxy alive; per-query timers reap pending */ });
+
   function forward(msg, rinfo) {
-    const up = dgram.createSocket("udp4");
-    const done = () => { try { up.close(); } catch { /* ignore */ } };
-    const timer = setTimeout(done, 4000);
-    up.on("message", (resp) => {
-      clearTimeout(timer);
-      try { server.send(resp, rinfo.port, rinfo.address); } catch { /* ignore */ }
-      done();
-    });
-    up.on("error", () => { clearTimeout(timer); done(); });
-    try { up.send(msg, upstreamPort, upstream); } catch { clearTimeout(timer); done(); }
+    if (msg.length < 2) return; // not a valid DNS message
+    if (pending.size >= MAX_PENDING) return; // overloaded → drop; the client retries
+    const txid = msg.readUInt16BE(0);
+    const existing = pending.get(txid);
+    if (existing) clearTimeout(existing.timer); // replace an in-flight duplicate
+    const timer = setTimeout(() => pending.delete(txid), TIMEOUT_MS);
+    pending.set(txid, { rinfo, timer });
+    try { up.send(msg, upstreamPort, upstream); }
+    catch { clearTimeout(timer); pending.delete(txid); }
   }
 
   server.on("message", (msg, rinfo) => {
@@ -73,7 +92,12 @@ export function startDnsProxy(opts = {}) {
       log.ok(`Proxy DNS actif ${host}:${boundPort} → upstream ${upstream}`);
       resolve({
         port: boundPort,
-        stop() { try { server.close(); } catch { /* ignore */ } },
+        stop() {
+          for (const p of pending.values()) clearTimeout(p.timer);
+          pending.clear();
+          try { up.close(); } catch { /* ignore */ }
+          try { server.close(); } catch { /* ignore */ }
+        },
       });
     });
   });
