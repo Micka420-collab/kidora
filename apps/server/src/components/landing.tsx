@@ -166,6 +166,11 @@ export function Landing() {
             <Image src="/kidora-mark.svg" alt="" width={32} height={32} priority unoptimized />
             Kidora
           </div>
+          <nav className="hidden items-center gap-7 text-sm font-medium text-white/70 md:flex">
+            <a href="#features" className="transition hover:text-white">Fonctionnalités</a>
+            <a href="#showcase" className="transition hover:text-white">En profondeur</a>
+            <a href="#faq" className="transition hover:text-white">FAQ</a>
+          </nav>
           <div className="flex items-center gap-2">
             <Link href="/login" className="rounded-lg px-4 py-2 text-sm font-semibold text-white/80 transition hover:text-white">Se connecter</Link>
             <Link href="/register" className="rounded-lg bg-white px-4 py-2 text-sm font-bold text-brand-700 transition hover:scale-105 hover:bg-white/90">Commencer</Link>
@@ -279,7 +284,7 @@ export function Landing() {
       </section>
 
       {/* features */}
-      <section className="mx-auto max-w-6xl px-6 py-16 [perspective:1400px]">
+      <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16 [perspective:1400px]">
         <SectionTitle
           eyebrow="Tout-en-un"
           title="Tout pour protéger, sans surveiller à l'excès"
@@ -311,7 +316,7 @@ export function Landing() {
       </section>
 
       {/* showcase — scrollytelling */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
+      <section id="showcase" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
         <SectionTitle
           eyebrow="En profondeur"
           title="Pensé pour le quotidien des familles"
@@ -368,7 +373,7 @@ export function Landing() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-3xl px-6 py-16">
+      <section id="faq" className="mx-auto max-w-3xl scroll-mt-24 px-6 py-16">
         <SectionTitle eyebrow="Questions" title="Vous vous demandez peut-être…" />
         <div className="mt-10 space-y-3">
           {faqs.map((f, i) => (
