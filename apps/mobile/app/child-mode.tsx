@@ -265,19 +265,19 @@ export default function ChildMode() {
           <Animated.View style={[s.halo, haloStyle]} />
           <Animated.View style={mascotAnim}>
             <Image
-              source={bedtime && !paused ? require("../assets/mascot-sleep.png") : require("../assets/mascot.png")}
-              style={[s.mascot, paused && { opacity: 0.85 }]}
+              source={paused ? require("../assets/mascot-pause.png") : bedtime ? require("../assets/mascot-sleep.png") : require("../assets/mascot.png")}
+              style={s.mascot}
               resizeMode="contain"
-              accessibilityLabel={bedtime && !paused ? "Mascotte Kidora endormie" : "Mascotte Kidora"}
+              accessibilityLabel={paused ? "Mascotte Kidora qui fait une pause" : bedtime ? "Mascotte Kidora endormie" : "Mascotte Kidora"}
             />
           </Animated.View>
           {paused && <Text style={s.mascotBadge}>⏸</Text>}
         </View>
 
-        <Text style={s.title}>{paused ? "Pause demandée par un parent" : "Tu es protégé·e ✨"}</Text>
+        <Text style={s.title}>{paused ? "C'est l'heure d'une petite pause 😌" : "Tu es protégé·e ✨"}</Text>
         <Text style={s.desc}>
           {paused
-            ? "Tes parents ont mis l'appareil en pause. Ça reviendra bientôt 😊"
+            ? "Tes parents ont mis l'appareil en pause. Ça reviendra vite — profites-en pour souffler 😊"
             : "Kidora veille sur toi avec tes parents. Tout va bien — voici ta journée."}
         </Text>
 
