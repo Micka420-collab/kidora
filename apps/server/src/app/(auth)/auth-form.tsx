@@ -84,17 +84,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
             {mode === "register" && (
               <div>
                 <label className="label">Votre nom</label>
-                <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Marie Dupont" required />
+                <input className="input" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Marie Dupont" required />
               </div>
             )}
             <div>
               <label className="label">Email</label>
-              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" required />
+              <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="vous@exemple.com" required />
             </div>
             <div>
               <label className="label">Mot de passe</label>
               <div className="relative">
-                <input className="input pr-10" type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required />
+                <input className="input pr-10" type={showPw ? "text" : "password"} autoComplete={mode === "register" ? "new-password" : "current-password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" minLength={mode === "register" ? 8 : 1} required />
                 <button
                   type="button"
                   onClick={() => setShowPw((v) => !v)}
