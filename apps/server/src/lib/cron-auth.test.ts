@@ -4,10 +4,11 @@ import { isCronAuthorized } from "./cron-auth";
 const SECRET = "s3cr3t-cron-key";
 
 describe("isCronAuthorized", () => {
-  it("with no secret: allows outside production, denies in production", () => {
-    expect(isCronAuthorized({ secret: undefined, isProduction: false, bearer: "", key: "" })).toBe(true);
-    expect(isCronAuthorized({ secret: "", isProduction: false, bearer: "", key: "" })).toBe(true);
+  it("with no secret: fails closed in every environment", () => {
+    expect(isCronAuthorized({ secret: undefined, isProduction: false, bearer: "", key: "" })).toBe(false);
+    expect(isCronAuthorized({ secret: "", isProduction: false, bearer: "", key: "" })).toBe(false);
     expect(isCronAuthorized({ secret: undefined, isProduction: true, bearer: "", key: "" })).toBe(false);
+    expect(isCronAuthorized({ secret: undefined, bearer: "", key: "" })).toBe(false); // isProduction omitted
   });
 
   it("accepts the secret via the Bearer token", () => {
