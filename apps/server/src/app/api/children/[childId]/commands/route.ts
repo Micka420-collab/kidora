@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { audit } from "@/lib/audit";
+import { buildCommandRows } from "@/lib/commands";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -36,15 +37,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const parsed = createSchema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
 
-    const command = await prisma.command.create({
-      data: {
-        childId,
-        deviceId: parsed.data.deviceId ?? null,
-        type: parsed.data.type,
-        payload: JSON.stringify(parsed.data.payload ?? {}),
-      },
+    // A broadcast (no deviceId) is fanned out to every enrolled device so the
+    // action reaches them all, not just whichever device syncs first.
+    const deviceIds = parsed.data.deviceId
+      ? []
+      : (await prisma.device.findMany({ where: { childId }, select: { id: true } })).map((d) => d.id);
+
+    const rows = buildCommandRows({
+      childId,
+      type: parsed.data.type,
+      payload: JSON.stringify(parsed.data.payload ?? {}),
+      deviceId: parsed.data.deviceId ?? null,
+      deviceIds,
     });
-    await audit(parent.id, "command", `${parsed.data.type}`);
-    return json({ command });
+    await prisma.command.createMany({ data: rows });
+    await audit(parent.id, "command", rows.length > 1 ? `${parsed.data.type}×${rows.length}` : parsed.data.type);
+    return json({ ok: true, count: rows.length });
   });
 }
