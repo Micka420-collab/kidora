@@ -12,6 +12,7 @@ import { Loader2, Clock, Ban, Globe, BellRing, Download } from "lucide-react";
 type Report = {
   days: number;
   totalSeconds: number;
+  prevTotalSeconds?: number;
   avgPerDaySeconds: number;
   trend: { date: string; seconds: number }[];
   topApps: { appName: string; category: string | null; seconds: number }[];
@@ -90,7 +91,7 @@ export default function ReportsTab() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi icon={Clock} tint="bg-brand-50 text-brand-600" value={formatDuration(report.totalSeconds)} label={`${t.totalTime} · ${days} ${t.days}`} />
+        <Kpi icon={Clock} tint="bg-brand-50 text-brand-600" value={formatDuration(report.totalSeconds)} label={`${t.totalTime} · ${days} ${t.days}`} delta={periodDelta(report.totalSeconds, report.prevTotalSeconds)} />
         <Kpi icon={Clock} tint="bg-indigo-50 text-indigo-600" value={formatDuration(report.avgPerDaySeconds)} label={t.perDay} />
         <Kpi icon={Ban} tint="bg-red-50 text-red-600" value={String(report.web.blockedVisits)} label={t.blockedVisits} />
         <Kpi icon={BellRing} tint="bg-amber-50 text-amber-600" value={String(report.alerts.total)} label={t.alerts} />
@@ -168,13 +169,25 @@ export default function ReportsTab() {
   );
 }
 
-function Kpi({ icon: Icon, tint, value, label }: { icon: typeof Clock; tint: string; value: string; label: string }) {
+function periodDelta(now: number, prev: number | undefined): { pct: number; up: boolean } | null {
+  if (!prev || prev <= 0) return null;
+  const pct = Math.round(((now - prev) / prev) * 100);
+  if (Math.abs(pct) < 1) return null;
+  return { pct: Math.abs(pct), up: now > prev };
+}
+
+function Kpi({ icon: Icon, tint, value, label, delta }: { icon: typeof Clock; tint: string; value: string; label: string; delta?: { pct: number; up: boolean } | null }) {
   return (
     <div className="card flex items-center gap-3 p-4">
       <div className={`grid h-11 w-11 place-items-center rounded-xl ${tint}`}><Icon size={20} /></div>
       <div>
         <div className="text-xl font-bold">{value}</div>
         <div className="text-xs text-muted">{label}</div>
+        {delta && (
+          <div className={`text-xs font-semibold ${delta.up ? "text-amber-600" : "text-emerald-600"}`}>
+            {delta.up ? "▲" : "▼"} {delta.pct}%
+          </div>
+        )}
       </div>
     </div>
   );
