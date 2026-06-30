@@ -42,7 +42,7 @@ export default async function OverviewPage() {
 
   const kidIds = kids.map((k) => k.id);
   // Independent queries run in parallel.
-  const [usageToday, topApps, recentAlerts] = await Promise.all([
+  const [usageToday, topApps, recentAlerts, recentActivity] = await Promise.all([
     prisma.appUsage.groupBy({
       by: ["childId"],
       where: { childId: { in: kidIds }, date: today() },
@@ -59,8 +59,15 @@ export default async function OverviewPage() {
       take: 6,
       include: { child: { select: { name: true, avatar: true } } },
     }),
+    prisma.activityEvent.findMany({
+      where: { childId: { in: kidIds }, type: { in: ["app_open", "web_visit", "search", "blocked"] } },
+      orderBy: { ts: "desc" },
+      take: 8,
+      select: { id: true, childId: true, type: true, title: true, ts: true },
+    }),
   ]);
   const usageMap = new Map(usageToday.map((u) => [u.childId, u._sum.seconds ?? 0]));
+  const kidById = new Map(kids.map((k) => [k.id, k]));
 
   const totalDevices = kids.reduce((a, k) => a + k.devices.length, 0);
   const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => isDeviceOnline(d)).length, 0);
@@ -209,6 +216,27 @@ export default async function OverviewPage() {
           )}
         </div>
       </div>
+
+      {recentActivity.length > 0 && (
+        <div className="card p-5">
+          <h2 className="mb-4 text-lg font-semibold">{tt.overview.recentActivity}</h2>
+          <ul className="space-y-2.5">
+            {recentActivity.map((e) => {
+              const kid = kidById.get(e.childId);
+              const icon = e.type === "web_visit" ? "🌐" : e.type === "search" ? "🔍" : e.type === "blocked" ? "🚫" : "📱";
+              return (
+                <li key={e.id}>
+                  <Link href={`/dashboard/children/${e.childId}`} className="group flex items-center gap-3">
+                    <span className="text-base">{icon}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm group-hover:text-brand-700">{e.title ?? e.type}</span>
+                    <span className="shrink-0 text-xs text-muted">{kid?.avatar ?? "🧒"} {kid?.name} · {relativeTime(e.ts)}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
