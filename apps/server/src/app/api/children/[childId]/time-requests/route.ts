@@ -67,17 +67,30 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       where: { id: parsed.data.id, childId },
     });
     if (!reqRow) return apiError("Demande introuvable", 404);
+    // Idempotent: an already-handled request must not grant time again.
+    if (reqRow.status !== "pending") {
+      return json({ ok: true, alreadyProcessed: true, status: reqRow.status });
+    }
 
     if (parsed.data.action === "approve") {
+      // Atomically claim the request (only if still pending) to defend against
+      // a double-click / two-tab race that would otherwise double-grant time.
+      const claimed = await prisma.timeRequest.updateMany({
+        where: { id: reqRow.id, status: "pending" },
+        data: { status: "approved" },
+      });
+      if (claimed.count === 0) return json({ ok: true, alreadyProcessed: true });
       await prisma.$transaction([
-        prisma.timeRequest.update({ where: { id: reqRow.id }, data: { status: "approved" } }),
         prisma.timeGrant.create({
           data: { childId, date: today(), minutes: reqRow.minutes, source: "request" },
         }),
         prisma.command.create({ data: { childId, type: "resume", payload: "{}" } }),
       ]);
     } else {
-      await prisma.timeRequest.update({ where: { id: reqRow.id }, data: { status: "denied" } });
+      await prisma.timeRequest.updateMany({
+        where: { id: reqRow.id, status: "pending" },
+        data: { status: "denied" },
+      });
     }
     return json({ ok: true });
   });
