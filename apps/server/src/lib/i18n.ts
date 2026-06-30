@@ -117,6 +117,7 @@ const fr = {
     history: "Historique de navigation récent",
     historyDesc: "Les derniers sites visités (les blocages sont signalés).",
     noHistory: "Aucune visite enregistrée pour l'instant.",
+    exportCsv: "Exporter CSV",
   },
   screen: {
     limits: "Limites de temps d'écran",
@@ -325,6 +326,7 @@ const en: typeof fr = {
     history: "Recent browsing history",
     historyDesc: "The most recently visited sites (blocks are flagged).",
     noHistory: "No visits recorded yet.",
+    exportCsv: "Export CSV",
   },
   screen: {
     limits: "Screen time limits",
