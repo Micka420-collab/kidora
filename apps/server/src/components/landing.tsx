@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform, useSpring, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
-  ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink,
+  ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check,
 } from "lucide-react";
 
 const features = [
@@ -25,6 +25,43 @@ const steps = [
   { n: "2", title: "Installez l'agent", desc: "Sur le PC (MSI) ou le téléphone (app Kids), avec un simple jeton." },
   { n: "3", title: "Veillez sereinement", desc: "Tableau de bord unique : règles, activité en direct, alertes." },
 ];
+
+const showcase = [
+  {
+    img: "/show-filter.jpg",
+    eyebrow: "Filtrage & sécurité",
+    title: "Un web filtré, sans angle mort",
+    desc: "La mascotte fait barrage : le bon contenu passe, les menaces sont bloquées avant même d'arriver.",
+    points: [
+      "Blocage par catégorie : adulte, violence, jeux d'argent…",
+      "SafeSearch forcé sur Google, Bing & YouTube",
+      "Listes blanche et noire personnalisées par enfant",
+    ],
+  },
+  {
+    img: "/show-location.jpg",
+    eyebrow: "Localisation & zones",
+    title: "Toujours savoir qu'ils sont bien arrivés",
+    desc: "Position en temps réel et zones de sécurité : une alerte dès qu'un enfant entre ou quitte un lieu défini.",
+    points: [
+      "Carte en direct + historique des déplacements",
+      "Géofences (maison, école…) avec alertes entrée/sortie",
+      "Bouton SOS côté enfant pour les urgences",
+    ],
+  },
+  {
+    img: "/show-screentime.jpg",
+    eyebrow: "Équilibre & sommeil",
+    title: "Du temps d'écran sain, des nuits paisibles",
+    desc: "Des limites douces et une heure du coucher qui met les appareils en veille, sans bras de fer quotidien.",
+    points: [
+      "Limites quotidiennes par jour de la semaine",
+      "Heure du coucher : mise en pause automatique la nuit",
+      "Bonus de temps accordé d'un geste depuis le mobile",
+    ],
+  },
+];
+type ShowItem = (typeof showcase)[number];
 
 const reveal: Variants = {
   hidden: { opacity: 0, y: 48, rotateX: -10 },
@@ -185,6 +222,20 @@ export function Landing() {
         </div>
       </section>
 
+      {/* showcase — scrollytelling */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <SectionTitle
+          eyebrow="En profondeur"
+          title="Pensé pour le quotidien des familles"
+          subtitle="Faites défiler : chaque pilier de Kidora, illustré et expliqué."
+        />
+        <div className="mt-6">
+          {showcase.map((item, i) => (
+            <ShowcaseRow key={item.title} item={item} flip={i % 2 === 1} />
+          ))}
+        </div>
+      </section>
+
       {/* how it works */}
       <section className="mx-auto max-w-5xl px-6 py-16">
         <SectionTitle eyebrow="Simple" title="En 3 étapes" />
@@ -257,6 +308,43 @@ export function Landing() {
           </a>
         </div>
       </footer>
+    </div>
+  );
+}
+
+function ShowcaseRow({ item, flip }: { item: ShowItem; flip: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [70, -70]);
+  const rotateY = useTransform(scrollYProgress, [0, 1], flip ? [8, -8] : [-8, 8]);
+
+  return (
+    <div ref={ref} className="grid items-center gap-8 py-10 lg:grid-cols-2 lg:gap-14">
+      <div className={`[perspective:1300px] ${flip ? "lg:order-2" : ""}`}>
+        <motion.div style={{ y, rotateY }} className="relative [transform-style:preserve-3d]">
+          <div className="absolute -inset-5 -z-10 rounded-[2rem] bg-gradient-to-tr from-brand-500/30 to-fuchsia-500/20 blur-2xl" />
+          <Image
+            src={item.img} alt={item.title} width={900} height={604}
+            className="w-full rounded-2xl border border-white/10 shadow-2xl shadow-black/50"
+          />
+        </motion.div>
+      </div>
+      <motion.div
+        variants={reveal} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
+        className={flip ? "lg:order-1" : ""}
+      >
+        <div className="mb-3 w-fit rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-200">{item.eyebrow}</div>
+        <h3 className="text-2xl font-bold leading-tight sm:text-3xl">{item.title}</h3>
+        <p className="mt-3 text-white/70">{item.desc}</p>
+        <ul className="mt-5 space-y-2.5">
+          {item.points.map((p) => (
+            <li key={p} className="flex items-start gap-2.5 text-sm text-white/85">
+              <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-brand-500/25 text-brand-200"><Check size={13} strokeWidth={3} /></span>
+              {p}
+            </li>
+          ))}
+        </ul>
+      </motion.div>
     </div>
   );
 }
