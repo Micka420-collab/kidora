@@ -47,6 +47,21 @@ if ($Uninstall) {
   Invoke-Step "supprimer la tâche $TaskName" {
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
   }
+  Invoke-Step "restaurer le DNS système (DHCP automatique)" {
+    Get-NetAdapter -Physical -ErrorAction SilentlyContinue |
+      Where-Object { $_.Status -eq 'Up' } |
+      Set-DnsClientServerAddress -ResetServerAddresses -ErrorAction SilentlyContinue
+    ipconfig /flushdns | Out-Null
+  }
+  Invoke-Step "nettoyer le fichier hosts (bloc Kidora)" {
+    $hostsPath = Join-Path $env:windir 'System32\drivers\etc\hosts'
+    if (Test-Path $hostsPath) {
+      $raw = Get-Content $hostsPath -Raw
+      # Strip the managed block (markers written by lib/win.js), incl. leading blank lines.
+      $cleaned = [regex]::Replace($raw, '(?s)\r?\n*# >>> KIDORA START.*?# <<< KIDORA END', '')
+      Set-Content -Path $hostsPath -Value $cleaned -Encoding ascii
+    }
+  }
   Invoke-Step "réinitialiser les ACL de $AgentDir" {
     icacls "$AgentDir" /reset /T /C /Q | Out-Null
   }

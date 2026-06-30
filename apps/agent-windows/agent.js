@@ -156,20 +156,27 @@ async function main() {
   setInterval(syncOnce, syncInterval * 1000);
   log.info(`Surveillance active. Échantillon ${SAMPLE_INTERVAL}s · sync ${syncInterval}s. Ctrl+C pour arrêter.`);
 
-  // graceful shutdown
-  process.on("SIGINT", async () => {
+  // graceful shutdown — restore system DNS/proxy so we never leave the machine
+  // pointed at a dead local resolver. Handle SIGTERM too: under Task Scheduler
+  // the process is stopped with SIGTERM/kill, not Ctrl+C (SIGINT).
+  let shuttingDown = false;
+  async function shutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
     log.info("Arrêt…");
     clearInterval(heartbeatTimer);
     hideOverlay();
     if (filter.dns) {
       try { await restoreSystemDns(); } catch {}
-      filter.dns.stop();
+      try { filter.dns.stop(); } catch {}
     }
     try {
       await api.sync({ online: false });
     } catch {}
     process.exit(0);
-  });
+  }
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
 /** Build the DNS-proxy view of the web policy (normalized Sets). */
