@@ -351,6 +351,7 @@ model Alert {
   child  Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([parentId, read])
+  @@index([parentId, ts])
   @@index([childId, ts])
 }
 
