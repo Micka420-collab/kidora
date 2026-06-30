@@ -67,6 +67,12 @@ export const parent = {
   async location(id: string, limit = 50) {
     return req<{ pings: LocationPing[]; latest: LocationPing | null; geofences: Geofence[] }>(`/api/children/${id}/location?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async addGeofence(id: string, data: { name: string; lat: number; lng: number; radius?: number }) {
+    return req<{ geofence: Geofence }>(`/api/children/${id}/geofences`, { method: "POST", body: data, headers: await this.authHeader() });
+  },
+  async deleteGeofence(id: string, geofenceId: string) {
+    return req<{ ok: true }>(`/api/children/${id}/geofences?id=${encodeURIComponent(geofenceId)}`, { method: "DELETE", headers: await this.authHeader() });
+  },
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
