@@ -109,6 +109,7 @@ const fr = {
     appName: "Nom de l'application",
     appId: "Identifiant (exe / package) — optionnel",
     perDay: "/jour",
+    usedToday: "utilisé aujourd'hui",
   },
   web: {
     protection: "Protection",
@@ -333,6 +334,7 @@ const en: typeof fr = {
     appName: "App name",
     appId: "Identifier (exe / package) — optional",
     perDay: "/day",
+    usedToday: "used today",
   },
   web: {
     protection: "Protection",
