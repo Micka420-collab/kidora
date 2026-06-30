@@ -178,6 +178,22 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://kidora.example.com/api/cron
 Test manuel (sans envoi réel) : `?dryRun=1` — `…/api/cron/reports?dryRun=1&days=7`.
 En dev (hors production) l'endpoint est accessible sans secret.
 
+### 3. Crons de maintenance (rétention & connectivité)
+
+`vercel.json` planifie aussi deux crons de fond (mêmes règles d'auth `CRON_SECRET`) :
+
+```json
+{ "crons": [
+  { "path": "/api/cron/cleanup",       "schedule": "0 4 * * *" },
+  { "path": "/api/cron/offline-check",  "schedule": "0 * * * *" }
+] }
+```
+
+- **`/api/cron/cleanup`** (quotidien) — purge la télémétrie plus ancienne que
+  `RETENTION_DAYS` (défaut 90). Prévisualiser : `?dryRun=1` (+ `?days=` pour tester).
+- **`/api/cron/offline-check`** (horaire) — alerte le parent quand un appareil
+  ne répond plus depuis `OFFLINE_ALERT_HOURS` (défaut 12). `?dryRun=1` / `?hours=`.
+
 ## Agent Windows en production
 
 Pointez l'agent sur l'URL déployée :
