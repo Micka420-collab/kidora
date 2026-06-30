@@ -32,6 +32,7 @@ export default function ChildMode() {
   const pulse = useRef(new Animated.Value(0)).current; // 0→1 loop for the halo
   const float = useRef(new Animated.Value(0)).current; // 0→1 loop: mascot idle float/breathe
   const sosScale = useRef(new Animated.Value(1)).current;
+  const pop = useRef(new Animated.Value(0)).current; // celebration pop on "request sent"
 
   useEffect(() => {
     // entrance: fade + slide up
@@ -142,6 +143,8 @@ export default function ChildMode() {
         events: [{ type: "time_request", title: `Demande de +${minutes} min` }],
       });
       setReqStatus("sent");
+      pop.setValue(0);
+      Animated.spring(pop, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
     } catch {
       setReqStatus("idle");
       RNAlert.alert("Oups", "La demande n'est pas partie. Réessaie dans un instant.");
@@ -254,9 +257,15 @@ export default function ChildMode() {
 
         {/* Demander plus de temps d'écran à ses parents (vraie demande → alerte parent) */}
         {reqStatus === "sent" ? (
-          <View style={s.timeSent}>
-            <Text style={s.timeSentText}>✓ Demande envoyée — tes parents vont décider 💜</Text>
-          </View>
+          <Animated.View
+            style={[
+              s.timeSent,
+              { opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) }] },
+            ]}
+          >
+            <Text style={s.timeSentEmoji}>🎉</Text>
+            <Text style={s.timeSentText}>Demande envoyée — tes parents vont décider 💜</Text>
+          </Animated.View>
         ) : pickTime ? (
           <View style={s.timeRow}>
             {[15, 30].map((m) => (
@@ -338,7 +347,8 @@ const s = StyleSheet.create({
   timeChipText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
   timeGhost: { paddingHorizontal: 14, paddingVertical: 14 },
   timeGhostText: { color: "rgba(255,255,255,0.7)", fontWeight: "700" },
-  timeSent: { marginTop: 16, backgroundColor: "rgba(220,252,231,0.95)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13 },
+  timeSent: { marginTop: 16, backgroundColor: "rgba(220,252,231,0.95)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, alignItems: "center" },
+  timeSentEmoji: { fontSize: 26, marginBottom: 2 },
   timeSentText: { color: "#15803d", fontWeight: "800", textAlign: "center" },
   sync: { color: "#c7d2fe", marginTop: 22, fontSize: 13 },
   refresh: { marginTop: 14, backgroundColor: "rgba(255,255,255,0.15)", paddingHorizontal: 24, paddingVertical: 14, borderRadius: 12, minHeight: 48, justifyContent: "center" },
