@@ -544,8 +544,10 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
     >
       <button
         type="button"
+        id={`faq-q-${index}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls={`faq-a-${index}`}
         className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left text-base font-semibold transition hover:bg-white/[0.03]"
       >
         {q}
@@ -557,6 +559,9 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
         {open && (
           <motion.div
             key="content"
+            id={`faq-a-${index}`}
+            role="region"
+            aria-labelledby={`faq-q-${index}`}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
