@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, PlaySquare, Smartphone, Monitor, ExternalLink } from "lucide-react";
+import { Loader2, PlaySquare, Smartphone, Monitor, ExternalLink, Download } from "lucide-react";
 
 type Video = {
   id: string;
@@ -42,9 +42,16 @@ export default function VideosTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-muted">
-        <PlaySquare size={18} className="text-red-500" />
-        <span>{videos.length} vidéo{videos.length > 1 ? "s" : ""} regardée{videos.length > 1 ? "s" : ""} (téléphone + PC)</span>
+      <div className="flex items-center justify-between gap-2 text-sm text-muted">
+        <div className="flex items-center gap-2">
+          <PlaySquare size={18} className="text-red-500" />
+          <span>{videos.length} vidéo{videos.length > 1 ? "s" : ""} regardée{videos.length > 1 ? "s" : ""} (téléphone + PC)</span>
+        </div>
+        {videos.length > 0 && (
+          <a href={`/api/children/${childId}/export?type=videos`} className="btn btn-outline px-3 py-1.5 text-xs" download>
+            <Download size={14} /> Exporter CSV
+          </a>
+        )}
       </div>
 
       {videos.length === 0 ? (

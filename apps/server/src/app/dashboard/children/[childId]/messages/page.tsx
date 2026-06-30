@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
-import { Loader2, MessageSquare, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Loader2, MessageSquare, ArrowDownLeft, ArrowUpRight, Download } from "lucide-react";
 
 type Message = {
   id: string;
@@ -33,9 +33,16 @@ export default function MessagesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-muted">
-        <MessageSquare size={18} className="text-brand-600" />
-        <span>{messages.length} message{messages.length > 1 ? "s" : ""} · {received} reçu{received > 1 ? "s" : ""}, {sent} envoyé{sent > 1 ? "s" : ""}</span>
+      <div className="flex items-center justify-between gap-2 text-sm text-muted">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={18} className="text-brand-600" />
+          <span>{messages.length} message{messages.length > 1 ? "s" : ""} · {received} reçu{received > 1 ? "s" : ""}, {sent} envoyé{sent > 1 ? "s" : ""}</span>
+        </div>
+        {messages.length > 0 && (
+          <a href={`/api/children/${childId}/export?type=messages`} className="btn btn-outline px-3 py-1.5 text-xs" download>
+            <Download size={14} /> Exporter CSV
+          </a>
+        )}
       </div>
 
       {messages.length === 0 ? (
