@@ -227,8 +227,9 @@ export function Landing() {
         </AnimatePresence>
       </header>
 
+      <main id="content" tabIndex={-1} className="scroll-mt-20 outline-none">
       {/* hero */}
-      <section id="content" ref={heroRef} tabIndex={-1} className="relative mx-auto max-w-6xl scroll-mt-20 px-6 pt-12 pb-24 text-center outline-none [perspective:1200px]">
+      <section ref={heroRef} className="relative mx-auto max-w-6xl px-6 pt-12 pb-24 text-center [perspective:1200px]">
         {/* live WebGL orb behind the hero (decorative, client-only) */}
         {!reduce && (
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] opacity-60 [mask-image:radial-gradient(58%_58%_at_50%_38%,black,transparent)]">
@@ -469,6 +470,8 @@ export function Landing() {
           </div>
         </motion.div>
       </section>
+
+      </main>
 
       {/* back-to-top */}
       <AnimatePresence>
