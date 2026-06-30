@@ -92,6 +92,18 @@ export const parent = {
   async changeEmail(email: string, currentPassword: string) {
     return req<{ ok: true; email: string }>("/api/account/email", { method: "POST", body: { email, currentPassword }, headers: await this.authHeader() });
   },
+  async twoFactorStatus() {
+    return req<{ enabled: boolean }>("/api/account/2fa", { headers: await this.authHeader() });
+  },
+  async twoFactorEnroll() {
+    return req<{ secret: string; otpauth: string; qr: string }>("/api/account/2fa", { method: "POST", body: { action: "enroll" }, headers: await this.authHeader() });
+  },
+  async twoFactorVerify(code: string) {
+    return req<{ enabled: boolean }>("/api/account/2fa", { method: "POST", body: { action: "verify", code }, headers: await this.authHeader() });
+  },
+  async twoFactorDisable(code: string) {
+    return req<{ enabled: boolean }>("/api/account/2fa", { method: "POST", body: { action: "disable", code }, headers: await this.authHeader() });
+  },
   async notificationPrefs() {
     return req<{ mutedTypes: string[]; mutableTypes: string[] }>("/api/account/notifications", { headers: await this.authHeader() });
   },
