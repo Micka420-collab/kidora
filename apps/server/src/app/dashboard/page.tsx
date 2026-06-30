@@ -41,8 +41,9 @@ export default async function OverviewPage() {
   });
 
   const kidIds = kids.map((k) => k.id);
-  // Independent queries run in parallel.
-  const [usageToday, topApps, recentAlerts, recentActivity] = await Promise.all([
+  const { d7, d14, weekAgo } = weekWindow();
+  // All independent dashboard queries in a single round-trip.
+  const [usageToday, topApps, recentAlerts, recentActivity, thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
     prisma.appUsage.groupBy({
       by: ["childId"],
       where: { childId: { in: kidIds }, date: today() },
@@ -65,6 +66,11 @@ export default async function OverviewPage() {
       take: 8,
       select: { id: true, childId: true, type: true, title: true, ts: true },
     }),
+    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
+    prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d14, lt: d7 } } }),
+    prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
+    prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: d7 } } }),
+    prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
   ]);
   const usageMap = new Map(usageToday.map((u) => [u.childId, u._sum.seconds ?? 0]));
   const kidById = new Map(kids.map((k) => [k.id, k]));
@@ -73,36 +79,26 @@ export default async function OverviewPage() {
   const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => isDeviceOnline(d)).length, 0);
   const totalToday = [...usageMap.values()].reduce((a, b) => a + b, 0);
 
-  // ── "This week" family insights (vs. the previous week) ──
-  const childIds = kids.map((k) => k.id);
-  const { d7, d14, weekAgo } = weekWindow();
-  let insights: Insight[] = [];
-  if (childIds.length) {
-    const [thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
-      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
-      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d14, lt: d7 } } }),
-      prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
-      prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
-      prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
-    ]);
-    let topCategory: { category: string; seconds: number } | null = null;
-    for (const c of catAgg) {
-      const s = c._sum.seconds ?? 0;
-      if (c.category && s > (topCategory?.seconds ?? 0)) topCategory = { category: c.category, seconds: s };
-    }
-    let busiestDay: { date: string; seconds: number } | null = null;
-    for (const d of dayAgg) {
-      const s = d._sum.seconds ?? 0;
-      if (s > (busiestDay?.seconds ?? 0)) busiestDay = { date: d.date, seconds: s };
-    }
-    insights = buildInsights({
-      thisWeekSeconds: thisWeekAgg._sum.seconds ?? 0,
-      lastWeekSeconds: lastWeekAgg._sum.seconds ?? 0,
-      topCategory,
-      busiestDay,
-      alertsThisWeek,
-    });
+  // "This week" family insights (vs. the previous week) — from the queries above.
+  let topCategory: { category: string; seconds: number } | null = null;
+  for (const c of catAgg) {
+    const s = c._sum.seconds ?? 0;
+    if (c.category && s > (topCategory?.seconds ?? 0)) topCategory = { category: c.category, seconds: s };
   }
+  let busiestDay: { date: string; seconds: number } | null = null;
+  for (const d of dayAgg) {
+    const s = d._sum.seconds ?? 0;
+    if (s > (busiestDay?.seconds ?? 0)) busiestDay = { date: d.date, seconds: s };
+  }
+  const insights: Insight[] = kids.length
+    ? buildInsights({
+        thisWeekSeconds: thisWeekAgg._sum.seconds ?? 0,
+        lastWeekSeconds: lastWeekAgg._sum.seconds ?? 0,
+        topCategory,
+        busiestDay,
+        alertsThisWeek,
+      })
+    : [];
   const showInsights = insights.some((i) =>
     i.key === "screenTime" ? i.seconds > 0 : i.key === "alerts" ? i.count > 0 : false,
   );
