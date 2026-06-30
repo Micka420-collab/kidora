@@ -98,6 +98,7 @@ const fr = {
     nt_blocked_attempt: "Tentative bloquée (site/app)",
     nt_geofence: "Entrée / sortie de zone",
     nt_keyword: "Mot-clé sensible",
+    nt_device_offline: "Appareil hors-ligne (monitoring interrompu)",
   },
   apps: {
     intro: "Définissez ce que votre enfant peut utiliser. Les nouvelles apps détectées apparaissent ici automatiquement.",
@@ -323,6 +324,7 @@ const en: typeof fr = {
     nt_blocked_attempt: "Blocked attempt (site/app)",
     nt_geofence: "Zone enter / exit",
     nt_keyword: "Sensitive keyword",
+    nt_device_offline: "Device offline (monitoring stopped)",
   },
   apps: {
     intro: "Set what your child can use. Newly detected apps appear here automatically.",
