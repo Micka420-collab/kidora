@@ -46,6 +46,7 @@ async function main() {
       name: "Famille Démo",
       email: "demo@kidora.app",
       passwordHash: await bcrypt.hash("kidora1234", 10),
+      emailVerified: true, // demo account shouldn't show the "verify email" banner
     },
   });
   console.log("👤 Parent: demo@kidora.app / kidora1234");
