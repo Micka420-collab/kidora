@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { generateSecret, verifyTotp, otpauthURL } from "@/lib/totp";
+import { rateLimit } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 
 const schema = z.object({
@@ -24,6 +25,18 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
+
+    // Throttle code attempts: verify/disable check a 6-digit TOTP (window 1 ⇒
+    // only 3/10^6 codes valid), so without a limit a hijacked session could
+    // brute-force a code to disable 2FA. 10 attempts / 5 min per account.
+    const rl = rateLimit(`2fa:${parent.id}`, 10, 5 * 60_000);
+    if (!rl.ok) {
+      return Response.json(
+        { error: "Trop de tentatives. Réessayez plus tard." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
+
     const parsed = schema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
     const { action, code } = parsed.data;
