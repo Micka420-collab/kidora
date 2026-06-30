@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, PlaySquare, Smartphone, Monitor, ExternalLink, Download } from "lucide-react";
 
 type Video = {
@@ -31,14 +32,20 @@ export default function VideosTab() {
   const { childId } = useParams<{ childId: string }>();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(false);
     api.get<{ videos: Video[] }>(`/api/children/${childId}/videos`)
       .then((r) => setVideos(r.videos))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
+  if (error) return <ErrorCard onRetry={load} />;
 
   return (
     <div className="space-y-4">

@@ -10,6 +10,7 @@
 - [x] Agent Windows : surveillance + blocage apps + filtrage hosts + verrouillage
 - [x] App mobile Expo : compagnon parent + agent de localisation enfant
 - [x] **États d'erreur honnêtes (mobile)** : composant `ErrorState` réutilisable (icône hors-ligne, message, bouton « Réessayer », `accessibilityRole="alert"`) câblé sur les écrans qui chargent des données (Vidéos, Messages, détail enfant, Alertes) — un échec réseau n'affiche plus à tort un état « vide » ; typecheck mobile vert
+- [x] **États d'erreur honnêtes (dashboard web)** : composant `ErrorCard` (`role="alert"`, bouton « Réessayer ») sur les onglets Vidéos & Messages — l'échec de chargement (rejet de `api.get`) affiche une erreur avec relance au lieu d'un faux état vide, et le rejet n'est plus non géré
 - [x] PWA installable · build de production vérifié
 
 ## ⭐ Priorités demandées (2026-06-29)
