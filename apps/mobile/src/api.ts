@@ -121,6 +121,9 @@ export const parent = {
   async markAlertsRead() {
     return req<{ ok: true }>("/api/alerts", { method: "PATCH", body: { all: true }, headers: await this.authHeader() });
   },
+  async markAlertRead(id: string) {
+    return req<{ ok: true }>("/api/alerts", { method: "PATCH", body: { ids: [id] }, headers: await this.authHeader() });
+  },
   // ── Remote actions ──
   async pause(id: string, paused: boolean) {
     return req<{ paused: boolean }>(`/api/children/${id}/pause`, { method: "POST", body: { paused }, headers: await this.authHeader() });

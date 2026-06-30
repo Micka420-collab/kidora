@@ -45,6 +45,16 @@ export default function Alerts() {
     try { await parent.markAlertsRead(); } catch { /* ignore */ }
   }
 
+  // Mark a single alert read (optimistic) on tap, then open the child.
+  function openAlert(a: Alert) {
+    if (!a.read) {
+      setAlerts((prev) => prev.map((x) => (x.id === a.id ? { ...x, read: true } : x)));
+      setUnread((u) => Math.max(0, u - 1));
+      parent.markAlertRead(a.id).catch(() => { /* best-effort */ });
+    }
+    router.push(`/child/${a.childId}`);
+  }
+
   const counts = useMemo(() => ({
     all: alerts.length,
     unread: alerts.filter((a) => !a.read).length,
@@ -107,21 +117,21 @@ export default function Alerts() {
         ) : shown.length === 0 ? (
           <Empty icon="filter" title="Aucune alerte" subtitle={`Aucune alerte « ${FILTERS.find((f) => f.key === filter)?.label.toLowerCase()} ».`} />
         ) : (
-          shown.map((a) => <AlertItem key={a.id} alert={a} />)
+          shown.map((a) => <AlertItem key={a.id} alert={a} onOpen={openAlert} />)
         )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function AlertItem({ alert }: { alert: Alert }) {
+function AlertItem({ alert, onOpen }: { alert: Alert; onOpen: (a: Alert) => void }) {
   const { c } = useTheme();
   const meta = alertMeta(alert.type);
   const tone = meta.tone === "danger" ? c.danger : meta.tone === "warn" ? c.warn : c.info;
   return (
     <Card
       padded
-      onPress={() => router.push(`/child/${alert.childId}`)}
+      onPress={() => onOpen(alert)}
       accessibilityLabel={`Alerte ${alert.child.name} : ${alert.message}`}
       style={alert.read ? undefined : { borderColor: tone + "55", borderWidth: 1 }}
     >
