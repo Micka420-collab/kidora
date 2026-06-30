@@ -14,7 +14,7 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
 [![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-261%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-271%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
@@ -47,7 +47,7 @@ Une **landing animée** accueille les visiteurs non connectés : défilement ave
 | 🎮 **Actions à distance** | Verrouiller, localiser, capture d'écran, envoyer un message (**web & mobile**) |
 | 👨‍👩‍👧 **Multi-tuteurs** | Inviter un co-parent (accès partagé, révocable) |
 | 🔔 **Notifications** | **Web push** + **préférences par type d'alerte** (sécurité toujours active) + **alerte « appareil hors-ligne »** (anti-tamper) |
-| 🔐 **Sécurité & comptes** | JWT httpOnly, bcrypt, **2FA/TOTP**, **mot de passe oublié / réinitialisation**, **vérification d'email**, changement mdp/email, **anti-brute-force**, rate-limiting, **CSP** + en-têtes durcis, **force de mot de passe + fuite (HIBP)**, journal d'audit |
+| 🔐 **Sécurité & comptes** | JWT httpOnly, bcrypt, **2FA/TOTP + codes de secours**, secret TOTP **chiffré au repos**, **révocation de session** (déconnexion globale), **mot de passe oublié / réinitialisation**, **vérification d'email**, changement mdp/email **ré-authentifié**, **anti-brute-force**, rate-limiting, **CSP** + en-têtes durcis, **force de mot de passe + fuite (HIBP)**, journal d'audit |
 | ♻️ **RGPD & rétention** | Export & suppression de compte, **nettoyage automatique** des données (rétention configurable) |
 | 🌍 **Bilingue** | Interface FR / EN |
 
@@ -176,7 +176,7 @@ npx expo start              # Expo Go (compagnon + localisation) ; EAS pour l'en
 ## 🧪 Qualité
 ```bash
 cd apps/server
-npm test          # 261 tests (Vitest, dont tests d'intégration du moteur de politique)
+npm test          # 271 tests (Vitest, dont tests d'intégration du moteur de politique)
 npm run build     # build de production (Turbopack)
 ```
 
