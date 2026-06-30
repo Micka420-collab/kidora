@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, MapPin, Crosshair, Home, Navigation, Plus, Trash2 } from "lucide-react";
 
 type Ping = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
@@ -17,11 +18,17 @@ export default function LocationTab() {
   const [data, setData] = useState<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] } | null>(null);
   const [locating, setLocating] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [error, setError] = useState(false);
   const [form, setForm] = useState({ name: "", lat: "", lng: "", radius: "150" });
 
   const load = useCallback(async () => {
-    const res = await api.get<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] }>(`/api/children/${childId}/location`);
-    setData(res);
+    setError(false);
+    try {
+      const res = await api.get<{ pings: Ping[]; latest: Ping | null; geofences: Fence[] }>(`/api/children/${childId}/location`);
+      setData(res);
+    } catch {
+      setError(true); // otherwise a failed fetch leaves the spinner forever
+    }
   }, [childId]);
   useEffect(() => { load(); }, [load]);
 
@@ -45,20 +52,29 @@ export default function LocationTab() {
     const lat = Number(form.lat);
     const lng = Number(form.lng);
     if (!form.name || Number.isNaN(lat) || Number.isNaN(lng)) return;
-    await api.post(`/api/children/${childId}/geofences`, {
-      name: form.name,
-      lat,
-      lng,
-      radius: Number(form.radius) || 150,
-    });
-    setAdding(false);
-    load();
+    try {
+      await api.post(`/api/children/${childId}/geofences`, {
+        name: form.name,
+        lat,
+        lng,
+        radius: Number(form.radius) || 150,
+      });
+      setAdding(false);
+    } finally {
+      load();
+    }
   }
   async function removeGeofence(id: string) {
+    const prev = data;
     setData((d) => (d ? { ...d, geofences: d.geofences.filter((f) => f.id !== id) } : d));
-    await api.del(`/api/children/${childId}/geofences?id=${id}`);
+    try {
+      await api.del(`/api/children/${childId}/geofences?id=${id}`);
+    } catch {
+      setData(prev); // rollback if the delete failed
+    }
   }
 
+  if (error) return <ErrorCard onRetry={load} />;
   if (!data) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
 
   const latest = data.latest;
