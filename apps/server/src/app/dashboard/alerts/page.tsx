@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff, Download, Hourglass } from "lucide-react";
 
 type Alert = {
@@ -37,14 +38,21 @@ export default function AlertsPage() {
   const { t } = useT();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
 
-  async function load() {
-    const res = await api.get<{ alerts: Alert[] }>("/api/alerts");
-    setAlerts(res.alerts);
-    setLoading(false);
-  }
-  useEffect(() => { load(); }, []);
+  const load = useCallback(async () => {
+    setError(false);
+    try {
+      const res = await api.get<{ alerts: Alert[] }>("/api/alerts");
+      setAlerts(res.alerts);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
   const counts = {
     all: alerts.length,
@@ -126,6 +134,8 @@ export default function AlertsPage() {
 
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>
+      ) : error ? (
+        <ErrorCard onRetry={() => { setLoading(true); load(); }} />
       ) : alerts.length === 0 ? (
         <div className="card grid place-items-center gap-2 py-16 text-center text-muted">
           <ShieldAlert size={28} />

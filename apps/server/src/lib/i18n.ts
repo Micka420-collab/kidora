@@ -25,6 +25,7 @@ const fr = {
     add: "Ajouter",
     delete: "Supprimer",
     language: "Langue",
+    error: "Une erreur est survenue",
   },
   overview: {
     hello: "Bonjour",
@@ -267,6 +268,7 @@ const en: typeof fr = {
     add: "Add",
     delete: "Delete",
     language: "Language",
+    error: "Something went wrong",
   },
   overview: {
     hello: "Hello",

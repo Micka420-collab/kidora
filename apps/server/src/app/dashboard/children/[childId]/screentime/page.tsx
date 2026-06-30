@@ -46,11 +46,16 @@ export default function ScreenTimeTab() {
   async function save() {
     if (!st) return;
     setSaving(true);
-    await api.put(`/api/children/${childId}/screentime`, st);
-    setSaving(false);
-    setSaved(true);
-    toast(t.saved, "success");
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      await api.put(`/api/children/${childId}/screentime`, st);
+      setSaved(true);
+      toast(t.saved, "success");
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      toast(tr.common.error, "error");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (error) return <ErrorCard onRetry={load} />;

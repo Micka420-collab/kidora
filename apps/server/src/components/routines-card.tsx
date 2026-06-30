@@ -4,7 +4,18 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/client";
 import { WEEKDAYS } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Plus, Trash2, CalendarClock } from "lucide-react";
+
+// Defensive parse of a JSON-string column — never throw during render.
+function parseArr(s: string): string[] {
+  try {
+    const o = JSON.parse(s);
+    return Array.isArray(o) ? (o as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 type Routine = {
   id: string;
@@ -25,40 +36,58 @@ export function RoutinesCard({ childId }: { childId: string }) {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [apps, setApps] = useState<AppRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(empty);
 
   const load = useCallback(async () => {
-    const [r, a] = await Promise.all([
-      api.get<{ routines: Routine[] }>(`/api/children/${childId}/routines`),
-      api.get<{ rules: AppRule[] }>(`/api/children/${childId}/rules/apps`),
-    ]);
-    setRoutines(r.routines);
-    setApps(a.rules);
-    setLoading(false);
+    setError(false);
+    try {
+      const [r, a] = await Promise.all([
+        api.get<{ routines: Routine[] }>(`/api/children/${childId}/routines`),
+        api.get<{ rules: AppRule[] }>(`/api/children/${childId}/rules/apps`),
+      ]);
+      setRoutines(r.routines);
+      setApps(a.rules);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [childId]);
   useEffect(() => { load(); }, [load]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name) return;
-    await api.post(`/api/children/${childId}/routines`, {
-      name: form.name, days: form.days, start: form.start, end: form.end, blockedAppIds: form.apps,
-    });
-    setForm(empty);
-    setAdding(false);
-    load();
+    try {
+      await api.post(`/api/children/${childId}/routines`, {
+        name: form.name, days: form.days, start: form.start, end: form.end, blockedAppIds: form.apps,
+      });
+      setForm(empty);
+      setAdding(false);
+    } finally {
+      load();
+    }
   }
   async function toggle(r: Routine) {
-    await api.post(`/api/children/${childId}/routines`, {
-      id: r.id, name: r.name, enabled: !r.enabled,
-      days: JSON.parse(r.days), start: r.start, end: r.end, blockedAppIds: JSON.parse(r.blockedAppIds),
-    });
-    load();
+    try {
+      await api.post(`/api/children/${childId}/routines`, {
+        id: r.id, name: r.name, enabled: !r.enabled,
+        days: parseArr(r.days), start: r.start, end: r.end, blockedAppIds: parseArr(r.blockedAppIds),
+      });
+    } finally {
+      load();
+    }
   }
   async function remove(id: string) {
-    setRoutines((rs) => rs.filter((x) => x.id !== id));
-    await api.del(`/api/children/${childId}/routines?id=${id}`);
+    const prev = routines;
+    setRoutines((rs) => rs.filter((x) => x.id !== id)); // optimistic
+    try {
+      await api.del(`/api/children/${childId}/routines?id=${id}`);
+    } catch {
+      setRoutines(prev); // rollback
+    }
   }
   function toggleApp(appId: string) {
     setForm((f) => ({ ...f, apps: f.apps.includes(appId) ? f.apps.filter((a) => a !== appId) : [...f.apps, appId] }));
@@ -68,6 +97,7 @@ export function RoutinesCard({ childId }: { childId: string }) {
   }
 
   if (loading) return <div className="card grid place-items-center p-8"><Loader2 className="spinner text-muted" /></div>;
+  if (error) return <ErrorCard onRetry={() => { setLoading(true); load(); }} />;
 
   return (
     <div className="card p-5">
@@ -114,8 +144,8 @@ export function RoutinesCard({ childId }: { childId: string }) {
       ) : (
         <div className="space-y-2">
           {routines.map((r) => {
-            const days = JSON.parse(r.days) as string[];
-            const appCount = (JSON.parse(r.blockedAppIds) as string[]).length;
+            const days = parseArr(r.days);
+            const appCount = parseArr(r.blockedAppIds).length;
             return (
               <div key={r.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
                 <div>
