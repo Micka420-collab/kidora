@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Pressable, Alert as RNAlert, Animated, Easing, Image } from "react-native";
+import { View, Text, StyleSheet, Pressable, Alert as RNAlert, Animated, Easing, Image, AccessibilityInfo } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
@@ -23,6 +23,7 @@ export default function ChildMode() {
   const [bedtime, setBedtime] = useState(false);
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [reduceMotion, setReduceMotion] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevUsage = useRef<Record<string, number>>({});
 
@@ -34,31 +35,55 @@ export default function ChildMode() {
   const sosScale = useRef(new Animated.Value(1)).current;
   const pop = useRef(new Animated.Value(0)).current; // celebration pop on "request sent"
 
+  // Bootstrap (mount only): honour reduce-motion + start the sync loop.
   useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    start();
+    return () => {
+      if (timer.current) clearInterval(timer.current);
+      sub.remove();
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  // Animations — skipped (snapped to final) when the user prefers reduced motion.
+  useEffect(() => {
+    if (reduceMotion) {
+      fade.setValue(1);
+      slide.setValue(0);
+      pulse.setValue(0);
+      float.setValue(0);
+      return;
+    }
     // entrance: fade + slide up
-    Animated.parallel([
+    const entrance = Animated.parallel([
       Animated.timing(fade, { toValue: 1, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slide, { toValue: 0, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-    ]).start();
+    ]);
     // continuous protective pulse
-    Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
       ]),
-    ).start();
+    );
     // mascot idle: gentle float up/down + breathe (keeps the app feeling alive)
-    Animated.loop(
+    const floatLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(float, { toValue: 1, duration: 1900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(float, { toValue: 0, duration: 1900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
-    ).start();
-
-    start();
-    return () => { if (timer.current) clearInterval(timer.current); };
-    // eslint-disable-next-line
-  }, []);
+    );
+    entrance.start();
+    pulseLoop.start();
+    floatLoop.start();
+    return () => {
+      entrance.stop();
+      pulseLoop.stop();
+      floatLoop.stop();
+    };
+  }, [reduceMotion, fade, slide, pulse, float]);
 
   async function start() {
     const { status: perm } = await Location.requestForegroundPermissionsAsync();
@@ -193,12 +218,12 @@ export default function ChildMode() {
 
   return (
     <LinearGradient colors={["#4f46e5", "#3730a3", "#1e1b4b"]} style={s.container}>
-      <Sparkle style={{ top: 70, left: 36 }} delay={0} size={16} />
-      <Sparkle style={{ top: 120, right: 44 }} delay={520} size={11} />
-      <Sparkle style={{ top: 210, left: 26 }} delay={1100} size={9} />
-      <Sparkle style={{ bottom: 170, right: 36 }} delay={300} size={13} />
-      <Sparkle style={{ bottom: 120, left: 54 }} delay={860} size={10} />
-      <Sparkle style={{ bottom: 90, right: 64 }} delay={1500} size={8} />
+      <Sparkle style={{ top: 70, left: 36 }} delay={0} size={16} reduce={reduceMotion} />
+      <Sparkle style={{ top: 120, right: 44 }} delay={520} size={11} reduce={reduceMotion} />
+      <Sparkle style={{ top: 210, left: 26 }} delay={1100} size={9} reduce={reduceMotion} />
+      <Sparkle style={{ bottom: 170, right: 36 }} delay={300} size={13} reduce={reduceMotion} />
+      <Sparkle style={{ bottom: 120, left: 54 }} delay={860} size={10} reduce={reduceMotion} />
+      <Sparkle style={{ bottom: 90, right: 64 }} delay={1500} size={8} reduce={reduceMotion} />
 
       <Animated.View style={[s.content, { opacity: fade, transform: [{ translateY: slide }] }]}>
         <View style={[s.badge, { backgroundColor: paused ? "rgba(254,243,199,0.95)" : active ? "rgba(220,252,231,0.95)" : "rgba(254,226,226,0.95)" }]}>
@@ -325,9 +350,13 @@ export default function ChildMode() {
 }
 
 // Soft twinkling sparkle for the background ambiance (pure Animated, no assets).
-function Sparkle({ style, delay, size = 10 }: { style: object; delay: number; size?: number }) {
+function Sparkle({ style, delay, size = 10, reduce = false }: { style: object; delay: number; size?: number; reduce?: boolean }) {
   const a = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (reduce) {
+      a.setValue(0.5); // static, gentle glint — no looping animation
+      return;
+    }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
@@ -337,7 +366,7 @@ function Sparkle({ style, delay, size = 10 }: { style: object; delay: number; si
     );
     loop.start();
     return () => loop.stop();
-  }, [a, delay]);
+  }, [a, delay, reduce]);
   return (
     <Animated.Text
       style={[
