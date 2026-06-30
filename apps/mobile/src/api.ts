@@ -70,6 +70,15 @@ export const parent = {
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async routines(id: string) {
+    return req<{ routines: RoutineRaw[] }>(`/api/children/${id}/routines`, { headers: await this.authHeader() });
+  },
+  async saveRoutine(id: string, routine: { id?: string; name: string; enabled?: boolean; days: string[]; start: string; end: string; blockedAppIds: string[] }) {
+    return req<{ routine: RoutineRaw }>(`/api/children/${id}/routines`, { method: "POST", body: routine, headers: await this.authHeader() });
+  },
+  async deleteRoutine(id: string, routineId: string) {
+    return req<{ ok: true }>(`/api/children/${id}/routines?id=${encodeURIComponent(routineId)}`, { method: "DELETE", headers: await this.authHeader() });
+  },
   async keywords(id: string) {
     return req<{ keywords: WatchedKeyword[] }>(`/api/children/${id}/keywords`, { headers: await this.authHeader() });
   },
@@ -231,6 +240,8 @@ export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtime
 export type AppAction = "allow" | "block" | "limit";
 export type AppRule = { id: string; appId: string; appName: string; action: AppAction; dailyLimitMinutes: number | null; category: string | null };
 export type WatchedKeyword = { id: string; term: string; createdAt: string };
+// Raw routine as stored (days/blockedAppIds are JSON strings).
+export type RoutineRaw = { id: string; name: string; enabled: boolean; days: string; start: string; end: string; blockedAppIds: string };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {

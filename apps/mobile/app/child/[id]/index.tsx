@@ -251,6 +251,7 @@ export default function ChildDetail() {
               <NavCard icon="apps" color="#8b5cf6" label="Applications" onPress={() => router.push(`/child/${id}/apps`)} />
               <NavCard icon="search" color={c.warn} label="Mots-clés" onPress={() => router.push(`/child/${id}/keywords`)} />
             </View>
+            <NavCard icon="calendar" color={c.info} label="Routines (heures d'école…)" onPress={() => router.push(`/child/${id}/routines`)} />
 
             {/* weekly trend */}
             <Card>
