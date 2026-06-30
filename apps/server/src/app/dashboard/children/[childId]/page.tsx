@@ -6,6 +6,7 @@ import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isBedtimeNow, todayWeekday } from "@/lib/policy";
 import { TimeRequestsCard } from "@/components/time-requests-card";
 import { LiveNow } from "@/components/live-now";
+import { RemoteActions } from "@/components/remote-actions";
 
 function dateStr(daysAgo: number) {
   const d = new Date();
@@ -78,6 +79,8 @@ export default async function ChildOverview({
       )}
 
       <LiveNow childId={childId} />
+
+      {deviceCount > 0 && <RemoteActions childId={childId} />}
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Today vs limit */}
