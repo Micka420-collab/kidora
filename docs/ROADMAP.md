@@ -51,6 +51,7 @@
 ### Serveur / dashboard
 - [x] Gestion multi-appareils : page globale « Appareils » (famille entière) + renommer/retirer un appareil
 - [x] Vue **Rapports** par enfant (période 7/14/30 j, KPIs, top apps/catégories/domaines, export CSV) ; **période mémorisée** (`localStorage`, restaurée au montage — pas de souci SSR/hydratation)
+- [x] **Temps restant aujourd'hui** sur la fiche enfant : la carte « Aujourd'hui » affiche désormais « Il reste X » (vert) / « Limite atteinte » / « Limite dépassée de X » (rouge) en plus de la limite et du pourcentage — le chiffre le plus actionnable pour le parent (bonus inclus)
 - [x] Actions à distance depuis le dashboard (verrouiller l'appareil, envoyer un message) via le système de commandes
 - [x] Actions familiales groupées (tout mettre en pause / reprendre) sur la vue d'ensemble
 - [x] Envoi par email des rapports (cron + résumé d'usage) — agrégation extraite (`lib/report.ts`), email HTML/texte (`report-email.ts`), envoi groupé opt-in (`report-mailer.ts`), transport SMTP optionnel (`mailer.ts`, no-op propre sans config), endpoint `GET /api/cron/reports` (protégé `CRON_SECRET`, `?dryRun=`), cron Vercel hebdo (`vercel.json`), opt-out par parent (`weeklyReportEmail` + toggle Paramètres FR/EN) ; **auth cron extraite & testée** (`lib/cron-auth.ts` : fail-closed en prod sans secret, comparaison du secret à **temps constant** `timingSafeEqual`, 4 tests) ; dry-run vérifié (16 candidats, 1 envoyé, 15 sans activité ignorés)
