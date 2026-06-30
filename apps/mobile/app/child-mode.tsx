@@ -208,13 +208,13 @@ export default function ChildMode() {
           <Animated.View style={[s.halo, haloStyle]} />
           <Animated.View style={mascotAnim}>
             <Image
-              source={require("../assets/mascot.png")}
-              style={[s.mascot, (paused || bedtime) && { opacity: 0.85 }]}
+              source={bedtime && !paused ? require("../assets/mascot-sleep.png") : require("../assets/mascot.png")}
+              style={[s.mascot, paused && { opacity: 0.85 }]}
               resizeMode="contain"
-              accessibilityLabel="Mascotte Kidora"
+              accessibilityLabel={bedtime && !paused ? "Mascotte Kidora endormie" : "Mascotte Kidora"}
             />
           </Animated.View>
-          {(paused || bedtime) && <Text style={s.mascotBadge}>{paused ? "⏸" : "🌙"}</Text>}
+          {paused && <Text style={s.mascotBadge}>⏸</Text>}
         </View>
 
         <Text style={s.title}>{paused ? "Pause demandée par un parent" : "Tu es protégé·e ✨"}</Text>
