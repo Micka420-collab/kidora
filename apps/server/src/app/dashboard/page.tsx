@@ -10,6 +10,7 @@ import { Onboarding } from "@/components/onboarding";
 import { ChildrenGrid, type ChildCardData } from "@/components/children-grid";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isDeviceOnline } from "@/lib/device-status";
+import { isPausedNow } from "@/lib/pause";
 import { buildInsights, type Insight } from "@/lib/insights";
 import { ymd } from "@/lib/retention";
 import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
@@ -101,7 +102,7 @@ export default async function OverviewPage() {
     id: k.id,
     name: k.name,
     avatar: k.avatar,
-    paused: k.paused,
+    paused: isPausedNow(k.paused, k.pausedUntil),
     deviceCount: k.devices.length,
     onlineCount: k.devices.filter((d) => isDeviceOnline(d)).length,
     secondsToday: usageMap.get(k.id) ?? 0,
@@ -115,7 +116,7 @@ export default async function OverviewPage() {
           <p className="text-sm text-muted">{tt.overview.todayActivity}</p>
         </div>
         <div className="flex gap-2">
-          {kids.length > 0 && <FamilyPause anyActive={kids.some((k) => !k.paused)} />}
+          {kids.length > 0 && <FamilyPause anyActive={kids.some((k) => !isPausedNow(k.paused, k.pausedUntil))} />}
           <Link href="/dashboard/children/new" className="btn btn-primary">
             <Plus size={16} /> {tt.nav.addChild}
           </Link>
