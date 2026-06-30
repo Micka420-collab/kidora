@@ -244,8 +244,10 @@ export default function ChildMode() {
             <Text style={s.stCheer}>{cheer}</Text>
           </View>
         ) : usedTodaySec != null ? (
-          <View style={s.chip}>
-            <Text style={s.chipText}>⏱  Temps d'écran aujourd'hui : {formatDuration(usedTodaySec)}</Text>
+          <View style={s.stCard}>
+            <Text style={s.stRemain}>☀️  Temps libre aujourd'hui</Text>
+            <Text style={s.stMeta}>{formatDuration(usedTodaySec)} d'écran jusqu'ici</Text>
+            <Text style={s.stCheer}>Pense à faire des pauses 💚</Text>
           </View>
         ) : null}
 
@@ -369,8 +371,6 @@ const s = StyleSheet.create({
   sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
   bedtime: { marginBottom: 22, backgroundColor: "rgba(199,210,254,0.16)", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(199,210,254,0.35)" },
   bedtimeText: { color: "#e0e7ff", fontWeight: "700", fontSize: 14 },
-  chip: { marginTop: 18, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
-  chipText: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5 },
   stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
   rewardStar: { width: 66, height: 66, marginBottom: 4 },
   stRemain: { color: "#fff", fontWeight: "800", fontSize: 19 },
