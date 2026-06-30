@@ -6,6 +6,7 @@ import { requireParent, withGuard } from "@/lib/guard";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { passwordPolicyError, isPasswordBreached } from "@/lib/password-policy";
 import { audit } from "@/lib/audit";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 const schema = z.object({
   currentPassword: z.string().min(1).max(200),
@@ -16,6 +17,13 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
+    const rl = rateLimit(`pwchange:${parent.id}:${clientIp(req)}`, 10, 15 * 60_000);
+    if (!rl.ok) {
+      return Response.json(
+        { error: "Trop de tentatives. Réessayez plus tard." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
     const parsed = schema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
     const { currentPassword, newPassword } = parsed.data;
