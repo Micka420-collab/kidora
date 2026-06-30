@@ -143,6 +143,15 @@ export const parent = {
   async changeEmail(email: string, currentPassword: string) {
     return req<{ ok: true; email: string }>("/api/account/email", { method: "POST", body: { email, currentPassword }, headers: await this.authHeader() });
   },
+  async guardians() {
+    return req<{ guardians: Guardian[] }>("/api/guardians", { headers: await this.authHeader() });
+  },
+  async addGuardian(email: string) {
+    return req<{ ok: true; added: string; children: number }>("/api/guardians", { method: "POST", body: { email }, headers: await this.authHeader() });
+  },
+  async removeGuardian(parentId: string) {
+    return req<{ ok: true }>(`/api/guardians?parentId=${encodeURIComponent(parentId)}`, { method: "DELETE", headers: await this.authHeader() });
+  },
   async twoFactorStatus() {
     return req<{ enabled: boolean }>("/api/account/2fa", { headers: await this.authHeader() });
   },
@@ -246,6 +255,7 @@ export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtime
 export type AppAction = "allow" | "block" | "limit";
 export type AppRule = { id: string; appId: string; appName: string; action: AppAction; dailyLimitMinutes: number | null; category: string | null };
 export type WatchedKeyword = { id: string; term: string; createdAt: string };
+export type Guardian = { id: string; name: string; email: string; children: string[] };
 // Raw routine as stored (days/blockedAppIds are JSON strings).
 export type RoutineRaw = { id: string; name: string; enabled: boolean; days: string; start: string; end: string; blockedAppIds: string };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
