@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { parent, type Child, type Live, type Alert } from "@/api";
-import { useTheme, relativeTime, radius, space, alertMeta } from "@/theme";
+import { useTheme, relativeTime, radius, space, alertMeta, formatDuration } from "@/theme";
 import { isDeviceOnline } from "@/device";
 import { Card, Avatar, PulseDot, Pill, Muted, SectionHeader, Empty, Skeleton, IconBubble } from "@/ui";
 
@@ -25,16 +25,22 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [week, setWeek] = useState<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number } | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [{ children }, a] = await Promise.all([parent.children(), parent.alerts()]);
+      const [{ children }, a, ins] = await Promise.all([
+        parent.children(),
+        parent.alerts(),
+        parent.insights().catch(() => null),
+      ]);
       // enrich each child with a live snapshot (best-effort, parallel)
       const live = await Promise.all(
         children.map((ch) => parent.live(ch.id).catch(() => undefined)),
       );
       setKids(children.map((ch, i) => ({ ...ch, live: live[i] })));
       setAlerts(a.alerts.slice(0, 3));
+      setWeek(ins);
     } catch {
       router.replace("/login");
     } finally {
@@ -70,7 +76,7 @@ export default function Home() {
               {[0, 1].map((i) => <Skeleton key={i} height={92} />)}
             </View>
           ) : (
-            <ChildList kids={kids} alerts={alerts} reload={load} refreshing={refreshing} setRefreshing={setRefreshing} />
+            <ChildList kids={kids} alerts={alerts} week={week} reload={load} refreshing={refreshing} setRefreshing={setRefreshing} />
           )}
         </View>
       </View>
@@ -106,7 +112,34 @@ function Hero({ onlineCount, total, allPaused, onToggle, busy, gradient }: { onl
   );
 }
 
-function ChildList({ kids, alerts, reload, refreshing, setRefreshing }: { kids: Enriched[]; alerts: Alert[]; reload: () => void; refreshing: boolean; setRefreshing: (v: boolean) => void }) {
+type Week = { thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number } | null;
+
+function WeekCard({ week }: { week: Week }) {
+  const { c } = useTheme();
+  if (!week || (week.thisWeekSeconds === 0 && week.alertsThisWeek === 0)) return null;
+  const { thisWeekSeconds: now, lastWeekSeconds: prev, alertsThisWeek } = week;
+  let delta: { up: boolean; pct: number } | null = null;
+  if (prev > 0) {
+    const pct = Math.round(((now - prev) / prev) * 100);
+    if (Math.abs(pct) >= 1) delta = { up: now > prev, pct: Math.abs(pct) };
+  }
+  return (
+    <Card>
+      <Text style={{ fontSize: 13, fontWeight: "700", color: c.textMuted, marginBottom: 8 }}>CETTE SEMAINE</Text>
+      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: c.text }}>{formatDuration(now)}</Text>
+        {delta && (
+          <Text style={{ fontSize: 14, fontWeight: "700", marginBottom: 3, color: delta.up ? c.warn : c.success }}>
+            {delta.up ? "▲" : "▼"} {delta.pct}%
+          </Text>
+        )}
+      </View>
+      <Muted style={{ marginTop: 2 }}>Temps d&apos;écran (7 j){alertsThisWeek > 0 ? ` · ${alertsThisWeek} alerte${alertsThisWeek > 1 ? "s" : ""}` : ""}</Muted>
+    </Card>
+  );
+}
+
+function ChildList({ kids, alerts, week, reload, refreshing, setRefreshing }: { kids: Enriched[]; alerts: Alert[]; week: Week; reload: () => void; refreshing: boolean; setRefreshing: (v: boolean) => void }) {
   const { c } = useTheme();
   return (
     <ScrollView
@@ -114,6 +147,7 @@ function ChildList({ kids, alerts, reload, refreshing, setRefreshing }: { kids: 
       contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxxl, gap: space.sm }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); reload(); }} tintColor={c.primary} colors={[c.primary]} />}
     >
+      <WeekCard week={week} />
       <SectionHeader title="Enfants" />
       {kids.length === 0 ? (
         <Empty icon="people" title="Aucun enfant" subtitle="Ajoutez un enfant et un appareil depuis le tableau de bord web." />
