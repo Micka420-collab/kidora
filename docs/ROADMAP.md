@@ -12,6 +12,7 @@
 - [x] **États d'erreur honnêtes (mobile)** : composant `ErrorState` réutilisable (icône hors-ligne, message, bouton « Réessayer », `accessibilityRole="alert"`) câblé sur les écrans qui chargent des données (Vidéos, Messages, détail enfant, Alertes) — un échec réseau n'affiche plus à tort un état « vide » ; typecheck mobile vert
 - [x] **États d'erreur honnêtes (dashboard web)** : composant `ErrorCard` (`role="alert"`, bouton « Réessayer ») sur les onglets Vidéos & Messages — l'échec de chargement (rejet de `api.get`) affiche une erreur avec relance au lieu d'un faux état vide, et le rejet n'est plus non géré
 - [x] **Correctif spinner infini (onglets Activité & Rapports)** : `setLoading(false)` était dans le `.then`, donc un échec de fetch laissait le spinner tourner indéfiniment ; passage à `.catch`/`.finally` + `ErrorCard` avec relance
+- [x] **Classe de bug refermée (Apps, Web, Temps d'écran, Appareils)** : ces onglets faisaient `setLoading(false)` après les `await` sans `try/catch` → même spinner infini sur échec ; `load` converti en `useCallback` avec `try/catch/finally` + `ErrorCard` ; tous les onglets enfant gèrent désormais l'erreur de chargement de façon cohérente (chargements secondaires en best-effort)
 - [x] PWA installable · build de production vérifié
 
 ## ⭐ Priorités demandées (2026-06-29)

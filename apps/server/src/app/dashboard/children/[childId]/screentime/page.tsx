@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { WEEKDAYS, formatMinutes } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
 import { useToast } from "@/components/toast";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Moon, Plus, Trash2, Save, Check } from "lucide-react";
 import { RoutinesCard } from "@/components/routines-card";
 
@@ -19,11 +20,14 @@ export default function ScreenTimeTab() {
   const toast = useToast();
   const [st, setSt] = useState<ST | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    (async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
       const res = await api.get<{ screenTime: { enabled: boolean; dailyLimits: string; bedtimes: string } | null }>(`/api/children/${childId}/screentime`);
       const s = res.screenTime;
       setSt({
@@ -31,9 +35,13 @@ export default function ScreenTimeTab() {
         dailyLimits: s ? JSON.parse(s.dailyLimits) : {},
         bedtimes: s ? JSON.parse(s.bedtimes) : [],
       });
+    } catch {
+      setError(true);
+    } finally {
       setLoading(false);
-    })();
+    }
   }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function save() {
     if (!st) return;
@@ -45,6 +53,7 @@ export default function ScreenTimeTab() {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  if (error) return <ErrorCard onRetry={load} />;
   if (loading || !st) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
 
   return (

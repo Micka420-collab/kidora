@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { formatMinutes } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Plus, Trash2, Check, Ban, Hourglass } from "lucide-react";
 
 type Rule = {
@@ -22,15 +23,23 @@ export default function AppsTab() {
   const { t } = useT();
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newApp, setNewApp] = useState({ appName: "", appId: "" });
 
-  async function load() {
-    const res = await api.get<{ rules: Rule[] }>(`/api/children/${childId}/rules/apps`);
-    setRules(res.rules);
-    setLoading(false);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await api.get<{ rules: Rule[] }>(`/api/children/${childId}/rules/apps`);
+      setRules(res.rules);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function setAction(r: Rule, action: Rule["action"]) {
     setRules((rs) => rs.map((x) => (x.appId === r.appId ? { ...x, action } : x)));
@@ -62,6 +71,7 @@ export default function AppsTab() {
   }
 
   if (loading) return <Spinner />;
+  if (error) return <ErrorCard onRetry={load} />;
 
   return (
     <div className="space-y-4">

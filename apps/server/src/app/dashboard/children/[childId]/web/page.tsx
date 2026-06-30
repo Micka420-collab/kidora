@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye } from "lucide-react";
 
 type WebRule = { id: string; kind: string; value: string; action: "allow" | "block" };
@@ -23,15 +24,12 @@ export default function WebTab() {
   const [filter, setFilter] = useState<Filter | null>(null);
   const [rules, setRules] = useState<WebRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [domain, setDomain] = useState("");
   const [domainAction, setDomainAction] = useState<"block" | "allow">("block");
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [kw, setKw] = useState("");
 
-  async function loadKeywords() {
-    const res = await api.get<{ keywords: Keyword[] }>(`/api/children/${childId}/keywords`);
-    setKeywords(res.keywords);
-  }
   async function addKeyword(e: React.FormEvent) {
     e.preventDefault();
     if (kw.trim().length < 2) return;
@@ -44,21 +42,29 @@ export default function WebTab() {
     await api.del(`/api/children/${childId}/keywords?id=${id}`);
   }
 
-  async function load() {
-    loadKeywords();
-    const res = await api.get<{ child: { webFilter: Filter | null; webRules: WebRule[] } }>(`/api/children/${childId}`);
-    const wf = res.child.webFilter;
-    setFilter({
-      safeSearch: wf?.safeSearch ?? true,
-      blockUnknown: wf?.blockUnknown ?? false,
-      blockedCategories: typeof (wf as unknown as { blockedCategories: unknown })?.blockedCategories === "string"
-        ? JSON.parse((wf as unknown as { blockedCategories: string }).blockedCategories)
-        : (wf?.blockedCategories ?? []),
-    });
-    setRules(res.child.webRules ?? []);
-    setLoading(false);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    // Watched keywords are best-effort and shouldn't gate the page.
+    api.get<{ keywords: Keyword[] }>(`/api/children/${childId}/keywords`).then((r) => setKeywords(r.keywords)).catch(() => {});
+    try {
+      const res = await api.get<{ child: { webFilter: Filter | null; webRules: WebRule[] } }>(`/api/children/${childId}`);
+      const wf = res.child.webFilter;
+      setFilter({
+        safeSearch: wf?.safeSearch ?? true,
+        blockUnknown: wf?.blockUnknown ?? false,
+        blockedCategories: typeof (wf as unknown as { blockedCategories: unknown })?.blockedCategories === "string"
+          ? JSON.parse((wf as unknown as { blockedCategories: string }).blockedCategories)
+          : (wf?.blockedCategories ?? []),
+      });
+      setRules(res.child.webRules ?? []);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function saveFilter(next: Filter) {
     setFilter(next);
@@ -86,6 +92,7 @@ export default function WebTab() {
     await api.del(`/api/children/${childId}/rules/web?id=${r.id}`);
   }
 
+  if (error) return <ErrorCard onRetry={load} />;
   if (loading || !filter) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
 
   return (

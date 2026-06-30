@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera, Pencil, Trash2, X } from "lucide-react";
 
 type Device = {
@@ -27,6 +28,7 @@ export default function DevicesTab() {
   const t = tr.devices;
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", platform: "windows" });
   const [justAdded, setJustAdded] = useState<Device | null>(null);
@@ -49,17 +51,22 @@ export default function DevicesTab() {
     QRCode.toDataURL(payload, { width: 200, margin: 1 }).then(setQrUrl).catch(() => setQrUrl(null));
   }, [justAdded]);
 
-  async function loadShots() {
-    const res = await api.get<{ screenshots: { id: string; dataUrl: string; createdAt: string }[] }>(`/api/children/${childId}/screenshots`);
-    setShots(res.screenshots);
-  }
-  async function load() {
-    loadShots();
-    const res = await api.get<{ devices: Device[] }>(`/api/children/${childId}/devices`);
-    setDevices(res.devices);
-    setLoading(false);
-  }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [childId]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
+    // Screenshots are best-effort and shouldn't gate the devices list.
+    api.get<{ screenshots: { id: string; dataUrl: string; createdAt: string }[] }>(`/api/children/${childId}/screenshots`)
+      .then((r) => setShots(r.screenshots)).catch(() => {});
+    try {
+      const res = await api.get<{ devices: Device[] }>(`/api/children/${childId}/devices`);
+      setDevices(res.devices);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [childId]);
+  useEffect(() => { load(); }, [load]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -102,6 +109,7 @@ export default function DevicesTab() {
     await api.del(`/api/children/${childId}/devices/${id}`);
   }
 
+  if (error) return <ErrorCard onRetry={load} />;
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
 
   return (
