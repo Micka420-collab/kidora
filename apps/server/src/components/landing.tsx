@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRef, useState, useEffect, type MouseEvent } from "react";
-import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, animate, type Variants } from "framer-motion";
+import { motion, useScroll, useTransform, useSpring, useMotionValue, useInView, useReducedMotion, animate, type Variants } from "framer-motion";
 import {
   ShieldCheck, Clock, Globe, MapPin, AppWindow, BellRing,
   ShieldAlert, PlaySquare, KeyRound, ArrowRight, Lock, ExternalLink, Check,
@@ -79,6 +79,7 @@ const reveal: Variants = {
 };
 
 export function Landing() {
+  const reduce = useReducedMotion();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll();
   const progress = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.3 });
@@ -97,6 +98,7 @@ export function Landing() {
   const tiltX = useSpring(tiltXRaw, { stiffness: 150, damping: 18, mass: 0.4 });
   const tiltY = useSpring(tiltYRaw, { stiffness: 150, damping: 18, mass: 0.4 });
   function onHeroMove(e: MouseEvent<HTMLDivElement>) {
+    if (reduce) return;
     const r = e.currentTarget.getBoundingClientRect();
     tiltYRaw.set(((e.clientX - r.left) / r.width - 0.5) * 14);
     tiltXRaw.set(((e.clientY - r.top) / r.height - 0.5) * -14);
@@ -115,18 +117,18 @@ export function Landing() {
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <motion.div
           className="absolute -left-40 -top-40 h-[40rem] w-[40rem] rounded-full bg-brand-600/30 blur-[120px]"
-          animate={{ x: [0, 80, 0], y: [0, 60, 0], scale: [1, 1.15, 1] }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduce ? undefined : { x: [0, 80, 0], y: [0, 60, 0], scale: [1, 1.15, 1] }}
+          transition={reduce ? undefined : { duration: 18, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute right-[-12rem] top-1/3 h-[36rem] w-[36rem] rounded-full bg-fuchsia-600/25 blur-[130px]"
-          animate={{ x: [0, -70, 0], y: [0, 90, 0], scale: [1, 1.2, 1] }}
-          transition={{ duration: 22, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduce ? undefined : { x: [0, -70, 0], y: [0, 90, 0], scale: [1, 1.2, 1] }}
+          transition={reduce ? undefined : { duration: 22, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute bottom-[-10rem] left-1/3 h-[34rem] w-[34rem] rounded-full bg-amber-500/15 blur-[130px]"
-          animate={{ x: [0, 50, 0], y: [0, -60, 0], scale: [1, 1.1, 1] }}
-          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          animate={reduce ? undefined : { x: [0, 50, 0], y: [0, -60, 0], scale: [1, 1.1, 1] }}
+          transition={reduce ? undefined : { duration: 20, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
@@ -226,7 +228,7 @@ export function Landing() {
 
         {/* floating mascot */}
         <motion.div style={{ y: mascotY }} className="pointer-events-none absolute right-2 top-8 hidden sm:block lg:right-10">
-          <motion.div animate={{ y: [0, -14, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}>
+          <motion.div animate={reduce ? undefined : { y: [0, -14, 0] }} transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }}>
             <Image src="/mascot.png" alt="" width={96} height={96} unoptimized className="drop-shadow-2xl" />
           </motion.div>
         </motion.div>
@@ -344,7 +346,7 @@ export function Landing() {
           variants={reveal} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
           className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-500 via-fuchsia-600 to-brand-700 px-8 py-16 text-center"
         >
-          <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="mx-auto mb-6 w-fit">
+          <motion.div animate={reduce ? undefined : { y: [0, -12, 0] }} transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }} className="mx-auto mb-6 w-fit">
             <Image src="/mascot.png" alt="" width={84} height={84} unoptimized className="drop-shadow-xl" />
           </motion.div>
           <h2 className="text-3xl font-extrabold sm:text-4xl">Prêt à protéger votre famille ?</h2>
@@ -372,6 +374,7 @@ export function Landing() {
 }
 
 function Counter({ to, suffix = "", duration = 1.4 }: { to: number; suffix?: string; duration?: number }) {
+  const reduce = useReducedMotion();
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-60px" });
   const mv = useMotionValue(0);
@@ -379,13 +382,17 @@ function Counter({ to, suffix = "", duration = 1.4 }: { to: number; suffix?: str
 
   useEffect(() => {
     if (!inView) return;
+    if (reduce) {
+      setVal(to);
+      return;
+    }
     const controls = animate(mv, to, {
       duration,
       ease: [0.22, 1, 0.36, 1],
       onUpdate: (v) => setVal(Math.round(v)),
     });
     return () => controls.stop();
-  }, [inView, to, duration, mv]);
+  }, [inView, to, duration, mv, reduce]);
 
   return (
     <span ref={ref}>
