@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatDuration } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { useT } from "@/components/i18n-provider";
+import { ErrorCard } from "@/components/error-card";
 import { Loader2, Clock, Ban, Globe, BellRing, Download } from "lucide-react";
 
 type Report = {
@@ -26,11 +27,17 @@ export default function ReportsTab() {
   const [days, setDays] = useState(7);
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     setLoading(true);
-    api.get<Report>(`/api/children/${childId}/report?days=${days}`).then((r) => { setReport(r); setLoading(false); });
+    setError(false);
+    api.get<Report>(`/api/children/${childId}/report?days=${days}`)
+      .then((r) => setReport(r))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
   }, [childId, days]);
+  useEffect(() => { load(); }, [load]);
 
   function exportCsv() {
     if (!report) return;
@@ -50,7 +57,9 @@ export default function ReportsTab() {
     URL.revokeObjectURL(url);
   }
 
-  if (loading || !report) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
+  if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
+  if (error) return <ErrorCard onRetry={load} />;
+  if (!report) return null;
 
   const maxDay = Math.max(1, ...report.trend.map((t) => t.seconds));
 
