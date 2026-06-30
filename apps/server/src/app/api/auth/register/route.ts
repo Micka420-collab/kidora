@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       // account is grandfathered as verified so SMTP-less setups aren't blocked.
       emailVerified: !isMailConfigured(),
       emailVerifyToken: isMailConfigured() ? randomToken(32) : null,
+      emailVerifyTokenExpiry: isMailConfigured() ? new Date(Date.now() + 24 * 3600_000) : null,
     },
   });
 

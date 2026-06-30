@@ -7,11 +7,14 @@ export async function GET(req: NextRequest) {
   const token = new URL(req.url).searchParams.get("token") ?? "";
   let ok = false;
   if (token) {
-    const parent = await prisma.parent.findFirst({ where: { emailVerifyToken: token }, select: { id: true } });
+    const parent = await prisma.parent.findFirst({
+      where: { emailVerifyToken: token, emailVerifyTokenExpiry: { gt: new Date() } },
+      select: { id: true },
+    });
     if (parent) {
       await prisma.parent.update({
         where: { id: parent.id },
-        data: { emailVerified: true, emailVerifyToken: null },
+        data: { emailVerified: true, emailVerifyToken: null, emailVerifyTokenExpiry: null },
       });
       ok = true;
     }
