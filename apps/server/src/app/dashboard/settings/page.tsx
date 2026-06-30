@@ -15,16 +15,12 @@ import { ChangeEmailCard } from "@/components/change-email-card";
 
 export default async function SettingsPage() {
   const parent = (await getCurrentParent())!;
-  const childCount = await prisma.child.count({ where: { parentId: parent.id } });
-  const deviceCount = await prisma.device.count({
-    where: { child: { parentId: parent.id } },
-  });
-  const auditLogs = await prisma.auditLog.findMany({
-    where: { parentId: parent.id },
-    orderBy: { ts: "desc" },
-    take: 15,
-  });
-  const locale = await getLocale();
+  const [childCount, deviceCount, auditLogs, locale] = await Promise.all([
+    prisma.child.count({ where: { parentId: parent.id } }),
+    prisma.device.count({ where: { child: { parentId: parent.id } } }),
+    prisma.auditLog.findMany({ where: { parentId: parent.id }, orderBy: { ts: "desc" }, take: 15 }),
+    getLocale(),
+  ]);
   const t = getDict(locale).settings;
 
   return (
