@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TextInput, Switch, Image, Alert as RNAlert } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, ScrollView, TextInput, Switch, Image, Pressable, Alert as RNAlert } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { parent, getServer } from "@/api";
+import { parent, getServer, type Guardian } from "@/api";
 import * as storage from "@/storage";
 import { useTheme, space, radius } from "@/theme";
 import { Card, H1, Muted, Btn, IconBubble } from "@/ui";
@@ -36,6 +36,14 @@ export default function Settings() {
   const [tfaCode, setTfaCode] = useState("");
   const [tfaBusy, setTfaBusy] = useState(false);
   const [tfaDisarm, setTfaDisarm] = useState(false);
+  const [guardians, setGuardians] = useState<Guardian[] | null>(null);
+  const [coEmail, setCoEmail] = useState("");
+  const [coBusy, setCoBusy] = useState(false);
+
+  const loadGuardians = useCallback(async () => {
+    try { setGuardians((await parent.guardians()).guardians); }
+    catch { /* unavailable — hide the card */ }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -50,8 +58,35 @@ export default function Settings() {
         const s = await parent.twoFactorStatus();
         setTfaEnabled(s.enabled);
       } catch { /* 2FA status unavailable — hide the card */ }
+      loadGuardians();
     })();
-  }, []);
+  }, [loadGuardians]);
+
+  async function inviteGuardian() {
+    if (!coEmail.includes("@")) return;
+    setCoBusy(true);
+    try {
+      const r = await parent.addGuardian(coEmail.trim().toLowerCase());
+      setCoEmail("");
+      await loadGuardians();
+      RNAlert.alert("Kidora", `${r.added} a désormais accès à ${r.children} enfant${r.children > 1 ? "s" : ""}.`);
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Invitation impossible");
+    } finally { setCoBusy(false); }
+  }
+
+  function confirmRevoke(g: Guardian) {
+    RNAlert.alert("Retirer l'accès", `Retirer l'accès de ${g.name} (${g.email}) ?`, [
+      { text: "Annuler", style: "cancel" },
+      { text: "Retirer", style: "destructive", onPress: () => revokeGuardian(g) },
+    ]);
+  }
+  async function revokeGuardian(g: Guardian) {
+    const prev = guardians;
+    setGuardians((gs) => (gs ? gs.filter((x) => x.id !== g.id) : gs)); // optimistic
+    try { await parent.removeGuardian(g.id); }
+    catch { setGuardians(prev); RNAlert.alert("Erreur", "Action impossible"); }
+  }
 
   async function startEnroll() {
     setTfaBusy(true);
@@ -270,6 +305,39 @@ export default function Settings() {
                 <Btn title="Activer la 2FA" icon="shield-checkmark" loading={tfaBusy} onPress={startEnroll} full />
               </View>
             )}
+          </Card>
+        )}
+
+        {guardians !== null && (
+          <Card>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: c.text, marginBottom: 4 }}>👨‍👩‍👧 Co-parents</Text>
+            <Muted>Partagez l&apos;accès à tous vos enfants avec un autre compte Kidora (révocable).</Muted>
+
+            {guardians.length > 0 && (
+              <View style={{ marginTop: space.sm }}>
+                {guardians.map((g) => (
+                  <View key={g.id} style={{ flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: 10, borderTopWidth: 1, borderTopColor: c.border }}>
+                    <IconBubble icon="person" color={c.primary} size={36} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: "700", color: c.text }} numberOfLines={1}>{g.name}</Text>
+                      <Muted style={{ fontSize: 12 }} numberOfLines={1}>{g.email} · {g.children.length} enfant{g.children.length > 1 ? "s" : ""}</Muted>
+                    </View>
+                    <Pressable onPress={() => confirmRevoke(g)} hitSlop={10} accessibilityLabel={`Retirer ${g.name}`} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                      <Ionicons name="close-circle" size={22} color={c.textFaint} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 15 }}
+                placeholder="email@du-co-parent" placeholderTextColor={c.textFaint} keyboardType="email-address" autoCapitalize="none"
+                value={coEmail} onChangeText={setCoEmail} accessibilityLabel="Email du co-parent"
+              />
+              <Btn title="Inviter" icon="person-add" loading={coBusy} disabled={!coEmail.includes("@")} onPress={inviteGuardian} />
+            </View>
           </Card>
         )}
 
