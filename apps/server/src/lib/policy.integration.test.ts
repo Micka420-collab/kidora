@@ -73,4 +73,15 @@ describe("buildPolicy (integration)", () => {
 
     await prisma.child.update({ where: { id: childId }, data: { pausedUntil: null } });
   });
+
+  it("adds today's granted bonus minutes to the screen-time policy", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    expect((await buildPolicy(childId)).screenTime.bonusMinutesToday).toBe(0);
+
+    await prisma.timeGrant.create({ data: { childId, date: today, minutes: 15, source: "parent" } });
+    await prisma.timeGrant.create({ data: { childId, date: today, minutes: 5, source: "request" } });
+    expect((await buildPolicy(childId)).screenTime.bonusMinutesToday).toBe(20); // summed
+
+    await prisma.timeGrant.deleteMany({ where: { childId, date: today } });
+  });
 });
