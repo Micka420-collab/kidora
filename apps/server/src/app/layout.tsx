@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { cookies } from "next/headers";
 import { isLocale, LOCALE_COOKIE } from "@/lib/i18n";
+import { siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -9,15 +10,11 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
 const description =
   "Kidora — protégez vos enfants en ligne. Temps d'écran, filtrage web, apps, localisation et détection de risque par IA. Windows, Android, iPhone.";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(siteUrl()),
   title: "Kidora — Contrôle parental",
   description,
   applicationName: "Kidora",
