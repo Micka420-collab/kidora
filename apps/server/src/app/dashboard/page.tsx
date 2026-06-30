@@ -131,13 +131,15 @@ export default async function OverviewPage() {
           ) : (
             <ul className="space-y-3">
               {recentAlerts.map((a) => (
-                <li key={a.id} className="flex items-start gap-3">
-                  <span className="mt-0.5 text-lg">{a.child.avatar ?? "🧒"}</span>
-                  <div className="flex-1">
-                    <div className="text-sm">{a.message}</div>
-                    <div className="text-xs text-muted">{a.child.name} · {relativeTime(a.ts)}</div>
-                  </div>
-                  {!a.read && <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500" />}
+                <li key={a.id}>
+                  <Link href={`/dashboard/children/${a.childId}`} className="group flex items-start gap-3">
+                    <span className="mt-0.5 text-lg">{a.child.avatar ?? "🧒"}</span>
+                    <div className="flex-1">
+                      <div className="text-sm group-hover:text-brand-700">{a.message}</div>
+                      <div className="text-xs text-muted">{a.child.name} · {relativeTime(a.ts)}</div>
+                    </div>
+                    {!a.read && <span className="mt-1.5 h-2 w-2 rounded-full bg-red-500" />}
+                  </Link>
                 </li>
               ))}
             </ul>
