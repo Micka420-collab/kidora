@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { todayWeekday, isWithinWindow, isBedtimeNow } from "./schedule";
+import { todayWeekday, isWithinWindow, isBedtimeNow, WEEKDAYS_ORDER } from "./schedule";
 
 // Reference dates (local): 2026-01-05 = Monday, 01-02 = Friday,
 // 01-03 = Saturday, 01-06 = Tuesday.
@@ -48,5 +48,16 @@ describe("isBedtimeNow", () => {
   it("false for empty/undefined", () => {
     expect(isBedtimeNow([], mon(23))).toBe(false);
     expect(isBedtimeNow(undefined, mon(23))).toBe(false);
+  });
+});
+
+describe("default `now` argument (uses the real clock)", () => {
+  it("todayWeekday() returns a valid weekday key", () => {
+    expect(WEEKDAYS_ORDER).toContain(todayWeekday());
+  });
+  it("isBedtimeNow() runs against the real clock without throwing", () => {
+    // Clock-independent: result is a boolean; the empty list is never bedtime.
+    expect(typeof isBedtimeNow([{ days: [], start: "00:00", end: "23:59" }])).toBe("boolean");
+    expect(isBedtimeNow([])).toBe(false);
   });
 });
