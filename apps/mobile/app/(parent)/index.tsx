@@ -26,6 +26,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [week, setWeek] = useState<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number } | null>(null);
+  // Pending screen-time requests surface as unread `time_request` alerts — no extra fetch.
+  const [timeReq, setTimeReq] = useState<{ count: number; childId: string | null }>({ count: 0, childId: null });
 
   const load = useCallback(async () => {
     try {
@@ -40,6 +42,8 @@ export default function Home() {
       );
       setKids(children.map((ch, i) => ({ ...ch, live: live[i] })));
       setAlerts(a.alerts.slice(0, 3));
+      const pendingReqs = a.alerts.filter((x) => x.type === "time_request" && !x.read);
+      setTimeReq({ count: pendingReqs.length, childId: pendingReqs[0]?.childId ?? null });
       setWeek(ins);
     } catch {
       router.replace("/login");
@@ -86,7 +90,7 @@ export default function Home() {
               {[0, 1].map((i) => <Skeleton key={i} height={92} />)}
             </View>
           ) : (
-            <ChildList kids={kids} alerts={alerts} week={week} reload={load} refreshing={refreshing} setRefreshing={setRefreshing} />
+            <ChildList kids={kids} alerts={alerts} week={week} timeReq={timeReq} reload={load} refreshing={refreshing} setRefreshing={setRefreshing} />
           )}
         </View>
       </View>
@@ -149,7 +153,7 @@ function WeekCard({ week }: { week: Week }) {
   );
 }
 
-function ChildList({ kids, alerts, week, reload, refreshing, setRefreshing }: { kids: Enriched[]; alerts: Alert[]; week: Week; reload: () => void; refreshing: boolean; setRefreshing: (v: boolean) => void }) {
+function ChildList({ kids, alerts, week, timeReq, reload, refreshing, setRefreshing }: { kids: Enriched[]; alerts: Alert[]; week: Week; timeReq: { count: number; childId: string | null }; reload: () => void; refreshing: boolean; setRefreshing: (v: boolean) => void }) {
   const { c } = useTheme();
   return (
     <ScrollView
@@ -157,6 +161,22 @@ function ChildList({ kids, alerts, week, reload, refreshing, setRefreshing }: { 
       contentContainerStyle={{ padding: space.lg, paddingBottom: space.xxxl, gap: space.sm }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); reload(); }} tintColor={c.primary} colors={[c.primary]} />}
     >
+      {timeReq.count > 0 && (
+        <Pressable
+          onPress={() => router.push(timeReq.count === 1 && timeReq.childId ? `/child/${timeReq.childId}` : "/(parent)/alerts")}
+          accessibilityLabel="Voir les demandes de temps en attente"
+          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: c.warnSoft, borderWidth: 1, borderColor: c.warn + "55", borderRadius: radius.lg, padding: space.md }}>
+            <IconBubble icon="hourglass" color={c.warn} size={40} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: c.text }}>{timeReq.count} demande{timeReq.count > 1 ? "s" : ""} de temps</Text>
+              <Muted style={{ fontSize: 12 }}>En attente de votre réponse — appuyez pour {timeReq.count === 1 ? "répondre" : "voir"}.</Muted>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={c.warn} />
+          </View>
+        </Pressable>
+      )}
       <WeekCard week={week} />
       <SectionHeader title="Enfants" />
       {kids.length === 0 ? (
