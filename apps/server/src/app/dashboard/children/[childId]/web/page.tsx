@@ -4,13 +4,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
+import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
-import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye, Globe, Ban, History } from "lucide-react";
 
 type WebRule = { id: string; kind: string; value: string; action: "allow" | "block" };
 type Filter = { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string[] };
 type Keyword = { id: string; term: string };
+type Visit = { id: string; domain: string; url: string | null; title: string | null; category: string | null; blocked: boolean; ts: string };
 
 const FILTERABLE: Category[] = [
   "adult", "gambling", "violence", "drugs", "dating",
@@ -29,6 +31,7 @@ export default function WebTab() {
   const [domainAction, setDomainAction] = useState<"block" | "allow">("block");
   const [keywords, setKeywords] = useState<Keyword[]>([]);
   const [kw, setKw] = useState("");
+  const [visits, setVisits] = useState<Visit[]>([]);
 
   async function addKeyword(e: React.FormEvent) {
     e.preventDefault();
@@ -45,8 +48,9 @@ export default function WebTab() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(false);
-    // Watched keywords are best-effort and shouldn't gate the page.
+    // Watched keywords + browsing history are best-effort and shouldn't gate the page.
     api.get<{ keywords: Keyword[] }>(`/api/children/${childId}/keywords`).then((r) => setKeywords(r.keywords)).catch(() => {});
+    api.get<{ visits: Visit[] }>(`/api/children/${childId}/web-visits?take=20`).then((r) => setVisits(r.visits)).catch(() => {});
     try {
       const res = await api.get<{ child: { webFilter: Filter | null; webRules: WebRule[] } }>(`/api/children/${childId}`);
       const wf = res.child.webFilter;
@@ -192,6 +196,36 @@ export default function WebTab() {
                 <button className="text-slate-400 hover:text-red-500" onClick={() => removeKeyword(k.id)}><Trash2 size={12} /></button>
               </span>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent browsing history */}
+      <div className="card p-5">
+        <h3 className="mb-1 flex items-center gap-2 text-base font-semibold"><History size={18} /> {t.history}</h3>
+        <p className="mb-4 text-sm text-muted">{t.historyDesc}</p>
+        {visits.length === 0 ? (
+          <p className="text-sm text-muted">{t.noHistory}</p>
+        ) : (
+          <div className="divide-y">
+            {visits.map((v) => {
+              const meta = v.category ? CATEGORY_META[(v.category as Category)] ?? CATEGORY_META.unknown : null;
+              return (
+                <div key={v.id} className="flex items-center gap-3 py-2.5">
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${v.blocked ? "bg-red-50 text-red-500" : "bg-slate-50 text-slate-500"}`}>
+                    {v.blocked ? <Ban size={15} /> : <Globe size={15} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">{v.title || v.domain}</div>
+                    <div className="truncate text-xs text-muted">
+                      {meta && <span>{meta.emoji} {meta.label} · </span>}{v.domain}
+                    </div>
+                  </div>
+                  {v.blocked && <span className="badge shrink-0 bg-red-100 text-red-600">{t.blocked}</span>}
+                  <span className="shrink-0 text-xs text-muted">{relativeTime(v.ts)}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
