@@ -106,7 +106,7 @@ export const childAgent = {
   async sync(payload: object) {
     const token = await storage.get("enrollToken");
     if (!token) throw new Error("Appareil non enrôlé");
-    return req<{ policy: Policy; commands: Command[] }>("/api/agent/sync", {
+    return req<{ policy: Policy; commands: Command[]; pendingTimeRequest?: { minutes: number } | null }>("/api/agent/sync", {
       method: "POST",
       body: payload,
       headers: { Authorization: `Bearer ${token}` },

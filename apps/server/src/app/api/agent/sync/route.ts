@@ -383,9 +383,17 @@ export async function POST(req: NextRequest) {
   }
 
   const policy = await buildPolicy(childId);
+  // Most recent still-pending time request, so the Kids screen can show
+  // "request awaiting a decision" (clears itself once approved or denied).
+  const pendingTimeRequest = await prisma.timeRequest.findFirst({
+    where: { childId, status: "pending" },
+    orderBy: { createdAt: "desc" },
+    select: { minutes: true },
+  });
   return json({
     policy,
     commands: pending.map((c) => ({ id: c.id, type: c.type, payload: JSON.parse(c.payload) })),
+    pendingTimeRequest: pendingTimeRequest ? { minutes: pendingTimeRequest.minutes } : null,
     serverTime: new Date().toISOString(),
   });
 }

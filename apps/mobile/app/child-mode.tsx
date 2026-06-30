@@ -24,6 +24,7 @@ export default function ChildMode() {
   const [bedtimeAt, setBedtimeAt] = useState<string | null>(null); // "HH:MM" of next bedtime today
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [pendingReq, setPendingReq] = useState<number | null>(null); // minutes of a request awaiting a parent decision
   const [reduceMotion, setReduceMotion] = useState(false);
   const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -152,6 +153,7 @@ export default function ChildMode() {
         grantTimer.current = setTimeout(() => setGranted(null), 10_000);
       }
       prevBonus.current = bonus;
+      setPendingReq(res.pendingTimeRequest ? res.pendingTimeRequest.minutes : null);
       setBedtime(isBedtimeNow(st?.bedtimes));
       setBedtimeAt(nextBedtimeStart(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
@@ -353,6 +355,10 @@ export default function ChildMode() {
               <Text style={s.timeGhostText}>Annuler</Text>
             </Pressable>
           </View>
+        ) : pendingReq != null ? (
+          <View style={s.pendingReq}>
+            <Text style={s.pendingReqText}>⏳  Demande de +{pendingReq} min en attente…</Text>
+          </View>
         ) : (
           <Pressable
             style={s.timeBtn}
@@ -445,6 +451,8 @@ const s = StyleSheet.create({
   stMeta: { color: "#c7d2fe", fontSize: 12.5, marginTop: 8 },
   stCheer: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5, marginTop: 6 },
   timeBtn: { marginTop: 16, backgroundColor: "#facc15", paddingHorizontal: 28, paddingVertical: 15, borderRadius: 16, minWidth: 240, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  pendingReq: { marginTop: 16, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, minWidth: 240, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
+  pendingReqText: { color: "#e0e7ff", fontWeight: "700", fontSize: 14 },
   timeBtnText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
   timeRow: { marginTop: 16, flexDirection: "row", gap: 10, alignItems: "center" },
   timeChip: { backgroundColor: "#facc15", paddingHorizontal: 22, paddingVertical: 14, borderRadius: 14, minHeight: 48, justifyContent: "center" },
