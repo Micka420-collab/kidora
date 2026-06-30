@@ -15,6 +15,7 @@ type Report = {
   prevTotalSeconds?: number;
   avgPerDaySeconds: number;
   trend: { date: string; seconds: number }[];
+  byHour?: number[];
   topApps: { appName: string; category: string | null; seconds: number }[];
   byCategory: { category: string; seconds: number }[];
   web: { totalVisits: number; blockedVisits: number; topDomains: { domain: string; count: number; blocked: number }[] };
@@ -110,6 +111,25 @@ export default function ReportsTab() {
           ))}
         </div>
       </div>
+
+      {report.byHour && report.byHour.some((n) => n > 0) && (() => {
+        const max = Math.max(1, ...report.byHour!);
+        return (
+          <div className="card p-5">
+            <h3 className="mb-4 text-base font-semibold">{t.byHour}</h3>
+            <div className="flex h-28 items-end gap-[3px]">
+              {report.byHour!.map((n, h) => (
+                <div key={h} className="flex flex-1 flex-col items-center gap-1">
+                  <div className="flex w-full flex-1 items-end">
+                    <div className="w-full rounded-t bg-indigo-400 hover:bg-indigo-500" style={{ height: `${Math.max((n / max) * 100, 2)}%` }} title={`${h}h — ${n}`} />
+                  </div>
+                  {h % 3 === 0 && <span className="text-[9px] text-muted">{h}h</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="card p-5">
