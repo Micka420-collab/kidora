@@ -6,15 +6,9 @@ import { getLocale, getDict } from "@/lib/i18n";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { FamilyPause } from "@/components/family-pause";
 import { Onboarding } from "@/components/onboarding";
+import { ChildrenGrid, type ChildCardData } from "@/components/children-grid";
 import { CATEGORY_META, type Category } from "@/lib/categories";
-import {
-  Smartphone,
-  Clock,
-  ShieldAlert,
-  ArrowRight,
-  Plus,
-  Circle,
-} from "lucide-react";
+import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -53,6 +47,16 @@ export default async function OverviewPage() {
   const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => d.online).length, 0);
   const totalToday = [...usageMap.values()].reduce((a, b) => a + b, 0);
 
+  const childCards: ChildCardData[] = kids.map((k) => ({
+    id: k.id,
+    name: k.name,
+    avatar: k.avatar,
+    paused: k.paused,
+    deviceCount: k.devices.length,
+    onlineCount: k.devices.filter((d) => d.online).length,
+    secondsToday: usageMap.get(k.id) ?? 0,
+  }));
+
   return (
     <div className="space-y-7">
       <div className="flex items-center justify-between">
@@ -81,38 +85,11 @@ export default async function OverviewPage() {
         {kids.length === 0 ? (
           <Onboarding t={tt.onboarding} />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {kids.map((k) => {
-              const secs = usageMap.get(k.id) ?? 0;
-              const online = k.devices.filter((d) => d.online).length;
-              return (
-                <Link key={k.id} href={`/dashboard/children/${k.id}`} className="card group p-5 transition hover:shadow-md">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className="grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-2xl">{k.avatar ?? "🧒"}</span>
-                      <div>
-                        <div className="flex items-center gap-2 font-bold">
-                          {k.name}
-                          {k.paused && <span className="badge bg-amber-100 text-amber-700">⏸ En pause</span>}
-                        </div>
-                        <div className="text-xs text-muted">{k.devices.length} appareil(s) · {online} en ligne</div>
-                      </div>
-                    </div>
-                    <ArrowRight size={18} className="text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-brand-500" />
-                  </div>
-                  <div className="mt-4 flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1.5 text-muted">
-                      <Clock size={15} /> {formatDuration(secs)} aujourd'hui
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted">
-                      <Circle size={9} className={online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300"} />
-                      {online ? "Actif" : "Hors ligne"}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <ChildrenGrid
+            items={childCards}
+            searchPlaceholder={tt.overview.searchChildren}
+            noMatch={tt.overview.noChildMatch}
+          />
         )}
       </div>
 
