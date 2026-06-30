@@ -20,6 +20,8 @@ type Report = {
   alerts: { total: number; byType: { type: string; count: number }[] };
 };
 
+const DAYS_KEY = "kidora_report_days";
+
 export default function ReportsTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t: tr } = useT();
@@ -28,6 +30,17 @@ export default function ReportsTab() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  // Restore the parent's preferred range on mount (effect → no SSR/hydration risk).
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(DAYS_KEY));
+    if ([7, 14, 30].includes(saved)) setDays(saved);
+  }, []);
+
+  function chooseDays(d: number) {
+    setDays(d);
+    try { localStorage.setItem(DAYS_KEY, String(d)); } catch { /* storage unavailable */ }
+  }
 
   const load = useCallback(() => {
     setLoading(true);
@@ -68,7 +81,7 @@ export default function ReportsTab() {
       <div className="flex items-center justify-between">
         <div className="flex gap-1.5">
           {[7, 14, 30].map((d) => (
-            <button key={d} onClick={() => setDays(d)} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${days === d ? "bg-brand-600 text-white" : "border bg-white text-slate-600 hover:bg-slate-50"}`}>
+            <button key={d} onClick={() => chooseDays(d)} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${days === d ? "bg-brand-600 text-white" : "border bg-white text-slate-600 hover:bg-slate-50"}`}>
               {d} {t.days}
             </button>
           ))}
