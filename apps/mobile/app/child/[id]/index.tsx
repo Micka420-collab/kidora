@@ -4,7 +4,7 @@ import { useLocalSearchParams, useFocusEffect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { parent, type Child, type Live, type Report, type ScreenTimeToday } from "@/api";
+import { parent, type Child, type Live, type Report, type ScreenTimeToday, type TimeRequest } from "@/api";
 import { useTheme, formatDuration, relativeTime, categoryMeta, space, radius } from "@/theme";
 import { isDeviceOnline } from "@/device";
 import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Empty, Skeleton, ErrorState } from "@/ui";
@@ -18,6 +18,7 @@ export default function ChildDetail() {
   const [live, setLive] = useState<Live | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [stToday, setStToday] = useState<ScreenTimeToday | null>(null);
+  const [pending, setPending] = useState<TimeRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -26,15 +27,17 @@ export default function ChildDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [chRes, lv, rp] = await Promise.all([
+      const [chRes, lv, rp, tr] = await Promise.all([
         parent.child(id),
         parent.live(id).catch(() => null),
         parent.report(id, 7).catch(() => null),
+        parent.timeRequests(id).catch(() => null),
       ]);
       setChild(chRes.child);
       setStToday(chRes.screenTimeToday ?? null);
       setLive(lv);
       setReport(rp);
+      setPending((tr?.requests ?? []).filter((r) => r.status === "pending"));
       setError(false);
     } catch { setError(true); } finally {
       setLoading(false);
@@ -69,6 +72,9 @@ export default function ChildDetail() {
     ]);
   }
   function grant() { act(() => parent.grantTime(id!, 15), "+15 min accordées."); }
+  function respond(reqId: string, action: "approve" | "deny", minutes: number) {
+    act(() => parent.respondTimeRequest(id!, reqId, action), action === "approve" ? `+${minutes} min accordées.` : "Demande refusée.");
+  }
 
   const todaySeconds = report?.trend?.length ? report.trend[report.trend.length - 1].seconds : 0;
 
@@ -120,6 +126,30 @@ export default function ChildDetail() {
               <Action icon="chatbubble" label="Message" onPress={message} disabled={busy} />
               <Action icon="add-circle" label="+15 min" onPress={grant} disabled={busy} />
             </View>
+
+            {/* pending time requests (approve the exact amount the child asked for) */}
+            {pending.length > 0 && (
+              <View style={{ gap: space.sm }}>
+                <H2>Demandes de temps</H2>
+                {pending.map((r) => (
+                  <Card key={r.id}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
+                      <IconBubble icon="time" color={c.warn} size={38} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "800", color: c.text }}>+{r.minutes} min demandées</Text>
+                        {r.reason ? <Muted numberOfLines={1}>{r.reason}</Muted> : null}
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>
+                      <View style={{ flex: 1 }}>
+                        <Btn title={`Accorder +${r.minutes} min`} onPress={() => respond(r.id, "approve", r.minutes)} disabled={busy} full />
+                      </View>
+                      <Btn title="Refuser" variant="ghost" onPress={() => respond(r.id, "deny", r.minutes)} disabled={busy} />
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            )}
 
             {/* stats */}
             <View style={{ flexDirection: "row", gap: space.sm }}>
