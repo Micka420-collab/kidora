@@ -23,17 +23,23 @@ export function TimeRequestsCard({ childId }: { childId: string }) {
 
   async function grant(minutes: number) {
     setBusy(true);
-    await api.post(`/api/children/${childId}/time-requests`, { minutes });
-    await load();
-    setBusy(false);
-    router.refresh();
+    try {
+      await api.post(`/api/children/${childId}/time-requests`, { minutes });
+      await load();
+      router.refresh();
+    } finally {
+      setBusy(false); // never leave the buttons stuck disabled on error
+    }
   }
   async function decide(id: string, action: "approve" | "deny") {
     setBusy(true);
-    await api.patch(`/api/children/${childId}/time-requests`, { id, action });
-    await load();
-    setBusy(false);
-    router.refresh();
+    try {
+      await api.patch(`/api/children/${childId}/time-requests`, { id, action });
+      await load();
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   const pending = requests.filter((r) => r.status === "pending");
