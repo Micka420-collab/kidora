@@ -1,9 +1,26 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { accessibleChildWhere } from "@/lib/guard";
+import { isDeviceOnline } from "@/lib/device-status";
 import { ChildHeader } from "@/components/child-header";
 import { ChildTabs } from "@/components/child-tabs";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ childId: string }>;
+}): Promise<Metadata> {
+  const parent = await getCurrentParent();
+  if (!parent) return { title: "Kidora" };
+  const { childId } = await params;
+  const child = await prisma.child.findFirst({
+    where: { id: childId, ...accessibleChildWhere(parent.id) },
+    select: { name: true, avatar: true },
+  });
+  return { title: child ? `${child.avatar ?? "🧒"} ${child.name} · Kidora` : "Kidora" };
+}
 
 export default async function ChildLayout({
   children,
@@ -35,7 +52,7 @@ export default async function ChildLayout({
           id: d.id,
           name: d.name,
           platform: d.platform,
-          online: d.online,
+          online: isDeviceOnline(d),
           battery: d.battery,
         }))}
       />
