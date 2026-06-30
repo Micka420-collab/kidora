@@ -28,6 +28,24 @@
 - [x] **Onboarding guidé** : assistant 3 étapes (bilingue) pour les nouveaux comptes sur la vue d'ensemble
 - [~] **Refonte UX app Android** — deux apps séparées, mode sombre, minSdk 23, a11y ; **animations & effets** (dégradés `expo-linear-gradient`, fondu d'entrée, bouclier pulsant, bouton SOS animé) ; **app Parents entièrement repensée** : design system clair/sombre (`src/theme.ts` + `src/ui.tsx`), navigation par onglets, Accueil avec cartes enfants *live* (app en cours, batterie, présence pulsante via `/live`), détail enfant (stats, tendance 7 j, top apps, localisation, actions distantes pause/verrou/message/+15 min), flux d'alertes, connexion redessinée ; typecheck vert · *rendu à vérifier via EAS/appareil*
 
+## 📱 Parité app parent ⇄ web — quasi complète (2026-06-30)
+Tout se pilote désormais depuis l'app **Kidora Parents** (Expo/RN), à parité avec le dashboard web. Chaque item vérifié `apps/mobile tsc` vert, un PR à la fois, `main` resté vert.
+- [x] **Préférences de notification** (#188) : muter les catégories d'alerte depuis les Réglages (GET `/api/account/notifications` ajouté ; sécurité toujours active)
+- [x] **2FA / TOTP** (#189) : activer (QR + secret + code) / désactiver (champ inline cross-plateforme, pas d'`Alert.prompt` iOS-only)
+- [x] **Historique de navigation web** (#190) : écran par enfant (catégorie, badge bloqué, ouvrir le site)
+- [x] **Localisation : historique + zones** (#191) : position actuelle (badge dans/hors zone, précision), liste des géofences, timeline des pings, ouverture OpenStreetMap (haversine local)
+- [x] **Carte appareils** (#192) : par appareil — plateforme, en ligne (récence), dernière activité, batterie
+- [x] **Activité par heure** (#193) : histogramme 24 h + heure de pointe + fil d'évènements (logique `hourly.ts` reprise en local)
+- [x] **Édition du temps d'écran** (#194) : interrupteur + préréglages « tous les jours » + stepper par jour (préserve les heures du coucher)
+- [x] **Édition du filtrage web** (#195) : SafeSearch, bloquer sites inconnus, catégories (sensibles/optionnelles)
+- [x] **Règles d'applications** (#196) : sélecteur Autorisée/Limitée/Bloquée + limite quotidienne + usage du jour (PUT optimiste)
+- [x] **Mots-clés sensibles** (#197) : ajout libre + suggestions à risque, suppression optimiste
+- [x] **Routines** (#198) : activer/désactiver/supprimer les profils horaires (création détaillée sur le web)
+- [x] **Zones de sécurité** (#199) : créer une géofence à la position actuelle + suppression
+- [x] **Co-parents / multi-tuteurs** (#202) : lister, inviter par email, révoquer depuis les Réglages
+- [x] **Famille en pause programmée** + **changement d'email** (sessions précédentes #186/#187)
+- [x] **Doc** (#200) section README « Application parent (mobile) » · **CI** (#201) `checkout`/`setup-node` → v5 (fin de la déprécation Node 20)
+
 ## 🏅 Niveau pro / expert (directive 2026-06-29)
 - [x] **CI GitHub Actions** : typecheck + tests + build à chaque push/PR (badge dans le README)
 - [x] Mode sombre **web** (dashboard) — variables CSS + overrides ciblés, bascule persistée par cookie, SSR sans flash ; **badges/teintes `-100` corrigés en sombre** (fonds profonds + texte éclairci, contraste AA)
