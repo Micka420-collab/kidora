@@ -4,7 +4,7 @@ import { useLocalSearchParams, useFocusEffect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { parent, type Child, type Live, type Report } from "@/api";
+import { parent, type Child, type Live, type Report, type ScreenTimeToday } from "@/api";
 import { useTheme, formatDuration, relativeTime, categoryMeta, space, radius } from "@/theme";
 import { isDeviceOnline } from "@/device";
 import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Empty, Skeleton, ErrorState } from "@/ui";
@@ -17,6 +17,7 @@ export default function ChildDetail() {
   const [child, setChild] = useState<Child | null>(null);
   const [live, setLive] = useState<Live | null>(null);
   const [report, setReport] = useState<Report | null>(null);
+  const [stToday, setStToday] = useState<ScreenTimeToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -25,12 +26,13 @@ export default function ChildDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [ch, lv, rp] = await Promise.all([
-        parent.child(id).then((r) => r.child),
+      const [chRes, lv, rp] = await Promise.all([
+        parent.child(id),
         parent.live(id).catch(() => null),
         parent.report(id, 7).catch(() => null),
       ]);
-      setChild(ch);
+      setChild(chRes.child);
+      setStToday(chRes.screenTimeToday ?? null);
       setLive(lv);
       setReport(rp);
       setError(false);
@@ -69,6 +71,12 @@ export default function ChildDetail() {
   function grant() { act(() => parent.grantTime(id!, 15), "+15 min accordées."); }
 
   const todaySeconds = report?.trend?.length ? report.trend[report.trend.length - 1].seconds : 0;
+
+  // Today's screen-time allowance (limit + granted bonus) vs. usage so far.
+  const limitSec = (stToday?.totalMinutes ?? 0) * 60;
+  const usedPct = limitSec > 0 ? Math.min(1, todaySeconds / limitSec) : 0;
+  const remainingSec = Math.max(0, limitSec - todaySeconds);
+  const stColor = usedPct >= 1 ? c.danger : usedPct >= 0.85 ? c.warn : c.success;
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -119,6 +127,25 @@ export default function ChildDetail() {
               <Stat icon="trending-up" value={formatDuration(report?.avgPerDaySeconds ?? 0)} label="Moy./jour" color={c.info} />
               <Stat icon="globe" value={String(report?.web.totalVisits ?? 0)} label={`${report?.web.blockedVisits ?? 0} bloqués`} color={c.warn} />
             </View>
+
+            {/* today's screen-time allowance */}
+            {limitSec > 0 && (
+              <Card>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm }}>
+                  <H2>Temps d&apos;écran aujourd&apos;hui</H2>
+                  <Text style={{ fontWeight: "800", color: stColor }}>
+                    {remainingSec > 0 ? `${formatDuration(remainingSec)} restant` : "Limite atteinte"}
+                  </Text>
+                </View>
+                <View style={{ marginTop: space.md }}>
+                  <Bar value={usedPct} color={stColor} />
+                </View>
+                <Muted style={{ marginTop: 6 }}>
+                  {formatDuration(todaySeconds)} / {formatDuration(limitSec)}
+                  {stToday && stToday.bonusMinutes > 0 ? ` · +${stToday.bonusMinutes} min bonus` : ""}
+                </Muted>
+              </Card>
+            )}
 
             {/* videos + messages shortcuts */}
             <View style={{ flexDirection: "row", gap: space.sm }}>
