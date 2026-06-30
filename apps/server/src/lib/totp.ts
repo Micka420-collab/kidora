@@ -1,4 +1,11 @@
-import { createHmac, randomBytes } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
+/** Constant-time string equality (avoids leaking digit matches via timing). */
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && timingSafeEqual(ab, bb);
+}
 
 // RFC 6238 TOTP (Google Authenticator compatible) — dependency-free.
 // SHA-1, 6 digits, 30s period. Secrets are base32 (RFC 4648, no padding).
@@ -55,7 +62,7 @@ export function verifyTotp(secret: string, token: string, window = 1, now: numbe
   if (!secret || !/^\d{6}$/.test((token || "").trim())) return false;
   const t = token.trim();
   for (let w = -window; w <= window; w++) {
-    if (totp(secret, now + w * 30 * 1000) === t) return true;
+    if (safeEqual(totp(secret, now + w * 30 * 1000), t)) return true;
   }
   return false;
 }
