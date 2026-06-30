@@ -191,11 +191,12 @@ export default function ChildDetail() {
               </Card>
             )}
 
-            {/* videos + messages shortcuts */}
+            {/* videos + messages + web history shortcuts */}
             <View style={{ flexDirection: "row", gap: space.sm }}>
               <NavCard icon="logo-youtube" color="#ef4444" label="Vidéos YouTube" onPress={() => router.push(`/child/${id}/videos`)} />
               <NavCard icon="chatbubbles" color={c.primary} label="Messages" onPress={() => router.push(`/child/${id}/messages`)} />
             </View>
+            <NavCard icon="globe" color={c.info} label="Historique de navigation web" onPress={() => router.push(`/child/${id}/web`)} />
 
             {/* weekly trend */}
             <Card>
