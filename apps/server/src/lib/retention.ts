@@ -69,5 +69,15 @@ export async function purgeOldTelemetry(
     () => prisma.appUsage.count({ where: dateWhere }),
     () => prisma.appUsage.deleteMany({ where: dateWhere }));
 
+  // Old *read* alerts (unread are always kept) and old handled commands.
+  const readAlertWhere = { read: true, ts: { lt: cutoff } };
+  await run("alertRead",
+    () => prisma.alert.count({ where: readAlertWhere }),
+    () => prisma.alert.deleteMany({ where: readAlertWhere }));
+  const doneCmdWhere = { status: { not: "pending" }, createdAt: { lt: cutoff } };
+  await run("commandDone",
+    () => prisma.command.count({ where: doneCmdWhere }),
+    () => prisma.command.deleteMany({ where: doneCmdWhere }));
+
   return results;
 }
