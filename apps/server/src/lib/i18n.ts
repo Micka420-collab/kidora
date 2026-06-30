@@ -114,6 +114,9 @@ const fr = {
     keywordsDesc: "Recevez une alerte si l'un de ces mots apparaît dans les recherches ou les titres de pages. Une liste de termes à risque (automutilation, violence…) est déjà surveillée par défaut.",
     keywordPlaceholder: "ex : nom d'un jeu, sujet sensible…",
     noKeywords: "Aucun mot-clé personnalisé.",
+    history: "Historique de navigation récent",
+    historyDesc: "Les derniers sites visités (les blocages sont signalés).",
+    noHistory: "Aucune visite enregistrée pour l'instant.",
   },
   screen: {
     limits: "Limites de temps d'écran",
@@ -319,6 +322,9 @@ const en: typeof fr = {
     keywordsDesc: "Get an alert if one of these words appears in searches or page titles. A built-in list of risky terms (self-harm, violence…) is already monitored.",
     keywordPlaceholder: "e.g. a game name, a sensitive topic…",
     noKeywords: "No custom keyword.",
+    history: "Recent browsing history",
+    historyDesc: "The most recently visited sites (blocks are flagged).",
+    noHistory: "No visits recorded yet.",
   },
   screen: {
     limits: "Screen time limits",
