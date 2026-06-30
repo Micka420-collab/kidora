@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { childAgent } from "@/api";
 import { formatDuration } from "@/theme";
+import { isBedtimeNow } from "@/schedule";
 import * as storage from "@/storage";
 import * as AppUsage from "../modules/app-usage";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
@@ -19,6 +20,7 @@ export default function ChildMode() {
   const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
   const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
   const [limitMin, setLimitMin] = useState(0); // today's screen-time limit (+ bonus), 0 = none
+  const [bedtime, setBedtime] = useState(false);
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -100,6 +102,7 @@ export default function ChildMode() {
       const st = res.policy.screenTime;
       const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
       setLimitMin(st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) + (st.bonusMinutesToday ?? 0) : 0);
+      setBedtime(isBedtimeNow(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
       setStatus(res.policy.paused ? "⏸ Mis en pause par un parent" : "Protection active 🛡️");
     } catch (e) {
@@ -178,9 +181,15 @@ export default function ChildMode() {
           <Text style={[s.badgeText, { color: paused ? "#b45309" : active ? "#15803d" : "#b91c1c" }]}>{status}</Text>
         </View>
 
+        {bedtime && !paused && (
+          <View style={s.bedtime}>
+            <Text style={s.bedtimeText}>🌙  C'est l'heure de dormir — repose-toi bien</Text>
+          </View>
+        )}
+
         <View style={s.shieldWrap}>
           <Animated.View style={[s.halo, haloStyle]} />
-          <Text style={s.shield}>{paused ? "⏸" : "🛡️"}</Text>
+          <Text style={s.shield}>{paused ? "⏸" : bedtime ? "🌙" : "🛡️"}</Text>
         </View>
 
         <Text style={s.title}>{paused ? "Pause demandée par un parent" : "Tu es protégé·e ✨"}</Text>
@@ -285,6 +294,8 @@ const s = StyleSheet.create({
   sos: { marginTop: 28, backgroundColor: "#ef4444", paddingHorizontal: 44, paddingVertical: 20, borderRadius: 18, alignItems: "center", minWidth: 240, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   sosText: { color: "#fff", fontWeight: "800", fontSize: 26, letterSpacing: 1 },
   sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
+  bedtime: { marginBottom: 22, backgroundColor: "rgba(199,210,254,0.16)", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(199,210,254,0.35)" },
+  bedtimeText: { color: "#e0e7ff", fontWeight: "700", fontSize: 14 },
   chip: { marginTop: 18, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   chipText: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5 },
   stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
