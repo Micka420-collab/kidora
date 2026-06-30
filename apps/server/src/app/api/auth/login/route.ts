@@ -9,7 +9,7 @@ import { rateLimit, clientIp, loginLockStatus, recordLoginFailure, clearLoginFai
 import { audit } from "@/lib/audit";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
   password: z.string().min(1),
   code: z.string().optional(), // TOTP code, required when 2FA is enabled
 });
