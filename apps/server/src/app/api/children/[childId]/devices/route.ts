@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { randomToken } from "@/lib/password";
+import { sortDevicesByActivity } from "@/lib/devices-sort";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -16,7 +17,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       where: { childId },
       orderBy: { createdAt: "asc" },
     });
-    return json({ devices });
+    // Surface the most relevant devices first: online, then recently seen.
+    return json({ devices: sortDevicesByActivity(devices) });
   });
 }
 
