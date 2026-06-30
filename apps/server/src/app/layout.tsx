@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { cookies } from "next/headers";
+import { isLocale, LOCALE_COOKIE } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,11 +18,13 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const theme = (await cookies()).get("kidora_theme")?.value;
-  const dark = theme === "dark";
+  const jar = await cookies();
+  const dark = jar.get("kidora_theme")?.value === "dark";
+  const localeCookie = jar.get(LOCALE_COOKIE)?.value;
+  const lang = isLocale(localeCookie) ? localeCookie : "fr";
   return (
     <html
-      lang="fr"
+      lang={lang}
       className={`${geistSans.variable} h-full antialiased${dark ? " dark" : ""}`}
     >
       <body className="min-h-full">{children}</body>
