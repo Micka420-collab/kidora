@@ -23,6 +23,12 @@ describe("formatDuration", () => {
     expect(formatDuration(5400)).toBe("1 h 30 min");
     expect(formatDuration(3660)).toBe("1 h 1 min");
   });
+
+  it("never renders a 60-minute part at hour boundaries (regression)", () => {
+    expect(formatDuration(3599)).toBe("1 h"); // was "60 min"
+    expect(formatDuration(7199)).toBe("2 h"); // was "1 h 60 min"
+    expect(formatDuration(86399)).toBe("24 h"); // was "23 h 60 min"
+  });
 });
 
 describe("formatMinutes", () => {

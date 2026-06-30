@@ -82,8 +82,11 @@ export function useTheme() {
 // ── Formatting helpers ──────────────────────────────────────────────────
 export function formatDuration(seconds: number): string {
   if (!seconds || seconds < 0) return "0 min";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
+  // Round to whole minutes first, then split (rounding the minute part alone
+  // could yield 60 → "1 h 60" / "60 min").
+  const totalMin = Math.round(seconds / 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   if (h && m) return `${h} h ${m}`;
   if (h) return `${h} h`;
   return `${m} min`;
