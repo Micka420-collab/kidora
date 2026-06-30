@@ -247,6 +247,7 @@ export default function ChildDetail() {
               <NavCard icon="hourglass" color={c.primary} label="Temps d'écran" onPress={() => router.push(`/child/${id}/screentime`)} />
               <NavCard icon="shield-half" color={c.warn} label="Filtrage web" onPress={() => router.push(`/child/${id}/webfilter`)} />
             </View>
+            <NavCard icon="apps" color="#8b5cf6" label="Règles des applications" onPress={() => router.push(`/child/${id}/apps`)} />
 
             {/* weekly trend */}
             <Card>
