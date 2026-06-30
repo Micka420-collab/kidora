@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { accessibleChildWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { VerifyEmailBanner } from "@/components/verify-email-banner";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ToastProvider } from "@/components/toast";
 
@@ -42,6 +43,7 @@ export default async function DashboardLayout({
           kids={kids}
           unread={unread}
         >
+          {!parent.emailVerified && <VerifyEmailBanner />}
           {children}
         </DashboardShell>
       </ToastProvider>
