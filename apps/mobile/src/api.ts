@@ -61,6 +61,9 @@ export const parent = {
   async messages(id: string) {
     return req<{ messages: Message[] }>(`/api/children/${id}/messages`, { headers: await this.authHeader() });
   },
+  async webVisits(id: string, take = 100) {
+    return req<{ visits: WebVisit[] }>(`/api/children/${id}/web-visits?take=${take}`, { headers: await this.authHeader() });
+  },
   async alerts() {
     return req<{ alerts: Alert[]; unread: number }>("/api/alerts", { headers: await this.authHeader() });
   },
@@ -184,6 +187,7 @@ export type Report = {
 };
 export type Video = { id: string; title: string; channel: string | null; url: string | null; source: string; platform: string; ts: string };
 export type Message = { id: string; app: string; direction: "in" | "out"; contact: string | null; body: string; ts: string };
+export type WebVisit = { id: string; domain: string; url: string | null; title: string | null; category: string | null; blocked: boolean; ts: string };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {
