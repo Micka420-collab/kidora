@@ -148,6 +148,11 @@ export function Landing() {
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#0b1020] text-white">
+      {/* skip link (keyboard / screen-reader) */}
+      <a href="#content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-bold focus:text-brand-700">
+        Aller au contenu
+      </a>
+
       {/* scroll progress */}
       <motion.div style={{ scaleX: progress }} className="fixed inset-x-0 top-0 z-50 h-1 origin-left bg-gradient-to-r from-brand-400 via-fuchsia-400 to-amber-300" />
 
@@ -223,7 +228,7 @@ export function Landing() {
       </header>
 
       {/* hero */}
-      <section ref={heroRef} className="relative mx-auto max-w-6xl px-6 pt-12 pb-24 text-center [perspective:1200px]">
+      <section id="content" ref={heroRef} tabIndex={-1} className="relative mx-auto max-w-6xl scroll-mt-20 px-6 pt-12 pb-24 text-center outline-none [perspective:1200px]">
         {/* live WebGL orb behind the hero (decorative, client-only) */}
         {!reduce && (
           <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[34rem] opacity-60 [mask-image:radial-gradient(58%_58%_at_50%_38%,black,transparent)]">
@@ -504,7 +509,7 @@ export function Landing() {
             </ul>
           </div>
         </div>
-        <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-2 border-t border-white/10 px-6 pt-6 text-xs text-white/40 sm:flex-row">
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-2 border-t border-white/10 px-6 pt-6 text-xs text-white/55 sm:flex-row">
           <span>© Kidora — Conçu pour les familles. 🛡️</span>
           <span>Outil de contrôle parental — usage autorisé entre parent et enfant mineur.</span>
         </div>
