@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
@@ -9,6 +10,7 @@ import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow } from 
 
 type Alert = {
   id: string;
+  childId: string;
   type: string;
   severity: string;
   message: string;
@@ -122,13 +124,15 @@ export default function AlertsPage() {
             const tint = a.severity === "critical" ? "bg-red-50 text-red-500" : a.severity === "warning" ? "bg-amber-50 text-amber-500" : "bg-brand-50 text-brand-500";
             return (
               <div key={a.id} className={`flex items-center gap-3 p-4 ${a.read ? "" : "bg-brand-50/30"}`}>
-                <span className={`grid h-10 w-10 place-items-center rounded-lg ${tint}`}><Icon size={18} /></span>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{a.message}</div>
-                  <div className="text-xs text-muted">{a.child.avatar ?? "🧒"} {a.child.name} · {relativeTime(a.ts)}</div>
-                </div>
+                <Link href={`/dashboard/children/${a.childId}`} className="group flex min-w-0 flex-1 items-center gap-3">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${tint}`}><Icon size={18} /></span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium group-hover:text-brand-700">{a.message}</div>
+                    <div className="text-xs text-muted">{a.child.avatar ?? "🧒"} {a.child.name} · {relativeTime(a.ts)}</div>
+                  </div>
+                </Link>
                 {!a.read && (
-                  <button className="text-xs font-semibold text-brand-600 hover:underline" onClick={() => markOne(a.id)}>
+                  <button className="shrink-0 text-xs font-semibold text-brand-600 hover:underline" onClick={() => markOne(a.id)}>
                     {t.alerts.markRead}
                   </button>
                 )}
