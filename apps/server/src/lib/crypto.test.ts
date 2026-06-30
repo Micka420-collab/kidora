@@ -19,10 +19,17 @@ describe("crypto (AES-256-GCM at rest)", () => {
     expect(isEncrypted("not-encrypted")).toBe(false);
   });
 
-  it("returns input on tampered ciphertext (no throw)", () => {
+  it("does not return the plaintext for tampered ciphertext (GCM auth)", () => {
     const enc = encrypt("secret");
     const tampered = enc.slice(0, -4) + "AAAA";
-    // either decodes wrong or returns as-is, but must not throw
     expect(() => decrypt(tampered)).not.toThrow();
+    // Auth-tag failure must NOT yield the original plaintext.
+    expect(decrypt(tampered)).not.toBe("secret");
+  });
+
+  it("round-trips unicode and empty strings", () => {
+    for (const s of ["", "Léa 🧒 café — naïve", "a".repeat(5000)]) {
+      expect(decrypt(encrypt(s))).toBe(s);
+    }
   });
 });

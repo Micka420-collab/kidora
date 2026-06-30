@@ -66,4 +66,22 @@ describe("renderWeeklyEmail", () => {
     const { html } = renderWeeklyEmail("P", empty, 7);
     expect(html).toContain("Aucune app enregistrée");
   });
+
+  it("includes a dashboard CTA only when APP_URL is set (and escapes it)", () => {
+    const prev = process.env.APP_URL;
+    try {
+      process.env.APP_URL = 'https://k.example/"x';
+      const withCta = renderWeeklyEmail("P", items, 7).html;
+      expect(withCta).toContain("Ouvrir le tableau de bord");
+      expect(withCta).toContain("https://k.example/&quot;x/dashboard"); // url escaped
+      expect(withCta).not.toContain('"x/dashboard'); // raw quote must not leak
+
+      delete process.env.APP_URL;
+      const noCta = renderWeeklyEmail("P", items, 7).html;
+      expect(noCta).not.toContain("Ouvrir le tableau de bord");
+    } finally {
+      if (prev === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = prev;
+    }
+  });
 });
