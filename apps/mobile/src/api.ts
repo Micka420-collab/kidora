@@ -92,6 +92,12 @@ export const parent = {
   async changeEmail(email: string, currentPassword: string) {
     return req<{ ok: true; email: string }>("/api/account/email", { method: "POST", body: { email, currentPassword }, headers: await this.authHeader() });
   },
+  async notificationPrefs() {
+    return req<{ mutedTypes: string[]; mutableTypes: string[] }>("/api/account/notifications", { headers: await this.authHeader() });
+  },
+  async setNotificationPrefs(mutedTypes: string[]) {
+    return req<{ ok: true; mutedTypes: string[] }>("/api/account/notifications", { method: "PATCH", body: { mutedTypes }, headers: await this.authHeader() });
+  },
   async insights() {
     return req<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number }>("/api/insights", { headers: await this.authHeader() });
   },
