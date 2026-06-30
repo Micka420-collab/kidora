@@ -6,6 +6,7 @@ import { json, apiError, readJson } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { generateSecret, verifyTotp, otpauthURL } from "@/lib/totp";
 import { encrypt, decrypt } from "@/lib/crypto";
+import { generateBackupCodes, consumeBackupCode, parseBackupHashes } from "@/lib/backup-codes";
 import { rateLimit } from "@/lib/ratelimit";
 import { audit } from "@/lib/audit";
 
@@ -62,17 +63,29 @@ export async function POST(req: NextRequest) {
     if (action === "verify") {
       if (!parent.totpSecret) return apiError("Commencez par configurer la 2FA.", 400);
       if (!verifyTotp(decrypt(parent.totpSecret), code ?? "")) return apiError("Code invalide. Réessayez.", 401);
-      await prisma.parent.update({ where: { id: parent.id }, data: { totpEnabled: true } });
+      // Issue one-time recovery codes (shown once) so a lost authenticator can't
+      // lock the parent out. Stored as hashes; the plaintext is returned here only.
+      const { codes, hashes } = generateBackupCodes(8);
+      await prisma.parent.update({
+        where: { id: parent.id },
+        data: { totpEnabled: true, totpBackupCodes: JSON.stringify(hashes) },
+      });
       await audit(parent.id, "2fa.enable");
-      return json({ enabled: true });
+      return json({ enabled: true, backupCodes: codes });
     }
 
-    // disable — require a valid current code to turn it off.
+    // disable — accept a current TOTP code OR a backup code (so a lost
+    // authenticator can still turn 2FA off using a recovery code).
     if (!parent.totpEnabled) return json({ enabled: false });
-    if (!parent.totpSecret || !verifyTotp(decrypt(parent.totpSecret), code ?? "")) {
+    const totpOk = !!parent.totpSecret && verifyTotp(decrypt(parent.totpSecret), code ?? "");
+    const backupOk = consumeBackupCode(code ?? "", parseBackupHashes(parent.totpBackupCodes)) !== null;
+    if (!totpOk && !backupOk) {
       return apiError("Code invalide.", 401);
     }
-    await prisma.parent.update({ where: { id: parent.id }, data: { totpEnabled: false, totpSecret: null } });
+    await prisma.parent.update({
+      where: { id: parent.id },
+      data: { totpEnabled: false, totpSecret: null, totpBackupCodes: "[]" },
+    });
     await audit(parent.id, "2fa.disable");
     return json({ enabled: false });
   });

@@ -175,7 +175,7 @@ export const parent = {
     return req<{ secret: string; otpauth: string; qr: string }>("/api/account/2fa", { method: "POST", body: { action: "enroll" }, headers: await this.authHeader() });
   },
   async twoFactorVerify(code: string) {
-    return req<{ enabled: boolean }>("/api/account/2fa", { method: "POST", body: { action: "verify", code }, headers: await this.authHeader() });
+    return req<{ enabled: boolean; backupCodes?: string[] }>("/api/account/2fa", { method: "POST", body: { action: "verify", code }, headers: await this.authHeader() });
   },
   async twoFactorDisable(code: string) {
     return req<{ enabled: boolean }>("/api/account/2fa", { method: "POST", body: { action: "disable", code }, headers: await this.authHeader() });
