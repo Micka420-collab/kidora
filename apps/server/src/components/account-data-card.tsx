@@ -8,6 +8,8 @@ export function AccountDataCard() {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +20,7 @@ export function AccountDataCard() {
       const res = await fetch("/api/account", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: confirmText }),
+        body: JSON.stringify({ confirm: confirmText, password, code: code || undefined }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -52,14 +54,18 @@ export function AccountDataCard() {
           </button>
         ) : (
           <div className="mt-3 space-y-2">
+            <label className="label text-red-700">Mot de passe actuel</label>
+            <input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Votre mot de passe" autoComplete="current-password" />
+            <label className="label text-red-700">Code 2FA (si activée)</label>
+            <input className="input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" inputMode="numeric" />
             <label className="label text-red-700">Tapez « SUPPRIMER » pour confirmer</label>
             <input className="input" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="SUPPRIMER" />
             {error && <div className="text-sm text-red-600">{error}</div>}
             <div className="flex gap-2">
-              <button className="btn btn-danger" disabled={busy || confirmText !== "SUPPRIMER"} onClick={deleteAccount}>
+              <button className="btn btn-danger" disabled={busy || confirmText !== "SUPPRIMER" || password.length < 1} onClick={deleteAccount}>
                 {busy && <Loader2 size={16} className="spinner" />} Confirmer la suppression
               </button>
-              <button className="btn btn-ghost" onClick={() => { setConfirming(false); setConfirmText(""); setError(null); }}>Annuler</button>
+              <button className="btn btn-ghost" onClick={() => { setConfirming(false); setConfirmText(""); setPassword(""); setCode(""); setError(null); }}>Annuler</button>
             </div>
           </div>
         )}
