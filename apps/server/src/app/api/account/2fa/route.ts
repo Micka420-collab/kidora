@@ -29,6 +29,13 @@ export async function POST(req: NextRequest) {
     const { action, code } = parsed.data;
 
     if (action === "enroll") {
+      // Refuse re-enrollment while 2FA is active: otherwise enroll would
+      // overwrite the live secret and flip totpEnabled off with no code check,
+      // silently neutralizing 2FA (the code-gated `disable` path is the only
+      // way to turn it off). The UI only offers enroll when 2FA is disabled.
+      if (parent.totpEnabled) {
+        return apiError("La 2FA est déjà active. Désactivez-la d'abord pour la reconfigurer.", 400);
+      }
       // Generate a fresh pending secret (2FA stays disabled until verified).
       const secret = generateSecret();
       await prisma.parent.update({ where: { id: parent.id }, data: { totpSecret: secret, totpEnabled: false } });
