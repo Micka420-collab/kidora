@@ -18,6 +18,7 @@ export default function ChildMode() {
   const [paused, setPaused] = useState(false);
   const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
   const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
+  const [limitMin, setLimitMin] = useState(0); // today's screen-time limit (+ bonus), 0 = none
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -95,6 +96,10 @@ export default function ChildMode() {
         events: [{ type: "location", title: "Position mise à jour" }],
       });
       setPaused(res.policy.paused);
+      // today's screen-time allowance (daily limit for this weekday + bonus granted)
+      const st = res.policy.screenTime;
+      const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
+      setLimitMin(st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) + (st.bonusMinutesToday ?? 0) : 0);
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
       setStatus(res.policy.paused ? "⏸ Mis en pause par un parent" : "Protection active 🛡️");
     } catch (e) {
@@ -153,6 +158,19 @@ export default function ChildMode() {
     opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] }),
   };
 
+  // ── Screen-time logic (kid-friendly) ──
+  const limitSec = limitMin * 60;
+  const hasLimit = limitSec > 0 && usedTodaySec != null;
+  const usedSec = usedTodaySec ?? 0;
+  const remainingSec = hasLimit ? Math.max(0, limitSec - usedSec) : 0;
+  const usedPct = hasLimit ? Math.min(1, usedSec / limitSec) : 0;
+  const barColor = usedPct >= 1 ? "#f87171" : usedPct >= 0.85 ? "#fbbf24" : "#34d399";
+  const cheer =
+    remainingSec === 0 ? "Le temps d'écran est fini pour aujourd'hui 🌙"
+    : usedPct < 0.5 ? "Profite bien ! 🎉"
+    : usedPct < 0.85 ? "Encore un peu de temps ⏱"
+    : "Bientôt la fin — pense à une pause 💚";
+
   return (
     <LinearGradient colors={["#4f46e5", "#3730a3", "#1e1b4b"]} style={s.container}>
       <Animated.View style={[s.content, { opacity: fade, transform: [{ translateY: slide }] }]}>
@@ -172,11 +190,20 @@ export default function ChildMode() {
             : "Kidora veille sur toi avec tes parents. Tout va bien — voici ta journée."}
         </Text>
 
-        {usedTodaySec != null && (
+        {hasLimit ? (
+          <View style={s.stCard}>
+            <Text style={s.stRemain}>⏳  Il te reste {formatDuration(remainingSec)}</Text>
+            <View style={s.stTrack}>
+              <View style={[s.stFill, { width: `${Math.round(usedPct * 100)}%`, backgroundColor: barColor }]} />
+            </View>
+            <Text style={s.stMeta}>{formatDuration(usedSec)} sur {formatDuration(limitSec)} aujourd'hui</Text>
+            <Text style={s.stCheer}>{cheer}</Text>
+          </View>
+        ) : usedTodaySec != null ? (
           <View style={s.chip}>
             <Text style={s.chipText}>⏱  Temps d'écran aujourd'hui : {formatDuration(usedTodaySec)}</Text>
           </View>
-        )}
+        ) : null}
 
         <Pressable
           onPress={triggerSOS}
@@ -260,6 +287,12 @@ const s = StyleSheet.create({
   sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
   chip: { marginTop: 18, backgroundColor: "rgba(255,255,255,0.14)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 },
   chipText: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5 },
+  stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
+  stRemain: { color: "#fff", fontWeight: "800", fontSize: 19 },
+  stTrack: { marginTop: 12, width: "100%", height: 12, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.22)", overflow: "hidden" },
+  stFill: { height: "100%", borderRadius: 999 },
+  stMeta: { color: "#c7d2fe", fontSize: 12.5, marginTop: 8 },
+  stCheer: { color: "#e0e7ff", fontWeight: "700", fontSize: 13.5, marginTop: 6 },
   timeBtn: { marginTop: 16, backgroundColor: "#facc15", paddingHorizontal: 28, paddingVertical: 15, borderRadius: 16, minWidth: 240, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
   timeBtnText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
   timeRow: { marginTop: 16, flexDirection: "row", gap: 10, alignItems: "center" },
