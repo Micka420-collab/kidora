@@ -51,6 +51,18 @@ describe("renderWeeklyEmail", () => {
     expect(text).toContain("Visites web : 120 (4 bloquées)");
   });
 
+  it("renders every child and an unsubscribe footer in the text version", () => {
+    const two: ReportItem[] = [
+      { childName: "Léa", report: makeReport() },
+      { childName: "Tom", report: makeReport({ topApps: [] }) },
+    ];
+    const { text } = renderWeeklyEmail("Marie", two, 14);
+    expect(text).toContain("# Léa");
+    expect(text).toContain("# Tom");
+    expect(text).toContain("Top apps : —"); // Tom has no apps
+    expect(text).toMatch(/Désactivez les résumés/);
+  });
+
   it("escapes malicious child/app names in the HTML", () => {
     const evil: ReportItem[] = [
       { childName: "<script>x</script>", report: makeReport({ topApps: [{ appName: "<img src=x>", category: null, seconds: 60 }] }) },
