@@ -142,7 +142,7 @@ export type Report = {
 };
 export type Video = { id: string; title: string; channel: string | null; url: string | null; source: string; platform: string; ts: string };
 export type Message = { id: string; app: string; direction: "in" | "out"; contact: string | null; body: string; ts: string };
-export type Alert = { id: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
+export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = { paused: boolean; blockedDomains: string[]; appRules: unknown[] };
 export type Command = { id: string; type: string; payload: Record<string, unknown> };

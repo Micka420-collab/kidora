@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, Pressable } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, type Alert } from "@/api";
@@ -74,7 +74,11 @@ function AlertItem({ alert }: { alert: Alert }) {
   const meta = alertMeta(alert.type);
   const tone = meta.tone === "danger" ? c.danger : meta.tone === "warn" ? c.warn : c.info;
   return (
-    <Card padded style={alert.read ? undefined : { borderColor: tone + "55", borderWidth: 1 }}>
+    <Card
+      padded
+      onPress={() => router.push(`/child/${alert.childId}`)}
+      style={alert.read ? undefined : { borderColor: tone + "55", borderWidth: 1 }}
+    >
       <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
         <IconBubble icon={meta.icon} color={tone} size={42} />
         <View style={{ flex: 1, gap: 3 }}>
