@@ -70,6 +70,15 @@ export const parent = {
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async keywords(id: string) {
+    return req<{ keywords: WatchedKeyword[] }>(`/api/children/${id}/keywords`, { headers: await this.authHeader() });
+  },
+  async addKeyword(id: string, term: string) {
+    return req<{ keyword: WatchedKeyword }>(`/api/children/${id}/keywords`, { method: "POST", body: { term }, headers: await this.authHeader() });
+  },
+  async deleteKeyword(id: string, keywordId: string) {
+    return req<{ ok: true }>(`/api/children/${id}/keywords?id=${encodeURIComponent(keywordId)}`, { method: "DELETE", headers: await this.authHeader() });
+  },
   async appRules(id: string) {
     return req<{ rules: AppRule[]; usageToday?: Record<string, number> }>(`/api/children/${id}/rules/apps`, { headers: await this.authHeader() });
   },
@@ -221,6 +230,7 @@ export type ActivityEvent = { id: string; type: string; title: string | null; de
 export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtimes: string };
 export type AppAction = "allow" | "block" | "limit";
 export type AppRule = { id: string; appId: string; appName: string; action: AppAction; dailyLimitMinutes: number | null; category: string | null };
+export type WatchedKeyword = { id: string; term: string; createdAt: string };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {
