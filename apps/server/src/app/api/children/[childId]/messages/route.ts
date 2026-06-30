@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { json } from "@/lib/http";
+import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 
 type Ctx = { params: Promise<{ childId: string }> };
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const { childId } = await ctx.params;
     await requireOwnedChild(parent.id, childId);
 
-    const take = Math.min(Math.max(Number(new URL(req.url).searchParams.get("take") ?? 100), 1), 300);
+    const take = clampLimit(new URL(req.url).searchParams.get("take"), 100, 300);
     const messages = await prisma.message.findMany({
       where: { childId },
       orderBy: { ts: "desc" },

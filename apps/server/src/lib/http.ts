@@ -9,6 +9,23 @@ export function apiError(message: string, status = 400): Response {
   return Response.json({ error: message }, { status });
 }
 
+/**
+ * Safely parse a `limit`/`take` query value into a clamped integer. Guards
+ * against missing, non-numeric, negative and oversized values (an unguarded
+ * `take: NaN`/negative would crash the Prisma query).
+ */
+export function clampLimit(
+  raw: string | null | undefined,
+  def: number,
+  max: number,
+  min = 1,
+): number {
+  if (raw == null || raw === "") return def;
+  const n = Math.floor(Number(raw));
+  if (!Number.isFinite(n)) return def;
+  return Math.min(Math.max(n, min), max);
+}
+
 /** Authenticate a device agent via Bearer enrollToken. */
 export async function getDeviceFromRequest(req: NextRequest) {
   const auth = req.headers.get("authorization") ?? "";
