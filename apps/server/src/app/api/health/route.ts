@@ -1,19 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { json } from "@/lib/http";
 
-// GET /api/health — lightweight liveness/readiness probe (public).
+export const dynamic = "force-dynamic";
+
+// GET /api/health — public liveness/readiness probe. Confirms the DB is
+// reachable and reports round-trip latency, without leaking business metrics.
 export async function GET() {
+  const t0 = Date.now();
   try {
-    const [parents, children, devices] = await Promise.all([
-      prisma.parent.count(),
-      prisma.child.count(),
-      prisma.device.count(),
-    ]);
+    await prisma.parent.count(); // cheap DB round-trip
     return json({
       status: "ok",
       version: "1.0.0",
       db: "up",
-      counts: { parents, children, devices },
+      latencyMs: Date.now() - t0,
     });
   } catch {
     return json({ status: "degraded", db: "down" }, { status: 503 });
