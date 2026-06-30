@@ -89,6 +89,9 @@ export const parent = {
   async changePassword(currentPassword: string, newPassword: string) {
     return req<{ ok: true }>("/api/account/password", { method: "POST", body: { currentPassword, newPassword }, headers: await this.authHeader() });
   },
+  async changeEmail(email: string, currentPassword: string) {
+    return req<{ ok: true; email: string }>("/api/account/email", { method: "POST", body: { email, currentPassword }, headers: await this.authHeader() });
+  },
   async insights() {
     return req<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number }>("/api/insights", { headers: await this.authHeader() });
   },

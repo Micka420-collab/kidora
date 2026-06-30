@@ -16,6 +16,9 @@ export default function Settings() {
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPw, setEmailPw] = useState("");
+  const [emailBusy, setEmailBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -36,6 +39,21 @@ export default function Settings() {
       RNAlert.alert("Erreur", e instanceof Error ? e.message : "Impossible de changer le mot de passe");
     } finally {
       setPwBusy(false);
+    }
+  }
+
+  async function changeEmail() {
+    if (!newEmail.includes("@") || emailPw.length < 1) return;
+    setEmailBusy(true);
+    try {
+      await parent.changeEmail(newEmail.trim(), emailPw);
+      setNewEmail("");
+      setEmailPw("");
+      RNAlert.alert("Kidora", "Adresse email mise à jour ✅");
+    } catch (e) {
+      RNAlert.alert("Erreur", e instanceof Error ? e.message : "Impossible de changer l'email");
+    } finally {
+      setEmailBusy(false);
     }
   }
 
@@ -76,6 +94,24 @@ export default function Settings() {
           />
           <View style={{ marginTop: space.md }}>
             <Btn title="Mettre à jour" icon="key" loading={pwBusy} disabled={curPw.length < 1 || newPw.length < 8} onPress={changePassword} full />
+          </View>
+        </Card>
+
+        <Card>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: c.text, marginBottom: 4 }}>✉️ Changer l&apos;adresse email</Text>
+          <Muted>Confirmez avec votre mot de passe actuel.</Muted>
+          <TextInput
+            style={{ marginTop: space.md, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 15 }}
+            placeholder="Nouvelle adresse email" placeholderTextColor={c.textFaint} keyboardType="email-address" autoCapitalize="none"
+            value={newEmail} onChangeText={setNewEmail} accessibilityLabel="Nouvelle adresse email"
+          />
+          <TextInput
+            style={{ marginTop: space.sm, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: radius.md, color: c.text, paddingHorizontal: 14, minHeight: 48, fontSize: 15 }}
+            placeholder="Mot de passe (confirmation)" placeholderTextColor={c.textFaint} secureTextEntry autoCapitalize="none"
+            value={emailPw} onChangeText={setEmailPw} accessibilityLabel="Mot de passe de confirmation"
+          />
+          <View style={{ marginTop: space.md }}>
+            <Btn title="Mettre à jour" icon="mail" loading={emailBusy} disabled={!newEmail.includes("@") || emailPw.length < 1} onPress={changeEmail} full />
           </View>
         </Card>
 
