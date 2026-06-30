@@ -8,7 +8,8 @@
   },
   "scripts": {
     "start": "node agent.js",
-    "enroll": "node agent.js --enroll"
+    "enroll": "node agent.js --enroll",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=18"
