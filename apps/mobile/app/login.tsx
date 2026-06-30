@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, KeyboardAvoidingView, Platform, Alert as RNAlert, ScrollView, Animated, Easing } from "react-native";
+import { View, Text, TextInput, KeyboardAvoidingView, Platform, Alert as RNAlert, ScrollView, Animated, Easing, Pressable } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,6 +17,7 @@ export default function Login() {
   const [server, setServer] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const fade = useRef(new Animated.Value(0)).current;
@@ -76,7 +77,18 @@ export default function Login() {
                   <TextInput style={inputStyle} placeholder="Email" placeholderTextColor={c.textFaint} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="Email" />
                 </Field>
                 <Field icon="lock-closed-outline">
-                  <TextInput style={inputStyle} placeholder="Mot de passe" placeholderTextColor={c.textFaint} secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="Mot de passe" />
+                  <View style={{ flex: 1, position: "relative", justifyContent: "center" }}>
+                    <TextInput style={[inputStyle, { paddingRight: 44 }]} placeholder="Mot de passe" placeholderTextColor={c.textFaint} secureTextEntry={!showPw} value={password} onChangeText={setPassword} accessibilityLabel="Mot de passe" />
+                    <Pressable
+                      onPress={() => setShowPw((v) => !v)}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPw ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                      style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: 44, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Ionicons name={showPw ? "eye-off-outline" : "eye-outline"} size={18} color={c.textFaint} />
+                    </Pressable>
+                  </View>
                 </Field>
               </>
             )}
