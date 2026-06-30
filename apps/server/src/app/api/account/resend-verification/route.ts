@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
     if (!isMailConfigured()) return apiError("L'envoi d'email n'est pas configuré sur ce serveur.", 400);
 
     const token = randomToken(32);
-    await prisma.parent.update({ where: { id: parent.id }, data: { emailVerifyToken: token } });
+    await prisma.parent.update({
+      where: { id: parent.id },
+      data: { emailVerifyToken: token, emailVerifyTokenExpiry: new Date(Date.now() + 24 * 3600_000) },
+    });
     const link = `${siteUrl()}/api/auth/verify-email?token=${token}`;
     await sendMail({
       to: row.email,

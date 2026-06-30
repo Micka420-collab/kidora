@@ -29,6 +29,7 @@ model Parent {
   resetTokenExpiry DateTime? // reset token validity
   emailVerified    Boolean   @default(false) // email confirmed (auto-true when SMTP is off)
   emailVerifyToken String?   @unique // pending email-verification token
+  emailVerifyTokenExpiry DateTime? // verification token validity (24h)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
