@@ -8,6 +8,16 @@ export async function getServer(): Promise<string> {
   return (await storage.get("server")) || DEFAULT_SERVER;
 }
 
+/** Error carrying the HTTP status so callers can tell a real 401 from a 5xx/network blip. */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 async function req<T>(
   path: string,
   opts: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
@@ -22,7 +32,7 @@ async function req<T>(
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error((data as { error?: string }).error ?? `Erreur ${res.status}`);
+  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Erreur ${res.status}`, res.status);
   return data as T;
 }
 

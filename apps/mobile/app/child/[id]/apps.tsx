@@ -39,7 +39,7 @@ export default function Apps() {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Persist a rule change optimistically; revert on failure.
-  async function persist(next: AppRule, prev: AppRule[]) {
+  async function persist(next: AppRule, original: AppRule) {
     if (!id) return;
     setRules((rs) => rs.map((r) => (r.appId === next.appId ? next : r)));
     setSavingId(next.appId);
@@ -51,18 +51,20 @@ export default function Apps() {
         dailyLimitMinutes: next.action === "limit" ? next.dailyLimitMinutes ?? 30 : null,
       });
     } catch {
-      setRules(prev); // revert
+      // Revert ONLY this row — not the whole array — so a failed save can't wipe
+      // an unrelated concurrent edit to another app.
+      setRules((rs) => rs.map((r) => (r.appId === next.appId ? original : r)));
     } finally { setSavingId(null); }
   }
 
   function setAction(rule: AppRule, action: AppAction) {
     if (rule.action === action) return;
     const next: AppRule = { ...rule, action, dailyLimitMinutes: action === "limit" ? rule.dailyLimitMinutes ?? 60 : rule.dailyLimitMinutes };
-    persist(next, rules);
+    persist(next, rule);
   }
   function bumpLimit(rule: AppRule, delta: number) {
     const m = Math.max(0, Math.min(1440, (rule.dailyLimitMinutes ?? 60) + delta));
-    persist({ ...rule, action: "limit", dailyLimitMinutes: m }, rules);
+    persist({ ...rule, action: "limit", dailyLimitMinutes: m }, rule);
   }
 
   return (

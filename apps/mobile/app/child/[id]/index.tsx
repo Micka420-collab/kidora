@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { View, Text, ScrollView, RefreshControl, Pressable, Alert as RNAlert } from "react-native";
 import { useLocalSearchParams, useFocusEffect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -67,11 +67,16 @@ export default function ChildDetail() {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  // Synchronous latch: `busy` state flushes async, so a quick double-tap could
+  // fire a non-idempotent action (e.g. grantTime → +30 instead of +15) twice.
+  const inFlight = useRef(false);
   async function act(fn: () => Promise<unknown>, okMsg?: string) {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     try { await fn(); if (okMsg) RNAlert.alert("Kidora", okMsg); await load(); }
     catch (e) { RNAlert.alert("Erreur", e instanceof Error ? e.message : "Action impossible"); }
-    finally { setBusy(false); }
+    finally { setBusy(false); inFlight.current = false; }
   }
 
   const paused = live?.paused ?? child?.paused ?? false;
