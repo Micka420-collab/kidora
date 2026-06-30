@@ -83,6 +83,9 @@ export const parent = {
   async grantTime(id: string, minutes: number) {
     return req<{ ok: true; granted: number }>(`/api/children/${id}/time-requests`, { method: "POST", body: { minutes }, headers: await this.authHeader() });
   },
+  async changePassword(currentPassword: string, newPassword: string) {
+    return req<{ ok: true }>("/api/account/password", { method: "POST", body: { currentPassword, newPassword }, headers: await this.authHeader() });
+  },
   async timeRequests(id: string) {
     return req<{ requests: TimeRequest[]; bonusMinutesToday: number }>(`/api/children/${id}/time-requests`, { headers: await this.authHeader() });
   },
