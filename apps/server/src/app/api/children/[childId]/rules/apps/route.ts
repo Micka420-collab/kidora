@@ -16,7 +16,16 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       where: { childId },
       orderBy: { appName: "asc" },
     });
-    return json({ rules });
+    // Today's usage per app, so the UI can show "used X / limit".
+    const today = new Date().toISOString().slice(0, 10);
+    const usage = await prisma.appUsage.groupBy({
+      by: ["appId"],
+      where: { childId, date: today },
+      _sum: { seconds: true },
+    });
+    const usageToday: Record<string, number> = {};
+    for (const u of usage) usageToday[u.appId] = u._sum.seconds ?? 0;
+    return json({ rules, usageToday });
   });
 }
 

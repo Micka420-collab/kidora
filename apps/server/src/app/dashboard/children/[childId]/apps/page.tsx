@@ -22,6 +22,7 @@ export default function AppsTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t } = useT();
   const [rules, setRules] = useState<Rule[]>([]);
+  const [usageToday, setUsageToday] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -31,8 +32,9 @@ export default function AppsTab() {
     setLoading(true);
     setError(false);
     try {
-      const res = await api.get<{ rules: Rule[] }>(`/api/children/${childId}/rules/apps`);
+      const res = await api.get<{ rules: Rule[]; usageToday?: Record<string, number> }>(`/api/children/${childId}/rules/apps`);
       setRules(res.rules);
+      setUsageToday(res.usageToday ?? {});
     } catch {
       setError(true);
     } finally {
@@ -110,6 +112,20 @@ export default function AppsTab() {
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{r.appName}</div>
                   <div className="text-xs text-muted">{meta.label} · {r.appId}</div>
+                  {r.action === "limit" && r.dailyLimitMinutes != null && (() => {
+                    const usedMin = Math.round((usageToday[r.appId] ?? 0) / 60);
+                    const limit = Math.max(r.dailyLimitMinutes, 1);
+                    const pct = Math.min(100, Math.round((usedMin / limit) * 100));
+                    const over = usedMin >= r.dailyLimitMinutes;
+                    return (
+                      <div className="mt-1.5 max-w-[14rem]">
+                        <div className="text-xs text-muted">{formatMinutes(usedMin)} / {formatMinutes(r.dailyLimitMinutes)} {t.apps.usedToday}</div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div className={`h-full rounded-full ${over ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {r.action === "limit" && (
