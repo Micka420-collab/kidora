@@ -67,6 +67,9 @@ export const parent = {
   async location(id: string, limit = 50) {
     return req<{ pings: LocationPing[]; latest: LocationPing | null; geofences: Geofence[] }>(`/api/children/${id}/location?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async activity(id: string, limit = 150) {
+    return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
+  },
   async alerts() {
     return req<{ alerts: Alert[]; unread: number }>("/api/alerts", { headers: await this.authHeader() });
   },
@@ -193,6 +196,7 @@ export type Message = { id: string; app: string; direction: "in" | "out"; contac
 export type WebVisit = { id: string; domain: string; url: string | null; title: string | null; category: string | null; blocked: boolean; ts: string };
 export type LocationPing = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
 export type Geofence = { id: string; name: string; lat: number; lng: number; radius: number; notifyOnEnter: boolean; notifyOnExit: boolean };
+export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {
