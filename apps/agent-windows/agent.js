@@ -194,12 +194,18 @@ function buildWeb(policy) {
 
 /** Turn collected DNS blocks into webVisit rows (deduped, capped). */
 function drainBlockedHosts(map) {
-  const rows = [...map.entries()].slice(0, 100).map(([domain, reason]) => ({
-    domain,
-    category: reason && reason.startsWith("category:") ? reason.slice("category:".length) : undefined,
-    blocked: true,
-  }));
-  map.clear();
+  const rows = [];
+  for (const [domain, reason] of map) {
+    if (rows.length >= 100) break;
+    rows.push({
+      domain,
+      category: reason && reason.startsWith("category:") ? reason.slice("category:".length) : undefined,
+      blocked: true,
+    });
+  }
+  // Only clear what we actually drained; the rest carries over to the next sync
+  // (previously map.clear() dropped every block past the first 100).
+  for (const r of rows) map.delete(r.domain);
   return rows;
 }
 
