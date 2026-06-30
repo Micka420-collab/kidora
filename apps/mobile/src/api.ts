@@ -77,6 +77,9 @@ export const parent = {
   async familyPause(paused: boolean) {
     return req<{ paused: boolean; count: number }>("/api/family/pause", { method: "POST", body: { paused }, headers: await this.authHeader() });
   },
+  async familyPauseFor(untilMinutes: number) {
+    return req<{ paused: boolean; count: number }>("/api/family/pause", { method: "POST", body: { untilMinutes }, headers: await this.authHeader() });
+  },
   async command(id: string, type: CommandType, payload?: Record<string, unknown>) {
     return req<{ ok: true }>(`/api/children/${id}/commands`, { method: "POST", body: { type, payload }, headers: await this.authHeader() });
   },

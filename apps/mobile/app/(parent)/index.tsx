@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, Pressable, RefreshControl, ScrollView } from "react-native";
+import { View, Text, Pressable, RefreshControl, ScrollView, Alert as RNAlert } from "react-native";
 import { useFocusEffect, router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,9 +54,19 @@ export default function Home() {
   const onlineCount = kids.filter((k) => k.live?.online ?? k.devices.some((d) => isDeviceOnline(d))).length;
   const allPaused = kids.length > 0 && kids.every((k) => k.live?.paused ?? k.paused);
 
-  async function toggleFamilyPause() {
+  async function runFamily(fn: () => Promise<unknown>) {
     setBusy(true);
-    try { await parent.familyPause(!allPaused); await load(); } finally { setBusy(false); }
+    try { await fn(); await load(); } finally { setBusy(false); }
+  }
+  function toggleFamilyPause() {
+    if (allPaused) { runFamily(() => parent.familyPause(false)); return; }
+    RNAlert.alert("Pause familiale", "Mettre tous les appareils en pause…", [
+      { text: "30 minutes", onPress: () => runFamily(() => parent.familyPauseFor(30)) },
+      { text: "1 heure", onPress: () => runFamily(() => parent.familyPauseFor(60)) },
+      { text: "2 heures", onPress: () => runFamily(() => parent.familyPauseFor(120)) },
+      { text: "Indéfiniment", onPress: () => runFamily(() => parent.familyPause(true)) },
+      { text: "Annuler", style: "cancel" as const },
+    ]);
   }
 
   return (
