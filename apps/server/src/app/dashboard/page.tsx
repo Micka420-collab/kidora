@@ -76,8 +76,8 @@ export default async function OverviewPage() {
       {/* Summary tiles */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Tile icon={Clock} label={tt.overview.screenTimeToday} value={formatDuration(totalToday)} tint="bg-brand-50 text-brand-600" />
-        <Tile icon={Smartphone} label={tt.overview.devicesOnline} value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" />
-        <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" />
+        <Tile icon={Smartphone} label={tt.overview.devicesOnline} value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" href="/dashboard/devices" />
+        <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" href="/dashboard/alerts" />
       </div>
 
       {/* Children */}
@@ -151,9 +151,9 @@ export default async function OverviewPage() {
   );
 }
 
-function Tile({ icon: Icon, label, value, tint }: { icon: typeof Clock; label: string; value: string; tint: string }) {
-  return (
-    <div className="card flex items-center gap-4 p-5">
+function Tile({ icon: Icon, label, value, tint, href }: { icon: typeof Clock; label: string; value: string; tint: string; href?: string }) {
+  const body = (
+    <>
       <div className={`grid h-12 w-12 place-items-center rounded-xl ${tint}`}>
         <Icon size={22} />
       </div>
@@ -161,6 +161,14 @@ function Tile({ icon: Icon, label, value, tint }: { icon: typeof Clock; label: s
         <div className="text-2xl font-bold">{value}</div>
         <div className="text-xs text-muted">{label}</div>
       </div>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="card flex items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
+        {body}
+      </Link>
+    );
+  }
+  return <div className="card flex items-center gap-4 p-5">{body}</div>;
 }
