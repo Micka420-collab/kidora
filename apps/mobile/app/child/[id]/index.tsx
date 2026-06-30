@@ -11,6 +11,11 @@ import { Card, Avatar, PulseDot, Pill, Muted, H2, Stat, Bar, Btn, IconBubble, Em
 
 const WD = ["D", "L", "M", "M", "J", "V", "S"];
 
+function fmtClock(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function ChildDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { c, gradient } = useTheme();
@@ -57,7 +62,16 @@ export default function ChildDetail() {
   const paused = live?.paused ?? child?.paused ?? false;
   const online = live?.online ?? child?.devices.some((d) => isDeviceOnline(d)) ?? false;
 
-  function togglePause() { act(() => parent.pause(id!, !paused)); }
+  function pauseMenu() {
+    if (paused) { act(() => parent.pause(id!, false)); return; }
+    RNAlert.alert("Mettre en pause", "Pour combien de temps ?", [
+      { text: "30 minutes", onPress: () => act(() => parent.pauseFor(id!, 30)) },
+      { text: "1 heure", onPress: () => act(() => parent.pauseFor(id!, 60)) },
+      { text: "2 heures", onPress: () => act(() => parent.pauseFor(id!, 120)) },
+      { text: "Indéfiniment", onPress: () => act(() => parent.pause(id!, true)) },
+      { text: "Annuler", style: "cancel" as const },
+    ]);
+  }
   function lock() {
     RNAlert.alert("Verrouiller l'appareil", "Verrouiller maintenant l'appareil de l'enfant ?", [
       { text: "Annuler", style: "cancel" },
@@ -92,7 +106,7 @@ export default function ChildDetail() {
           <Pressable onPress={() => router.back()} hitSlop={12} accessibilityLabel="Retour" style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: "#ffffff22", alignItems: "center", justifyContent: "center" }}>
             <Ionicons name="chevron-back" size={22} color="#fff" />
           </Pressable>
-          {paused && <Pill label="En pause" tone="warn" icon="pause" />}
+          {paused && <Pill label={live?.pausedUntil ? `Pause · jusqu'à ${fmtClock(live.pausedUntil)}` : "En pause"} tone="warn" icon="pause" />}
         </View>
         <View style={{ alignItems: "center", marginTop: space.sm, gap: 6 }}>
           <Avatar emoji={child?.avatar} size={76} online={online} />
@@ -121,7 +135,7 @@ export default function ChildDetail() {
           <>
             {/* quick actions */}
             <View style={{ flexDirection: "row", gap: space.sm }}>
-              <Action icon={paused ? "play" : "pause"} label={paused ? "Reprendre" : "Pause"} onPress={togglePause} active={paused} disabled={busy} />
+              <Action icon={paused ? "play" : "pause"} label={paused ? "Reprendre" : "Pause"} onPress={pauseMenu} active={paused} disabled={busy} />
               <Action icon="lock-closed" label="Verrouiller" onPress={lock} disabled={busy} />
               <Action icon="chatbubble" label="Message" onPress={message} disabled={busy} />
               <Action icon="add-circle" label="+15 min" onPress={grant} disabled={busy} />

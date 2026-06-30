@@ -41,6 +41,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     return json({
       online: !!onlineDevice,
       paused: isPausedNow(child?.paused ?? false, child?.pausedUntil),
+      pausedUntil: !child?.paused && child?.pausedUntil ? child.pausedUntil.toISOString() : null,
       lastSeen: lastSeen ? new Date(lastSeen).toISOString() : null,
       battery: onlineDevice?.battery ?? devices[0]?.battery ?? null,
       deviceName: onlineDevice?.name ?? null,
