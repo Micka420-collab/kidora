@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
@@ -9,15 +10,29 @@ import { Onboarding } from "@/components/onboarding";
 import { ChildrenGrid, type ChildCardData } from "@/components/children-grid";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { isDeviceOnline } from "@/lib/device-status";
+import { buildInsights, type Insight } from "@/lib/insights";
+import { ymd } from "@/lib/retention";
 import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Date window for the "this week" vs "last week" insights (kept in a helper so
+// the impure Date calls stay out of the component render body).
+function weekWindow() {
+  const now = Date.now();
+  return {
+    d7: ymd(new Date(now - 7 * 86400000)),
+    d14: ymd(new Date(now - 14 * 86400000)),
+    weekAgo: new Date(now - 7 * 86400000),
+  };
+}
+
 export default async function OverviewPage() {
   const parent = (await getCurrentParent())!;
-  const tt = getDict(await getLocale());
+  const locale = await getLocale();
+  const tt = getDict(locale);
   const kids = await prisma.child.findMany({
     where: accessibleChildWhere(parent.id),
     orderBy: { createdAt: "asc" },
@@ -47,6 +62,40 @@ export default async function OverviewPage() {
   const totalDevices = kids.reduce((a, k) => a + k.devices.length, 0);
   const onlineDevices = kids.reduce((a, k) => a + k.devices.filter((d) => isDeviceOnline(d)).length, 0);
   const totalToday = [...usageMap.values()].reduce((a, b) => a + b, 0);
+
+  // ── "This week" family insights (vs. the previous week) ──
+  const childIds = kids.map((k) => k.id);
+  const { d7, d14, weekAgo } = weekWindow();
+  let insights: Insight[] = [];
+  if (childIds.length) {
+    const [thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
+      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
+      prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d14, lt: d7 } } }),
+      prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
+      prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: childIds }, date: { gte: d7 } } }),
+      prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
+    ]);
+    let topCategory: { category: string; seconds: number } | null = null;
+    for (const c of catAgg) {
+      const s = c._sum.seconds ?? 0;
+      if (c.category && s > (topCategory?.seconds ?? 0)) topCategory = { category: c.category, seconds: s };
+    }
+    let busiestDay: { date: string; seconds: number } | null = null;
+    for (const d of dayAgg) {
+      const s = d._sum.seconds ?? 0;
+      if (s > (busiestDay?.seconds ?? 0)) busiestDay = { date: d.date, seconds: s };
+    }
+    insights = buildInsights({
+      thisWeekSeconds: thisWeekAgg._sum.seconds ?? 0,
+      lastWeekSeconds: lastWeekAgg._sum.seconds ?? 0,
+      topCategory,
+      busiestDay,
+      alertsThisWeek,
+    });
+  }
+  const showInsights = insights.some((i) =>
+    i.key === "screenTime" ? i.seconds > 0 : i.key === "alerts" ? i.count > 0 : false,
+  );
 
   const childCards: ChildCardData[] = kids.map((k) => ({
     id: k.id,
@@ -79,6 +128,16 @@ export default async function OverviewPage() {
         <Tile icon={Smartphone} label={tt.overview.devicesOnline} value={`${onlineDevices} / ${totalDevices}`} tint="bg-emerald-50 text-emerald-600" href="/dashboard/devices" />
         <Tile icon={ShieldAlert} label={tt.overview.unreadAlerts} value={String(recentAlerts.filter((a) => !a.read).length)} tint="bg-amber-50 text-amber-600" href="/dashboard/alerts" />
       </div>
+
+      {/* This-week insights */}
+      {showInsights && (
+        <div className="card p-5">
+          <h2 className="mb-4 text-lg font-semibold">{tt.overview.thisWeek}</h2>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {insights.map((i) => <InsightCell key={i.key} insight={i} t={tt.overview} locale={locale} />)}
+          </div>
+        </div>
+      )}
 
       {/* Children */}
       <div>
@@ -171,4 +230,53 @@ function Tile({ icon: Icon, label, value, tint, href }: { icon: typeof Clock; la
     );
   }
   return <div className="card flex items-center gap-4 p-5">{body}</div>;
+}
+
+function InsightCell({ insight, t, locale }: {
+  insight: Insight;
+  t: { iScreenTime: string; iTopCategory: string; iBusiestDay: string; iAlerts: string; iVsLastWeek: string; iStable: string };
+  locale: string;
+}) {
+  const loc = locale === "en" ? "en-US" : "fr-FR";
+  let icon = "📊";
+  let label = "";
+  let value = "";
+  let sub: ReactNode = null;
+
+  if (insight.key === "screenTime") {
+    icon = "⏱️";
+    label = t.iScreenTime;
+    value = formatDuration(insight.seconds);
+    if (insight.deltaPct != null && insight.direction !== "flat") {
+      const up = insight.direction === "up";
+      sub = <span className={up ? "font-medium text-amber-600" : "font-medium text-emerald-600"}>{up ? "▲" : "▼"} {Math.abs(insight.deltaPct)}% {t.iVsLastWeek}</span>;
+    } else {
+      sub = <span className="text-muted">{t.iStable}</span>;
+    }
+  } else if (insight.key === "topCategory") {
+    const meta = CATEGORY_META[insight.category as Category] ?? CATEGORY_META.unknown;
+    icon = meta.emoji;
+    label = t.iTopCategory;
+    value = meta.label;
+    sub = <span className="text-muted">{formatDuration(insight.seconds)}</span>;
+  } else if (insight.key === "busiestDay") {
+    icon = "📅";
+    label = t.iBusiestDay;
+    const wd = new Date(insight.date + "T00:00:00").toLocaleDateString(loc, { weekday: "long" });
+    value = wd.charAt(0).toUpperCase() + wd.slice(1);
+    sub = <span className="text-muted">{formatDuration(insight.seconds)}</span>;
+  } else {
+    icon = "🔔";
+    label = t.iAlerts;
+    value = String(insight.count);
+  }
+
+  return (
+    <div>
+      <div className="text-2xl">{icon}</div>
+      <div className="mt-1 text-xs text-muted">{label}</div>
+      <div className="text-lg font-bold leading-tight">{value}</div>
+      {sub && <div className="mt-0.5 text-xs">{sub}</div>}
+    </div>
+  );
 }
