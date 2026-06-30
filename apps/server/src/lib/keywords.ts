@@ -49,6 +49,21 @@ function normalize(s: string): string {
     .replace(/[̀-ͯ]/g, ""); // strip accents for robust matching
 }
 
+// Short acronym/token terms that must match as *whole words*, otherwise they
+// fire inside innocent words — e.g. "kys" must not match "kyste" (a cyst) or
+// "skys", and "xxx" should not match arbitrary substrings.
+const WHOLE_WORD = new Set(["kys", "xxx", "mdma"]);
+
+/** Does normalized `hay` contain `normTerm`? Whole-word for short acronyms. */
+function termMatches(hay: string, normTerm: string): boolean {
+  if (!normTerm) return false;
+  if (WHOLE_WORD.has(normTerm)) {
+    // \b is fine here: hay is already lowercased & accent-stripped.
+    return new RegExp(`\\b${normTerm}\\b`).test(hay);
+  }
+  return hay.includes(normTerm);
+}
+
 /**
  * Scan free text against built-in + custom watch terms.
  * `custom` = parent-defined terms (treated as "warning"/personnalisé).
@@ -61,7 +76,7 @@ export function scanText(text: string, custom: string[] = []): KeywordHit[] {
 
   for (const group of BUILTIN) {
     for (const term of group.terms) {
-      if (hay.includes(normalize(term)) && !seen.has(term)) {
+      if (termMatches(hay, normalize(term)) && !seen.has(term)) {
         seen.add(term);
         hits.push({ keyword: term, category: group.category, severity: group.severity });
       }
@@ -69,7 +84,7 @@ export function scanText(text: string, custom: string[] = []): KeywordHit[] {
   }
   for (const term of custom) {
     const t = term.trim();
-    if (t && hay.includes(normalize(t)) && !seen.has(t)) {
+    if (t && termMatches(hay, normalize(t)) && !seen.has(t)) {
       seen.add(t);
       hits.push({ keyword: t, category: "personnalisé", severity: "warning" });
     }

@@ -30,4 +30,16 @@ describe("scanText", () => {
     const pornHits = hits.filter((h) => h.keyword === "porn");
     expect(pornHits).toHaveLength(1);
   });
+
+  it("matches short acronyms as whole words (true positives)", () => {
+    expect(scanText("tu devrais kys").some((h) => h.keyword === "kys")).toBe(true);
+    expect(scanText("kys.").some((h) => h.keyword === "kys")).toBe(true);
+    expect(scanText("vente de mdma ce soir").some((h) => h.keyword === "mdma")).toBe(true);
+  });
+
+  it("does NOT fire short acronyms inside innocent words", () => {
+    // Regression: "kys" used to match "kyste" (a cyst) and "skys".
+    expect(scanText("j'ai un kyste au genou")).toHaveLength(0);
+    expect(scanText("the skys are blue")).toHaveLength(0);
+  });
 });
