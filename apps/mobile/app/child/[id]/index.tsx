@@ -189,7 +189,7 @@ export default function ChildDetail() {
 
             {/* today's screen-time allowance */}
             {limitSec > 0 && (
-              <Card>
+              <Card onPress={() => router.push(`/child/${id}/screentime`)}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm }}>
                   <H2>Temps d&apos;écran aujourd&apos;hui</H2>
                   <Text style={{ fontWeight: "800", color: stColor }}>
@@ -243,6 +243,7 @@ export default function ChildDetail() {
               <NavCard icon="globe" color={c.info} label="Historique web" onPress={() => router.push(`/child/${id}/web`)} />
               <NavCard icon="pulse" color={c.success} label="Activité" onPress={() => router.push(`/child/${id}/activity`)} />
             </View>
+            <NavCard icon="hourglass" color={c.primary} label="Régler le temps d'écran" onPress={() => router.push(`/child/${id}/screentime`)} />
 
             {/* weekly trend */}
             <Card>

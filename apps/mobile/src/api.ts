@@ -70,6 +70,12 @@ export const parent = {
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async screenTimeRule(id: string) {
+    return req<{ screenTime: ScreenTimeRuleRaw | null }>(`/api/children/${id}/screentime`, { headers: await this.authHeader() });
+  },
+  async setScreenTimeRule(id: string, data: { enabled?: boolean; dailyLimits?: Record<string, number> }) {
+    return req<{ screenTime: ScreenTimeRuleRaw }>(`/api/children/${id}/screentime`, { method: "PUT", body: data, headers: await this.authHeader() });
+  },
   async alerts() {
     return req<{ alerts: Alert[]; unread: number }>("/api/alerts", { headers: await this.authHeader() });
   },
@@ -197,6 +203,8 @@ export type WebVisit = { id: string; domain: string; url: string | null; title: 
 export type LocationPing = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
 export type Geofence = { id: string; name: string; lat: number; lng: number; radius: number; notifyOnEnter: boolean; notifyOnExit: boolean };
 export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
+// Raw screen-time rule as stored (dailyLimits/bedtimes are JSON strings).
+export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtimes: string };
 export type Alert = { id: string; childId: string; type: string; message: string; ts: string; read: boolean; child: { name: string; avatar: string | null } };
 export type CommandType = "lock" | "unlock" | "message" | "locate" | "screenshot";
 export type Policy = {
