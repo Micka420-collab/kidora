@@ -8,8 +8,8 @@ import { apiError, json, readJson } from "@/lib/http";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 const schema = z.object({
-  name: z.string().min(1).max(80),
-  email: z.string().email(),
+  name: z.string().trim().min(1).max(80),
+  email: z.string().trim().email(),
   password: z.string().min(8).max(200),
 });
 
