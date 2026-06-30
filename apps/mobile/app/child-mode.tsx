@@ -5,7 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { childAgent } from "@/api";
 import { formatDuration } from "@/theme";
-import { isBedtimeNow } from "@/schedule";
+import { isBedtimeNow, nextBedtimeStart } from "@/schedule";
 import * as storage from "@/storage";
 import * as AppUsage from "../modules/app-usage";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
@@ -21,6 +21,7 @@ export default function ChildMode() {
   const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
   const [limitMin, setLimitMin] = useState(0); // today's screen-time limit (+ bonus), 0 = none
   const [bedtime, setBedtime] = useState(false);
+  const [bedtimeAt, setBedtimeAt] = useState<string | null>(null); // "HH:MM" of next bedtime today
   const [pickTime, setPickTime] = useState(false); // show the +15/+30 chips
   const [reqStatus, setReqStatus] = useState<"idle" | "sending" | "sent">("idle");
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -137,6 +138,7 @@ export default function ChildMode() {
       const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
       setLimitMin(st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) + (st.bonusMinutesToday ?? 0) : 0);
       setBedtime(isBedtimeNow(st?.bedtimes));
+      setBedtimeAt(nextBedtimeStart(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
       setStatus(res.policy.paused ? "⏸ Mis en pause par un parent" : "Protection active 🛡️");
     } catch (e) {
@@ -233,6 +235,12 @@ export default function ChildMode() {
         {bedtime && !paused && (
           <View style={s.bedtime}>
             <Text style={s.bedtimeText}>🌙  C'est l'heure de dormir — repose-toi bien</Text>
+          </View>
+        )}
+
+        {!bedtime && !paused && bedtimeAt && (
+          <View style={s.bedtimeSoon}>
+            <Text style={s.bedtimeSoonText}>🌙  Dodo à {bedtimeAt}</Text>
           </View>
         )}
 
@@ -400,6 +408,8 @@ const s = StyleSheet.create({
   sosSub: { color: "#fee2e2", fontSize: 13, marginTop: 2 },
   bedtime: { marginBottom: 22, backgroundColor: "rgba(199,210,254,0.16)", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1, borderColor: "rgba(199,210,254,0.35)" },
   bedtimeText: { color: "#e0e7ff", fontWeight: "700", fontSize: 14 },
+  bedtimeSoon: { marginBottom: 22, backgroundColor: "rgba(199,210,254,0.10)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
+  bedtimeSoonText: { color: "#c7d2fe", fontWeight: "600", fontSize: 12.5 },
   stCard: { marginTop: 18, width: "100%", maxWidth: 340, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 18, paddingVertical: 16, alignItems: "center" },
   rewardStar: { width: 66, height: 66, marginBottom: 4 },
   stRemain: { color: "#fff", fontWeight: "800", fontSize: 19 },
