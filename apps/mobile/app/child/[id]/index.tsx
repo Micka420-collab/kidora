@@ -243,7 +243,10 @@ export default function ChildDetail() {
               <NavCard icon="globe" color={c.info} label="Historique web" onPress={() => router.push(`/child/${id}/web`)} />
               <NavCard icon="pulse" color={c.success} label="Activité" onPress={() => router.push(`/child/${id}/activity`)} />
             </View>
-            <NavCard icon="hourglass" color={c.primary} label="Régler le temps d'écran" onPress={() => router.push(`/child/${id}/screentime`)} />
+            <View style={{ flexDirection: "row", gap: space.sm }}>
+              <NavCard icon="hourglass" color={c.primary} label="Temps d'écran" onPress={() => router.push(`/child/${id}/screentime`)} />
+              <NavCard icon="shield-half" color={c.warn} label="Filtrage web" onPress={() => router.push(`/child/${id}/webfilter`)} />
+            </View>
 
             {/* weekly trend */}
             <Card>

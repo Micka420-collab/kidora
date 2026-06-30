@@ -70,6 +70,9 @@ export const parent = {
   async activity(id: string, limit = 150) {
     return req<{ events: ActivityEvent[] }>(`/api/children/${id}/activity?limit=${limit}`, { headers: await this.authHeader() });
   },
+  async setWebFilter(id: string, data: { safeSearch?: boolean; blockUnknown?: boolean; blockedCategories?: string[] }) {
+    return req<{ webFilter: { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string } }>(`/api/children/${id}/webfilter`, { method: "PUT", body: data, headers: await this.authHeader() });
+  },
   async screenTimeRule(id: string) {
     return req<{ screenTime: ScreenTimeRuleRaw | null }>(`/api/children/${id}/screentime`, { headers: await this.authHeader() });
   },
@@ -174,7 +177,9 @@ export type Child = {
   screenTime?: ScreenTimeCfg;
   _count?: { alerts: number };
 };
-export type ChildDetail = Child & { webFilter: unknown };
+// blockedCategories may arrive as a JSON string (raw Prisma field) or an array.
+export type WebFilter = { safeSearch: boolean; blockUnknown: boolean; blockedCategories: string[] | string };
+export type ChildDetail = Child & { webFilter: WebFilter | null };
 export type ScreenTimeToday = { enabled: boolean; limitMinutes: number; bonusMinutes: number; totalMinutes: number };
 export type TimeRequest = { id: string; minutes: number; reason: string | null; status: "pending" | "approved" | "denied"; createdAt: string };
 export type Live = {
