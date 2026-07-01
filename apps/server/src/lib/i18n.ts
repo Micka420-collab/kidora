@@ -63,6 +63,7 @@ const fr = {
     filterCritical: "Critiques",
     filterWarning: "Avertissements",
     noneForFilter: "Aucune alerte pour ce filtre.",
+    loadMore: "Charger plus d'alertes",
   },
   tabs: {
     overview: "Vue d'ensemble",
@@ -309,6 +310,7 @@ const en: typeof fr = {
     filterCritical: "Critical",
     filterWarning: "Warnings",
     noneForFilter: "No alerts for this filter.",
+    loadMore: "Load more alerts",
   },
   tabs: {
     overview: "Overview",

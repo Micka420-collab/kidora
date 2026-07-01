@@ -40,12 +40,15 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     setError(false);
     try {
-      const res = await api.get<{ alerts: Alert[] }>("/api/alerts");
+      const res = await api.get<{ alerts: Alert[]; nextCursor: string | null }>("/api/alerts");
       setAlerts(res.alerts);
+      setNextCursor(res.nextCursor);
     } catch {
       setError(true);
     } finally {
@@ -53,6 +56,24 @@ export default function AlertsPage() {
     }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await api.get<{ alerts: Alert[]; nextCursor: string | null }>(`/api/alerts?cursor=${encodeURIComponent(nextCursor)}`);
+      // De-dupe defensively in case a new alert shifted the window.
+      setAlerts((prev) => {
+        const seen = new Set(prev.map((a) => a.id));
+        return [...prev, ...res.alerts.filter((a) => !seen.has(a.id))];
+      });
+      setNextCursor(res.nextCursor);
+    } catch {
+      /* keep what we have; the button stays for a retry */
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const counts = {
     all: alerts.length,
@@ -168,6 +189,14 @@ export default function AlertsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {!loading && !error && nextCursor && (
+        <div className="grid place-items-center pt-1">
+          <button className="btn btn-outline" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? <Loader2 size={16} className="spinner" /> : null} {t.alerts.loadMore}
+          </button>
         </div>
       )}
     </div>
