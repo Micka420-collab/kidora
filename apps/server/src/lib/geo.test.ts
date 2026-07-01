@@ -64,4 +64,28 @@ describe("geofenceTransition", () => {
     const exitOnly: Fence = { ...fence, notifyOnEnter: false };
     expect(geofenceTransition(outside, inside, exitOnly)).toBeNull();
   });
+
+  describe("hysteresis (anti-flapping)", () => {
+    // 100 m fence → outer band ≈ 125 m. Points just outside the radius but
+    // inside the band must NOT count as an exit.
+    const edgeIn = { lat: 48.8566 + 0.00085, lng: 2.3522 }; // ~95 m N (inside)
+    const edgeBand = { lat: 48.8566 + 0.00108, lng: 2.3522 }; // ~120 m N (in band)
+
+    it("does not fire 'exit' for jitter into the band (inside → edge of band)", () => {
+      expect(geofenceTransition(edgeIn, edgeBand, fence)).toBeNull();
+    });
+    it("does not fire 'enter' from the band (band → inside) — no flap", () => {
+      expect(geofenceTransition(edgeBand, edgeIn, fence)).toBeNull();
+    });
+    it("still fires 'exit' once clearly beyond the outer band", () => {
+      expect(geofenceTransition(edgeIn, outside, fence)).toBe("exit");
+    });
+  });
+
+  it("ignores a fix whose accuracy is worse than the fence radius", () => {
+    // Would be an 'enter', but the fix is ±250 m for a 100 m fence → too uncertain.
+    expect(geofenceTransition(outside, inside, fence, 250)).toBeNull();
+    // A precise fix still fires.
+    expect(geofenceTransition(outside, inside, fence, 20)).toBe("enter");
+  });
 });
