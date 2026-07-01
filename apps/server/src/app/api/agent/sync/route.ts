@@ -86,9 +86,9 @@ const syncSchema = z.object({
     .optional(),
   location: z
     .object({
-      lat: z.number(),
-      lng: z.number(),
-      accuracy: z.number().optional(),
+      lat: z.number().finite().min(-90).max(90),
+      lng: z.number().finite().min(-180).max(180),
+      accuracy: z.number().finite().min(0).optional(),
       address: z.string().optional(),
     })
     .optional(),
@@ -325,7 +325,7 @@ export async function POST(req: NextRequest) {
     const now = { lat: body.location.lat, lng: body.location.lng };
     const prevLoc = prev ? { lat: prev.lat, lng: prev.lng } : null;
     for (const f of fences) {
-      const transition = geofenceTransition(prevLoc, now, f);
+      const transition = geofenceTransition(prevLoc, now, f, body.location.accuracy);
       if (transition === "enter") {
         alerts.push({ parentId, childId, type: "geofence", severity: "info", message: `Arrivée à « ${f.name} »` });
       }
