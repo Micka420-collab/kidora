@@ -43,6 +43,18 @@ export default function ChildDetail() {
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+
+  async function genAiSummary() {
+    if (!id) return;
+    setAiBusy(true);
+    try {
+      setAiSummary((await parent.aiSummary(id)).summary);
+    } catch (e) {
+      RNAlert.alert("Résumé IA", e instanceof Error ? e.message : "Impossible de générer le résumé.");
+    } finally { setAiBusy(false); }
+  }
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -260,6 +272,19 @@ export default function ChildDetail() {
               <NavCard icon="calendar" color={c.info} label="Routines" onPress={() => router.push(`/child/${id}/routines`)} />
               <NavCard icon="camera" color="#0ea5e9" label="Captures d'écran" onPress={() => router.push(`/child/${id}/screenshots`)} />
             </View>
+
+            {/* AI weekly summary (parent's configured model) */}
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm }}>
+                <H2>✨ Résumé IA de la semaine</H2>
+                <Btn title={aiSummary ? "Régénérer" : "Générer"} icon="sparkles" variant="ghost" loading={aiBusy} onPress={genAiSummary} />
+              </View>
+              {aiSummary ? (
+                <Text style={{ marginTop: space.sm, fontSize: 14, lineHeight: 21, color: c.text }}>{aiSummary}</Text>
+              ) : (
+                <Muted style={{ marginTop: 6 }}>Résumé bienveillant rédigé par votre modèle IA (statistiques agrégées ; nécessite l&apos;IA activée dans les Réglages web).</Muted>
+              )}
+            </Card>
 
             {/* weekly trend */}
             <Card>

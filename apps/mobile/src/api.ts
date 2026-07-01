@@ -196,6 +196,9 @@ export const parent = {
   async insights() {
     return req<{ thisWeekSeconds: number; lastWeekSeconds: number; alertsThisWeek: number }>("/api/insights", { headers: await this.authHeader() });
   },
+  async aiSummary(id: string) {
+    return req<{ summary: string }>(`/api/children/${id}/ai-summary`, { method: "POST", body: {}, headers: await this.authHeader() });
+  },
   async timeRequests(id: string) {
     return req<{ requests: TimeRequest[]; bonusMinutesToday: number }>(`/api/children/${id}/time-requests`, { headers: await this.authHeader() });
   },
