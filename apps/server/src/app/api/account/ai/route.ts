@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
-import { encrypt } from "@/lib/crypto";
+import { encrypt, hasStrongDataKey } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
 
 // GET /api/account/ai — current AI (OpenRouter) config. Never returns the key.
@@ -18,6 +18,9 @@ export async function GET() {
       enabled: row?.aiEnabled ?? false,
       model: row?.aiModel ?? "",
       hasKey: !!row?.aiApiKey,
+      // False → DATA_ENC_KEY isn't configured, so the stored key is encrypted
+      // with the public dev fallback (weak). The UI warns the parent.
+      secureStorage: hasStrongDataKey(),
     });
   });
 }
