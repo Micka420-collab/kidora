@@ -14,6 +14,7 @@ const SPLASH_BG = isChild ? "#ede9fe" : "#eef2ff"; // violet-100 / indigo-50 tin
 const easProjectId = isChild ? process.env.EAS_PROJECT_ID_CHILD : process.env.EAS_PROJECT_ID_PARENT;
 
 const config: ExpoConfig = {
+  owner: "kidora-team", // EAS organization that owns both app projects
   name: isChild ? "Kidora Kids" : "Kidora Parents",
   slug: isChild ? "kidora-child" : "kidora-parent",
   scheme: isChild ? "kidorachild" : "kidoraparent",

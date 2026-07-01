@@ -4,37 +4,37 @@
     "child": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "APP_ROLE": "child" },
+      "env": { "APP_ROLE": "child", "EAS_PROJECT_ID_CHILD": "ae734181-6b4b-4d51-b5b4-9a1541d64af0" },
       "android": { "buildType": "apk" }
     },
     "parent": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "APP_ROLE": "parent" },
+      "env": { "APP_ROLE": "parent", "EAS_PROJECT_ID_PARENT": "128c28e0-63dc-42f6-9d83-ad30bfd3dc4e" },
       "android": { "buildType": "apk" }
     },
 
     "child-apk": {
       "autoIncrement": true,
       "distribution": "internal",
-      "env": { "APP_ROLE": "child" },
+      "env": { "APP_ROLE": "child", "EAS_PROJECT_ID_CHILD": "ae734181-6b4b-4d51-b5b4-9a1541d64af0" },
       "android": { "buildType": "apk" }
     },
     "parent-apk": {
       "autoIncrement": true,
       "distribution": "internal",
-      "env": { "APP_ROLE": "parent" },
+      "env": { "APP_ROLE": "parent", "EAS_PROJECT_ID_PARENT": "128c28e0-63dc-42f6-9d83-ad30bfd3dc4e" },
       "android": { "buildType": "apk" }
     },
 
     "child-production": {
       "autoIncrement": true,
-      "env": { "APP_ROLE": "child" },
+      "env": { "APP_ROLE": "child", "EAS_PROJECT_ID_CHILD": "ae734181-6b4b-4d51-b5b4-9a1541d64af0" },
       "android": { "buildType": "app-bundle" }
     },
     "parent-production": {
       "autoIncrement": true,
-      "env": { "APP_ROLE": "parent" },
+      "env": { "APP_ROLE": "parent", "EAS_PROJECT_ID_PARENT": "128c28e0-63dc-42f6-9d83-ad30bfd3dc4e" },
       "android": { "buildType": "app-bundle" }
     }
   },
