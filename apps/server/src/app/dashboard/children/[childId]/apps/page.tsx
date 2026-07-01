@@ -6,6 +6,7 @@ import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { formatMinutes } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { useToast } from "@/components/toast";
 import { ErrorCard } from "@/components/error-card";
 import { Loader2, Plus, Trash2, Check, Ban, Hourglass } from "lucide-react";
 
@@ -21,6 +22,7 @@ type Rule = {
 export default function AppsTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t } = useT();
+  const toast = useToast();
   const [rules, setRules] = useState<Rule[]>([]);
   const [usageToday, setUsageToday] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -43,33 +45,57 @@ export default function AppsTab() {
   }, [childId]);
   useEffect(() => { load(); }, [load]);
 
+  // Optimistic update + rollback: if the save fails, restore the prior state and
+  // tell the parent, so a rule never LOOKS applied while the server rejected it.
   async function setAction(r: Rule, action: Rule["action"]) {
+    const prev = rules;
     setRules((rs) => rs.map((x) => (x.appId === r.appId ? { ...x, action } : x)));
-    await api.put(`/api/children/${childId}/rules/apps`, {
-      appId: r.appId, appName: r.appName, action,
-      dailyLimitMinutes: action === "limit" ? r.dailyLimitMinutes ?? 60 : null,
-    });
+    try {
+      await api.put(`/api/children/${childId}/rules/apps`, {
+        appId: r.appId, appName: r.appName, action,
+        dailyLimitMinutes: action === "limit" ? r.dailyLimitMinutes ?? 60 : null,
+      });
+    } catch {
+      setRules(prev);
+      toast(t.common.error, "error");
+    }
   }
   async function setLimit(r: Rule, minutes: number) {
+    const prev = rules;
     setRules((rs) => rs.map((x) => (x.appId === r.appId ? { ...x, dailyLimitMinutes: minutes } : x)));
-    await api.put(`/api/children/${childId}/rules/apps`, {
-      appId: r.appId, appName: r.appName, action: "limit", dailyLimitMinutes: minutes,
-    });
+    try {
+      await api.put(`/api/children/${childId}/rules/apps`, {
+        appId: r.appId, appName: r.appName, action: "limit", dailyLimitMinutes: minutes,
+      });
+    } catch {
+      setRules(prev);
+      toast(t.common.error, "error");
+    }
   }
   async function remove(r: Rule) {
+    const prev = rules;
     setRules((rs) => rs.filter((x) => x.appId !== r.appId));
-    await api.del(`/api/children/${childId}/rules/apps?appId=${encodeURIComponent(r.appId)}`);
+    try {
+      await api.del(`/api/children/${childId}/rules/apps?appId=${encodeURIComponent(r.appId)}`);
+    } catch {
+      setRules(prev);
+      toast(t.common.error, "error");
+    }
   }
   async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!newApp.appName) return;
     const appId = newApp.appId || newApp.appName.toLowerCase().replace(/\s+/g, "") + ".exe";
-    await api.put(`/api/children/${childId}/rules/apps`, {
-      appId, appName: newApp.appName, action: "allow", dailyLimitMinutes: null,
-    });
-    setNewApp({ appName: "", appId: "" });
-    setAdding(false);
-    load();
+    try {
+      await api.put(`/api/children/${childId}/rules/apps`, {
+        appId, appName: newApp.appName, action: "allow", dailyLimitMinutes: null,
+      });
+      setNewApp({ appName: "", appId: "" });
+      setAdding(false);
+      load();
+    } catch {
+      toast(t.common.error, "error"); // keep the form so the parent can retry
+    }
   }
 
   if (loading) return <Spinner />;
