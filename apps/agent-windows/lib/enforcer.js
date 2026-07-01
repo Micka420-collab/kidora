@@ -98,7 +98,10 @@ export class Enforcer {
       const limitMin = baseLimit + (policy.screenTime.bonusMinutesToday ?? 0);
       const total = tracker.totalTodaySeconds();
       if (limitMin > 0 && total >= limitMin * 60) {
-        const today = new Date().toISOString().slice(0, 10);
+        // Local date, so the "limit reached" notice re-arms at local midnight
+        // (matching the tracker's local-day usage reset).
+        const n = new Date();
+        const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
         if (this.limitNotifiedDate !== today) {
           this.limitNotifiedDate = today;
           this.events.push({ type: "limit_reached", title: `Limite quotidienne (${limitMin} min)` });

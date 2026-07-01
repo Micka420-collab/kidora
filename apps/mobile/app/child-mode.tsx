@@ -12,6 +12,13 @@ import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task
 
 const SYNC_MS = 60_000;
 
+// LOCAL calendar date "YYYY-MM-DD" (not UTC) so usage buckets by the family's
+// local day, matching the server (which reads the tzOffset we report).
+function localDay(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function ChildMode() {
   const [status, setStatus] = useState("Initialisation…");
   const [active, setActive] = useState(false);
@@ -69,7 +76,7 @@ export default function ChildMode() {
     (async () => {
       try {
         const raw = await storage.get("kidsUsageBaseline");
-        const today = new Date().toISOString().slice(0, 10);
+        const today = localDay();
         if (raw) {
           const parsed = JSON.parse(raw) as { date?: string; perApp?: Record<string, number> };
           if (parsed?.date === today && parsed.perApp) {
@@ -153,7 +160,7 @@ export default function ChildMode() {
         const granted = await AppUsage.hasPermission();
         setNeedsUsagePerm(!granted);
         if (granted) {
-          const today = new Date().toISOString().slice(0, 10);
+          const today = localDay();
           // New local day → reset the baseline (native cumulative resets at midnight).
           if (usageDate.current !== today) { prevUsage.current = {}; usageDate.current = today; }
           const entries = await AppUsage.getUsageToday();
@@ -174,6 +181,7 @@ export default function ChildMode() {
       const toAck = pendingResults.current.slice();
       const res = await childAgent.sync({
         online: true,
+        tzOffset: -new Date().getTimezoneOffset(), // minutes to add to UTC → local
         location,
         usage,
         events: [{ type: "location", title: "Position mise à jour" }],
