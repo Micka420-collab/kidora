@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { localDateStringDaysAgo } from "./localdate";
 
 export type ChildReport = {
   days: number;
@@ -15,18 +16,21 @@ export type ChildReport = {
   alerts: { total: number; byType: { type: string; count: number }[] };
 };
 
-export function dateStr(daysAgo: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+// "YYYY-MM-DD" for `daysAgo` days before now, in the family's local timezone
+// (offset = minutes to add to UTC). AppUsage.date is written by the agents in
+// that same local day, so the report window MUST bucket in local time too or a
+// non-UTC family's current day is missing and a stale day is included.
+export function dateStr(daysAgo: number, tzOffsetMinutes = 0, nowMs = Date.now()): string {
+  return localDateStringDaysAgo(nowMs, daysAgo, tzOffsetMinutes);
 }
 
 /**
  * Aggregate a child's activity over the last `days` days (screen time, top apps,
  * categories, web, alerts). Shared by the report API route and the weekly email.
+ * `tzOffsetMinutes` (the child's local-time offset) buckets the day window.
  */
-export async function buildChildReport(childId: string, days: number): Promise<ChildReport> {
-  const dates = Array.from({ length: days }, (_, i) => dateStr(days - 1 - i));
+export async function buildChildReport(childId: string, days: number, tzOffsetMinutes = 0): Promise<ChildReport> {
+  const dates = Array.from({ length: days }, (_, i) => dateStr(days - 1 - i, tzOffsetMinutes));
   const since = new Date();
   since.setDate(since.getDate() - days);
 

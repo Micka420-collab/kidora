@@ -21,14 +21,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     // the family's local time, not the server's. Clamped to ±14h; NaN → 0 (UTC).
     const tzRaw = Number(url.searchParams.get("tz"));
     const tzOffset = Number.isFinite(tzRaw) ? Math.min(840, Math.max(-840, Math.trunc(tzRaw))) : 0;
-    const report = await buildChildReport(childId, days);
+    const report = await buildChildReport(childId, days, tzOffset);
 
     // Total screen time over the *previous* equal-length window, for a delta;
     // and a by-hour activity histogram over the window (capped for safety).
+    // Prev-window day bounds use the same local tz as the report itself.
     const [prevAgg, events] = await Promise.all([
       prisma.appUsage.aggregate({
         _sum: { seconds: true },
-        where: { childId, date: { gte: dateStr(2 * days - 1), lt: dateStr(days - 1) } },
+        where: { childId, date: { gte: dateStr(2 * days - 1, tzOffset), lt: dateStr(days - 1, tzOffset) } },
       }),
       prisma.activityEvent.findMany({
         where: { childId, ts: { gte: new Date(Date.now() - days * 86400_000) } },

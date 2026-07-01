@@ -1,7 +1,28 @@
 import { describe, it, expect } from "vitest";
-import { aggregateReport } from "./report";
+import { aggregateReport, dateStr } from "./report";
 
 const dates = ["2026-06-28", "2026-06-29", "2026-06-30"];
+
+describe("dateStr (local-day bucketing)", () => {
+  // 2026-07-01T01:30:00Z — a moment where UTC and some offsets disagree on the day.
+  const at = Date.UTC(2026, 6, 1, 1, 30); // month 6 = July
+
+  it("uses UTC when no offset given", () => {
+    expect(dateStr(0, 0, at)).toBe("2026-07-01");
+    expect(dateStr(1, 0, at)).toBe("2026-06-30");
+  });
+
+  it("rolls the day back for a negative (west) offset", () => {
+    // UTC-5: local is 2026-06-30T20:30 → still the previous day
+    expect(dateStr(0, -300, at)).toBe("2026-06-30");
+  });
+
+  it("keeps the day for a positive (east) offset", () => {
+    // UTC+2: local is 2026-07-01T03:30
+    expect(dateStr(0, 120, at)).toBe("2026-07-01");
+    expect(dateStr(1, 120, at)).toBe("2026-06-30");
+  });
+});
 
 describe("aggregateReport", () => {
   it("returns zeros for empty input", () => {

@@ -39,7 +39,7 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
   for (const parent of parents) {
     const children = await prisma.child.findMany({
       where: { parentId: parent.id },
-      select: { id: true, name: true },
+      select: { id: true, name: true, tzOffsetMinutes: true },
       orderBy: { createdAt: "asc" },
     });
     if (children.length === 0) {
@@ -49,7 +49,7 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
 
     const items: ReportItem[] = [];
     for (const child of children) {
-      items.push({ childName: child.name, report: await buildChildReport(child.id, days) });
+      items.push({ childName: child.name, report: await buildChildReport(child.id, days, child.tzOffsetMinutes) });
     }
     if (!items.some((it) => hasActivity(it.report))) {
       summary.skippedNoActivity++;
