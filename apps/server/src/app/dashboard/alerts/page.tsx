@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { csvCell, csvWithBom } from "@/lib/csv";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
 import { Loader2, CheckCheck, ShieldAlert, Clock, Ban, MapPin, AppWindow, WifiOff, Download, Hourglass } from "lucide-react";
@@ -109,8 +110,8 @@ export default function AlertsPage() {
       ["Date", "Enfant", "Type", "Sévérité", "Message", "Lu"],
       ...visible.map((a) => [a.ts, a.child.name, a.type, a.severity, a.message, a.read ? "oui" : "non"]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv" });
+    const csv = csvWithBom(rows.map((r) => r.map(csvCell).join(",")).join("\r\n"));
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
