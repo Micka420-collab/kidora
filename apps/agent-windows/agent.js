@@ -8,7 +8,7 @@ import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
-import { normalizeDomain } from "./lib/domains.js";
+import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
 import { VideoCollector } from "./lib/videos.js";
 import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
@@ -59,7 +59,10 @@ async function main() {
 
   // Web filtering: prefer the local DNS proxy (category-level, catches new
   // domains); fall back to the hosts file if not admin or the port is taken.
-  const filter = { web: buildWeb(policy), dns: null, blocked: new Map() };
+  // The agent's own server host is always allow-listed so whitelist mode
+  // (blockUnknown) can't sinkhole the connection to the server (self-lockout).
+  const essentialHosts = essentialAllowHosts(cfg.server);
+  const filter = { web: buildWeb(policy, essentialHosts), dns: null, blocked: new Map() };
   let lastHostsKey = hostsKey(policy);
   if (DRY_RUN) {
     log.info("[dry-run] filtrage web non appliqué.");
@@ -132,7 +135,7 @@ async function main() {
         commandResults: pendingCmdResults.splice(0),
       });
       policy = res.policy;
-      filter.web = buildWeb(policy); // DNS proxy reads this live
+      filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
       const total = Math.round(tracker.totalTodaySeconds() / 60);
       log.event(
         `sync ✓  usage:${usage.length} events:${events.length + enforceEvents.length} bloqués(dns):${webVisits.length}  écran:${total}min  ${policy.paused ? "[PAUSE]" : ""}`,
@@ -180,13 +183,22 @@ async function main() {
   process.on("SIGTERM", shutdown);
 }
 
-/** Build the DNS-proxy view of the web policy (normalized Sets). */
-function buildWeb(policy) {
+/** Hosts the agent must ALWAYS reach (its own server + loopback) so whitelist
+ *  mode (blockUnknown) can't sinkhole its connection to the server. */
+function essentialAllowHosts(serverUrl) {
+  const hosts = ["localhost", "127.0.0.1"];
+  try { hosts.push(new URL(serverUrl).hostname); } catch { /* bad/relative url */ }
+  return hosts;
+}
+
+/** Build the DNS-proxy view of the web policy (normalized Sets). `essentialHosts`
+ *  are folded into the allow-list (explicit allow always wins in webDecision). */
+function buildWeb(policy, essentialHosts = []) {
   const w = policy?.webFilter || {};
   const norm = (arr) => new Set((arr || []).map((d) => normalizeDomain(d)));
   return {
     blockedDomains: norm(policy?.blockedDomains),
-    allowedDomains: norm(policy?.allowedDomains),
+    allowedDomains: norm([...(policy?.allowedDomains || []), ...essentialHosts]),
     blockedCategories: new Set(w.blockedCategories || []),
     blockUnknown: !!w.blockUnknown,
     safeSearch: !!w.safeSearch,
@@ -211,12 +223,21 @@ function drainBlockedHosts(map) {
 }
 
 function hostsKey(policy) {
-  return (policy?.blockedDomains || []).slice().sort().join(",");
+  // Include categories: a category change must also refresh the hosts fallback.
+  return JSON.stringify([
+    (policy?.blockedDomains || []).slice().sort(),
+    (policy?.webFilter?.blockedCategories || []).slice().sort(),
+  ]);
 }
 
 function applyHosts(policy, admin) {
   if (!admin) return;
-  const res = updateHostsFile(policy.blockedDomains || []);
+  // The hosts fallback can't categorize at query time like the DNS proxy, so
+  // expand blocked categories to their known domains and block those too —
+  // otherwise category filtering (social, adult…) is a no-op in fallback mode.
+  const catDomains = domainsForCategories(policy?.webFilter?.blockedCategories || []);
+  const all = [...(policy.blockedDomains || []), ...catDomains];
+  const res = updateHostsFile(all);
   if (res.ok) log.ok(`Filtrage web : ${res.count} domaine(s) bloqué(s) via hosts.`);
   else log.warn(`Filtrage web indisponible (${res.reason}).`);
 }
