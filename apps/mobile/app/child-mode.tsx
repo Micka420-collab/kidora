@@ -37,7 +37,14 @@ export default function ChildMode() {
   const [welcome, setWelcome] = useState(false); // first-launch greeting banner
   const [parentMsg, setParentMsg] = useState<string | null>(null); // a "message" command from a parent
   const [remoteLocked, setRemoteLocked] = useState(false); // a "lock" command from a parent (best-effort)
+  const [syncError, setSyncError] = useState(false); // last sync failed (offline) → status shown in red, not green
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncing = useRef(false); // re-entrancy guard so an overlapping sync can't double-ack
+  const mounted = useRef(true); // set false on unmount → skip post-await setState
+  // Commands already applied, keyed by id, with the ack we produced — so a
+  // re-delivered command (e.g. from a race) doesn't re-fire its side effect but
+  // is still re-acked in case the earlier ack was lost.
+  const handledCmds = useRef<Map<string, { status: "done" | "failed"; result?: string }>>(new Map());
   // Command results to ack on the next sync (so delivered commands don't hang).
   const pendingResults = useRef<{ id: string; status: "done" | "failed"; result?: string }[]>([]);
   // Per-app cumulative-usage baseline, persisted so it survives app restarts —
@@ -88,6 +95,7 @@ export default function ChildMode() {
       start();
     })();
     return () => {
+      mounted.current = false;
       if (timer.current) clearInterval(timer.current);
       if (grantTimer.current) clearTimeout(grantTimer.current);
       if (welcomeTimer.current) clearTimeout(welcomeTimer.current);
@@ -148,6 +156,8 @@ export default function ChildMode() {
   }
 
   async function syncNow() {
+    if (syncing.current) return; // don't let an overlapping run double-ack / race
+    syncing.current = true;
     try {
       let location: { lat: number; lng: number; accuracy?: number } | undefined;
       try {
@@ -156,6 +166,10 @@ export default function ChildMode() {
       } catch { /* location may be unavailable momentarily */ }
 
       let usage: { appId: string; appName: string; date: string; seconds: number }[] = [];
+      // Computed but NOT committed until the sync succeeds — otherwise a failed
+      // (offline) sync would advance the baseline while dropping the deltas, so
+      // that interval's screen time would be lost forever (server under-counts).
+      let nextBaseline: { date: string; perApp: Record<string, number> } | null = null;
       if (AppUsage.isAvailable) {
         const granted = await AppUsage.hasPermission();
         setNeedsUsagePerm(!granted);
@@ -165,16 +179,16 @@ export default function ChildMode() {
           if (usageDate.current !== today) { prevUsage.current = {}; usageDate.current = today; }
           const entries = await AppUsage.getUsageToday();
           let totalToday = 0;
+          const perApp: Record<string, number> = { ...prevUsage.current };
           for (const e of entries) {
             totalToday += e.totalSeconds;
             const prev = prevUsage.current[e.packageName] ?? 0;
             const delta = Math.max(0, e.totalSeconds - prev);
-            prevUsage.current[e.packageName] = e.totalSeconds;
+            perApp[e.packageName] = e.totalSeconds;
             if (delta > 0) usage.push({ appId: e.packageName, appName: e.appName, date: today, seconds: delta });
           }
           setUsedTodaySec(totalToday);
-          // Persist the baseline so a restart doesn't double-count.
-          storage.set("kidsUsageBaseline", JSON.stringify({ date: today, perApp: prevUsage.current })).catch(() => undefined);
+          nextBaseline = { date: today, perApp };
         }
       }
 
@@ -187,6 +201,13 @@ export default function ChildMode() {
         events: [{ type: "location", title: "Position mise à jour" }],
         ...(toAck.length ? { commandResults: toAck } : {}),
       });
+      // Sync succeeded → NOW commit the usage baseline (a restart won't re-send).
+      if (nextBaseline) {
+        prevUsage.current = nextBaseline.perApp;
+        storage.set("kidsUsageBaseline", JSON.stringify(nextBaseline)).catch(() => undefined);
+      }
+      if (!mounted.current) return; // unmounted mid-sync → don't touch state
+      setSyncError(false);
       // Drop the results we just acknowledged (keep any added since).
       pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
       // Apply remote commands the parent issued (lock / message / locate…).
@@ -218,8 +239,13 @@ export default function ChildMode() {
       setBedtimeAt(nextBedtimeStart(st?.bedtimes));
       setLastSync(new Date().toLocaleTimeString("fr-FR"));
       setStatus(res.policy.paused ? "⏸ Mis en pause par un parent" : "Protection active 🛡️");
-    } catch (e) {
-      setStatus("Erreur de synchronisation");
+    } catch {
+      if (mounted.current) {
+        setSyncError(true);
+        setStatus("Hors ligne — nouvelle tentative bientôt");
+      }
+    } finally {
+      syncing.current = false;
     }
   }
 
@@ -228,6 +254,13 @@ export default function ChildMode() {
   // phone, so lock/message are surfaced as banners (best-effort).
   function processCommands(commands?: { id: string; type: string; payload?: Record<string, unknown> }[]) {
     for (const cmd of commands ?? []) {
+      // Already applied (e.g. re-delivered by a race)? Don't re-run its side
+      // effect (a dismissed parent message must not pop back up) — just re-ack.
+      const prior = handledCmds.current.get(cmd.id);
+      if (prior) {
+        pendingResults.current.push({ id: cmd.id, ...prior });
+        continue;
+      }
       let status: "done" | "failed" = "done";
       let result: string | undefined;
       switch (cmd.type) {
@@ -254,7 +287,9 @@ export default function ChildMode() {
           status = "failed";
           result = "Commande non supportée";
       }
-      pendingResults.current.push({ id: cmd.id, status, ...(result ? { result } : {}) });
+      const ack = { status, ...(result ? { result } : {}) };
+      handledCmds.current.set(cmd.id, ack);
+      pendingResults.current.push({ id: cmd.id, ...ack });
     }
   }
 
@@ -304,6 +339,7 @@ export default function ChildMode() {
       });
       pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
       processCommands(res.commands);
+      if (!mounted.current) return;
       setReqStatus("sent");
       pop.setValue(0);
       Animated.spring(pop, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
@@ -386,8 +422,8 @@ export default function ChildMode() {
           </View>
         )}
 
-        <View style={[s.badge, { backgroundColor: paused ? "rgba(254,243,199,0.95)" : active ? "rgba(220,252,231,0.95)" : "rgba(254,226,226,0.95)" }]}>
-          <Text style={[s.badgeText, { color: paused ? "#b45309" : active ? "#15803d" : "#b91c1c" }]}>{status}</Text>
+        <View style={[s.badge, { backgroundColor: paused ? "rgba(254,243,199,0.95)" : (active && !syncError) ? "rgba(220,252,231,0.95)" : "rgba(254,226,226,0.95)" }]}>
+          <Text style={[s.badgeText, { color: paused ? "#b45309" : (active && !syncError) ? "#15803d" : "#b91c1c" }]}>{status}</Text>
         </View>
 
         {bedtime && !paused && (
