@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       return Response.json({ error: "Trop de résumés générés. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
     }
 
-    const report = await buildChildReport(childId, 7);
+    const report = await buildChildReport(childId, 7, child.tzOffsetMinutes);
     const data = {
       enfant: child.name,
       periode: "7 derniers jours",
