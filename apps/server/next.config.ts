@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next dev blocks internal-asset (fonts, HMR websocket) requests from origins
+  // other than localhost with a 403 → a blank page when you open the dev server
+  // via a LAN IP (e.g. to test a phone on the same Wi-Fi). Allow-list extra dev
+  // origins via DEV_LAN_ORIGIN (comma-separated), e.g. DEV_LAN_ORIGIN=192.168.1.48.
+  ...(process.env.DEV_LAN_ORIGIN
+    ? { allowedDevOrigins: process.env.DEV_LAN_ORIGIN.split(",").map((o) => o.trim()).filter(Boolean) }
+    : {}),
   // Keep Prisma engine + DB drivers (SQLite dev / Postgres prod) out of the bundle
   // so the right native driver is required lazily at runtime (see src/lib/prisma.ts).
   serverExternalPackages: [
