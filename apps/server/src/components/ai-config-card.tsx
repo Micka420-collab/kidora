@@ -89,7 +89,7 @@ export function AiConfigCard() {
       <h2 className="mb-1 flex items-center gap-2 text-base font-semibold"><Bot size={18} /> Détection de risque par IA</h2>
       <p className="mb-4 text-sm text-muted">
         Optionnel : utilisez votre <b>propre clé OpenRouter</b> et le modèle de votre choix (DeepSeek, GPT-4o-mini…) pour analyser
-        les messages &amp; recherches. Sans clé, l&apos;analyse heuristique intégrée reste active.
+        les messages &amp; recherches, et <b>enrichir le résumé hebdomadaire par email</b>. Sans clé, l&apos;analyse heuristique intégrée reste active.
         {cfg.enabled && <span className="ml-1 badge bg-emerald-100 text-emerald-700">Active · {cfg.model}</span>}
       </p>
 

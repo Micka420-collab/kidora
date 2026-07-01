@@ -73,6 +73,23 @@ describe("renderWeeklyEmail", () => {
     expect(html).toContain("&lt;img src=x&gt;");
   });
 
+  it("renders the AI summary block (html + text) when present, escaped", () => {
+    const withAi: ReportItem[] = [
+      { childName: "Léa", report: makeReport(), aiSummary: "Belle semaine !\nMoins d'écran le soir. <b>Bravo</b>" },
+    ];
+    const { html, text } = renderWeeklyEmail("Marie", withAi, 7);
+    expect(html).toContain("Résumé de la semaine par IA");
+    expect(html).toContain("Belle semaine !"); // content present
+    expect(html).toContain("&lt;b&gt;Bravo&lt;/b&gt;"); // HTML in the summary is escaped
+    expect(html).toContain("<br>"); // newline → <br>
+    expect(text).toContain("Résumé IA : Belle semaine !");
+  });
+
+  it("omits the AI summary block when absent", () => {
+    const { html } = renderWeeklyEmail("Marie", [{ childName: "Léa", report: makeReport() }], 7);
+    expect(html).not.toContain("Résumé de la semaine par IA");
+  });
+
   it("handles a child with no recorded apps", () => {
     const empty: ReportItem[] = [{ childName: "Tom", report: makeReport({ topApps: [] }) }];
     const { html } = renderWeeklyEmail("P", empty, 7);
