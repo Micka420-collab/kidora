@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { todayWeekday, isWithinWindow, isBedtimeNow, WEEKDAYS_ORDER } from "./schedule";
+import { todayWeekday, localWeekday, isWithinWindow, isWithinWindowTz, isBedtimeNow, isBedtimeNowTz, WEEKDAYS_ORDER } from "./schedule";
 
 // Reference dates (local): 2026-01-05 = Monday, 01-02 = Friday,
 // 01-03 = Saturday, 01-06 = Tuesday.
@@ -13,6 +13,35 @@ describe("todayWeekday", () => {
     expect(todayWeekday(mon(12))).toBe("mon");
     expect(todayWeekday(fri(12))).toBe("fri");
     expect(todayWeekday(sat(12))).toBe("sat");
+  });
+});
+
+describe("localWeekday / isWithinWindowTz (family-local, UTC server)", () => {
+  // 2026-01-05T23:30:00Z is a Monday night UTC.
+  const monNightUtc = Date.UTC(2026, 0, 5, 23, 30);
+
+  it("localWeekday rolls the day for offsets that cross midnight", () => {
+    expect(localWeekday(0, monNightUtc)).toBe("mon"); // UTC: Mon 23:30
+    expect(localWeekday(120, monNightUtc)).toBe("tue"); // UTC+2: Tue 01:30
+    expect(localWeekday(-300, monNightUtc)).toBe("mon"); // UTC-5: Mon 18:30
+  });
+
+  it("evaluates a school-hours window in the family's local time, not UTC", () => {
+    // Window 08:00–16:00 on weekdays. At 2026-01-05T14:00Z:
+    const at14Utc = Date.UTC(2026, 0, 5, 14, 0);
+    const school = { days: ["mon", "tue", "wed", "thu", "fri"], start: "08:00", end: "16:00" };
+    expect(isWithinWindowTz(school, 0, at14Utc)).toBe(true); // UTC 14:00 → inside
+    expect(isWithinWindowTz(school, -480, at14Utc)).toBe(false); // UTC-8 → 06:00 local, before start
+    expect(isWithinWindowTz(school, 180, at14Utc)).toBe(false); // UTC+3 → 17:00 local, after end
+  });
+
+  it("isBedtimeNowTz matches any window in local time", () => {
+    const at22Utc = Date.UTC(2026, 0, 5, 22, 0);
+    const night = [{ days: [] as string[], start: "21:00", end: "07:00" }];
+    expect(isBedtimeNowTz(night, 0, at22Utc)).toBe(true); // 22:00 local → bedtime
+    expect(isBedtimeNowTz(night, -180, at22Utc)).toBe(false); // UTC-3 → 19:00 local, before start
+    expect(isBedtimeNowTz([], 0, at22Utc)).toBe(false);
+    expect(isBedtimeNowTz(undefined, 0, at22Utc)).toBe(false);
   });
 });
 
