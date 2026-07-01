@@ -23,7 +23,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 }
 
 const createSchema = z.object({
-  type: z.enum(["lock", "unlock", "pause", "resume", "block_app", "message", "locate", "screenshot"]),
+  type: z.enum(["lock", "unlock", "pause", "resume", "message", "locate", "screenshot"]),
   deviceId: z.string().optional(),
   payload: z.record(z.string(), z.unknown()).optional(),
 });
