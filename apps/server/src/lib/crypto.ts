@@ -4,17 +4,29 @@ import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:
 
 const PREFIX = "enc:v1:";
 
-function key(): Buffer {
+/** The configured 32-byte key from DATA_ENC_KEY (base64 or hex), or null if the
+ *  env var is missing/invalid. */
+function strongKey(): Buffer | null {
   const raw = process.env.DATA_ENC_KEY;
-  if (raw) {
-    // accept base64 or hex; normalize to 32 bytes via sha256 if needed
-    const buf = /^[0-9a-f]{64}$/i.test(raw)
-      ? Buffer.from(raw, "hex")
-      : Buffer.from(raw, "base64");
-    if (buf.length === 32) return buf;
-  }
-  // dev fallback — deterministic 32-byte key (NOT for production)
-  return createHash("sha256").update("kidora-dev-data-key").digest();
+  if (!raw) return null;
+  // accept base64 or hex; must resolve to exactly 32 bytes
+  const buf = /^[0-9a-f]{64}$/i.test(raw) ? Buffer.from(raw, "hex") : Buffer.from(raw, "base64");
+  return buf.length === 32 ? buf : null;
+}
+
+/** True when a real DATA_ENC_KEY is configured — i.e. encryption at rest is NOT
+ *  using the public dev fallback. Callers can warn when this is false and a
+ *  genuine secret (e.g. an API key) is about to be stored. */
+export function hasStrongDataKey(): boolean {
+  return strongKey() !== null;
+}
+
+function key(): Buffer {
+  return (
+    strongKey() ??
+    // dev fallback — deterministic 32-byte key (NOT for production)
+    createHash("sha256").update("kidora-dev-data-key").digest()
+  );
 }
 
 export function encrypt(plaintext: string): string {

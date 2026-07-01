@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import { Bot, Loader2, ExternalLink, Check, Search, Sparkles } from "lucide-react";
 
-type Config = { enabled: boolean; model: string; hasKey: boolean };
+type Config = { enabled: boolean; model: string; hasKey: boolean; secureStorage?: boolean };
 type Model = {
   id: string;
   name: string;
@@ -108,6 +108,13 @@ export function AiConfigCard() {
               Obtenez une clé sur <a className="text-brand-600 hover:underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys <ExternalLink size={11} className="inline" /></a>. Stockée chiffrée, jamais réaffichée.
             </p>
           </>
+        )}
+        {cfg.hasKey && cfg.secureStorage === false && (
+          <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            ⚠️ La variable <code className="font-mono">DATA_ENC_KEY</code> n&apos;est pas configurée sur le serveur : votre clé est
+            stockée avec un chiffrement de développement (faible). Définissez <code className="font-mono">DATA_ENC_KEY</code> (32
+            octets) puis ré-enregistrez la clé pour un chiffrement fort.
+          </p>
         )}
       </div>
 
