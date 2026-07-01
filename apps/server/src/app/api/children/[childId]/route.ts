@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
-import { computeScreenTimeToday } from "@/lib/policy";
+import { computeScreenTimeToday, localWeekday } from "@/lib/policy";
 import { localDateString } from "@/lib/localdate";
 
 type Ctx = { params: Promise<{ childId: string }> };
@@ -32,7 +32,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const today = localDateString(Date.now(), child.tzOffsetMinutes);
     const grants = await prisma.timeGrant.findMany({ where: { childId, date: today } });
     const bonusMinutes = grants.reduce((a, g) => a + g.minutes, 0);
-    const screenTimeToday = computeScreenTimeToday(child.screenTime, bonusMinutes);
+    // Today's weekday in the family's local tz (not the server's UTC), so the
+    // limit shown near local midnight is for the right day.
+    const screenTimeToday = computeScreenTimeToday(child.screenTime, bonusMinutes, localWeekday(child.tzOffsetMinutes));
 
     return json({ child, screenTimeToday });
   });

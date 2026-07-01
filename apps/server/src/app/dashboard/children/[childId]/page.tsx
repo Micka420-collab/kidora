@@ -3,15 +3,22 @@ import { Smartphone, ArrowRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
-import { isBedtimeNow, todayWeekday } from "@/lib/policy";
+import { isBedtimeNowTz, localWeekday } from "@/lib/policy";
+import { localDateString, localDateStringDaysAgo } from "@/lib/localdate";
 import { TimeRequestsCard } from "@/components/time-requests-card";
 import { LiveNow } from "@/components/live-now";
 import { RemoteActions } from "@/components/remote-actions";
 
-function dateStr(daysAgo: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().slice(0, 10);
+// Local-day window in the family's timezone. Module-scope so Date.now() stays out
+// of the component render (react-hooks/purity). Usage/grants are keyed by local
+// day, so "today", the 7-day window and the weekday must all use the same tz.
+function localWindow(tz: number): { dates: string[]; today: string; weekday: string } {
+  const now = Date.now();
+  return {
+    dates: Array.from({ length: 7 }, (_, i) => localDateStringDaysAgo(now, 6 - i, tz)),
+    today: localDateString(now, tz),
+    weekday: localWeekday(tz, now),
+  };
 }
 function safeParse<T>(raw: string | undefined | null, fb: T): T {
   if (!raw) return fb;
@@ -24,8 +31,9 @@ export default async function ChildOverview({
   params: Promise<{ childId: string }>;
 }) {
   const { childId } = await params;
-  const dates = Array.from({ length: 7 }, (_, i) => dateStr(6 - i));
-  const today = dateStr(0);
+  const child = await prisma.child.findUnique({ where: { id: childId }, select: { tzOffsetMinutes: true } });
+  const tz = child?.tzOffsetMinutes ?? 0;
+  const { dates, today, weekday } = localWindow(tz);
 
   const [usage, screenTime, recent, grants, deviceCount] = await Promise.all([
     prisma.appUsage.findMany({ where: { childId, date: { in: dates } } }),
@@ -53,12 +61,15 @@ export default async function ChildOverview({
   }
   const totalToday = byApp.size ? [...byApp.values()].reduce((a, b) => a + b.seconds, 0) : 0;
   const limits = safeParse<Record<string, number>>(screenTime?.dailyLimits, {});
-  const limitToday = (limits[todayWeekday()] ?? 0) + bonusMin;
+  // A free day (no base limit) stays free even with a bonus grant — mirrors the
+  // server helper, the enforcer and the mobile client.
+  const baseLimit = limits[weekday] ?? 0;
+  const limitToday = baseLimit > 0 ? baseLimit + bonusMin : 0;
   const limitSecs = limitToday * 60;
   const pct = limitSecs ? Math.min(100, Math.round((totalToday / limitSecs) * 100)) : 0;
   const remainingSecs = limitSecs - totalToday;
   const bedtimes = safeParse<{ days: string[]; start: string; end: string }[]>(screenTime?.bedtimes, []);
-  const inBedtime = isBedtimeNow(bedtimes);
+  const inBedtime = isBedtimeNowTz(bedtimes, tz);
   const maxDay = Math.max(1, ...[...byDay.values()]);
 
   return (

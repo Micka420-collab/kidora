@@ -1,11 +1,11 @@
 import { prisma } from "./prisma";
 import { DEFAULT_BLOCKLIST } from "./categories";
-import { isBedtimeNow, todayWeekday } from "./schedule";
+import { isBedtimeNow, isBedtimeNowTz, todayWeekday, localWeekday } from "./schedule";
 import { isPausedNow } from "./pause";
 import { localDateString } from "./localdate";
 
 // Re-exported for existing importers.
-export { isBedtimeNow, todayWeekday };
+export { isBedtimeNow, isBedtimeNowTz, todayWeekday, localWeekday };
 
 export type EffectivePolicy = {
   childId: string;
@@ -124,7 +124,10 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   for (const routine of child.routines) {
     if (!routine.enabled) continue;
     const days = safeParse<string[]>(routine.days, []);
-    if (!isBedtimeNow([{ days, start: routine.start, end: routine.end }])) continue;
+    // Routines (e.g. "block games 08:00–16:00") are resolved server-side, so they
+    // MUST use the family's local clock — not the server's UTC — or they fire at
+    // the wrong hour for any non-UTC family.
+    if (!isBedtimeNowTz([{ days, start: routine.start, end: routine.end }], child.tzOffsetMinutes)) continue;
     activeRoutines.push(routine.name);
     for (const appId of safeParse<string[]>(routine.blockedAppIds, [])) {
       const existing = appRuleMap.get(appId);
