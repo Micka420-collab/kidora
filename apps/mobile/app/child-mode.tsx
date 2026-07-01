@@ -34,6 +34,7 @@ export default function ChildMode() {
   const [pendingReq, setPendingReq] = useState<number | null>(null); // minutes of a request awaiting a parent decision
   const [reduceMotion, setReduceMotion] = useState(false);
   const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
+  const [denied, setDenied] = useState(false); // parent refused the pending request
   const [welcome, setWelcome] = useState(false); // first-launch greeting banner
   const [parentMsg, setParentMsg] = useState<string | null>(null); // a "message" command from a parent
   const [remoteLocked, setRemoteLocked] = useState(false); // a "lock" command from a parent (best-effort)
@@ -53,9 +54,11 @@ export default function ChildMode() {
   const prevUsage = useRef<Record<string, number>>({});
   const usageDate = useRef<string | null>(null);
   const prevBonus = useRef<number | null>(null);
+  const prevPendingReq = useRef<number | null>(null); // to detect a pending request being resolved
   const sosInFlight = useRef(false);
   const reqInFlight = useRef(false);
   const grantTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deniedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const welcomeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Animations ──
@@ -98,6 +101,7 @@ export default function ChildMode() {
       mounted.current = false;
       if (timer.current) clearInterval(timer.current);
       if (grantTimer.current) clearTimeout(grantTimer.current);
+      if (deniedTimer.current) clearTimeout(deniedTimer.current);
       if (welcomeTimer.current) clearTimeout(welcomeTimer.current);
       sub.remove();
     };
@@ -222,8 +226,9 @@ export default function ChildMode() {
       setLimitMin(baseMin > 0 ? baseMin + (st?.bonusMinutesToday ?? 0) : 0);
       // Celebrate when a parent grants extra time (bonus went up since last sync).
       const bonus = st?.enabled ? (st.bonusMinutesToday ?? 0) : 0;
-      if (prevBonus.current != null && bonus > prevBonus.current) {
-        setGranted(bonus - prevBonus.current);
+      const bonusIncreased = prevBonus.current != null && bonus > prevBonus.current;
+      if (bonusIncreased) {
+        setGranted(bonus - prevBonus.current!);
         setReqStatus("idle");
         pop.setValue(0);
         Animated.spring(pop, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
@@ -231,7 +236,17 @@ export default function ChildMode() {
         grantTimer.current = setTimeout(() => setGranted(null), 10_000);
       }
       prevBonus.current = bonus;
-      setPendingReq(res.pendingTimeRequest ? res.pendingTimeRequest.minutes : null);
+      const nowPending = res.pendingTimeRequest ? res.pendingTimeRequest.minutes : null;
+      // A pending request that disappeared WITHOUT a bonus bump was refused —
+      // give the child closure instead of the banner silently vanishing.
+      if (prevPendingReq.current != null && nowPending == null && !bonusIncreased) {
+        setDenied(true);
+        setReqStatus("idle");
+        if (deniedTimer.current) clearTimeout(deniedTimer.current);
+        deniedTimer.current = setTimeout(() => setDenied(false), 8_000);
+      }
+      prevPendingReq.current = nowPending;
+      setPendingReq(nowPending);
       // Request resolved (approved → grant branch above, or denied → no pending
       // request and no bonus change): clear the lingering "sent" state.
       if (!res.pendingTimeRequest) setReqStatus((s) => (s === "sent" ? "idle" : s));
@@ -504,6 +519,12 @@ export default function ChildMode() {
           </Animated.View>
         )}
 
+        {denied && (
+          <View style={s.denied}>
+            <Text style={s.deniedText}>Ta demande de temps a été refusée cette fois 💛</Text>
+          </View>
+        )}
+
         {/* Demander plus de temps d'écran à ses parents (vraie demande → alerte parent) */}
         {reqStatus === "sent" ? (
           <Animated.View
@@ -635,6 +656,8 @@ const s = StyleSheet.create({
   timeBtn: { marginTop: 16, backgroundColor: "#facc15", paddingHorizontal: 28, paddingVertical: 15, borderRadius: 16, minWidth: 240, alignItems: "center", shadowColor: "#000", shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
   pendingReq: { marginTop: 16, backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, minWidth: 240, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
   pendingReqText: { color: "#e0e7ff", fontWeight: "700", fontSize: 14 },
+  denied: { marginTop: 16, backgroundColor: "rgba(254,226,226,0.96)", borderRadius: 14, paddingHorizontal: 18, paddingVertical: 13, minWidth: 240, alignItems: "center" },
+  deniedText: { color: "#b91c1c", fontWeight: "700", fontSize: 14, textAlign: "center" },
   timeBtnText: { color: "#713f12", fontWeight: "800", fontSize: 16 },
   timeRow: { marginTop: 16, flexDirection: "row", gap: 10, alignItems: "center" },
   timeChip: { backgroundColor: "#facc15", paddingHorizontal: 22, paddingVertical: 14, borderRadius: 14, minHeight: 48, justifyContent: "center" },
