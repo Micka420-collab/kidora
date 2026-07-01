@@ -161,11 +161,22 @@ export default function DevicesTab() {
             </button>
           </div>
           {justAdded.platform === "windows" && (
-            <pre className="mt-3 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+            <>
+              <a
+                href="https://github.com/Micka420-collab/kidora/releases"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
+              >
+                {t.getAgent}
+              </a>
+              <p className="mt-3 text-sm text-muted">{t.winSourceNote}</p>
+              <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
 {`# Sur le PC enfant (PowerShell) :
 cd kidora-agent
 node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}`}
-            </pre>
+              </pre>
+            </>
           )}
           <button className="mt-3 text-sm font-semibold text-brand-600" onClick={() => setJustAdded(null)}>{t.done}</button>
         </div>
