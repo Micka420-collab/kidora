@@ -75,11 +75,15 @@ export async function fetchOpenRouterModels(nowMs = 0): Promise<OpenRouterModel[
 }
 
 /** Verify a key + model with a tiny, cheap completion. Returns null on success,
- *  or a short error message. */
-export async function testOpenRouter(apiKey: string, model: string): Promise<string | null> {
+ *  or a short error message. Bounded by a timeout so a hung connection can't keep
+ *  the serverless function open. */
+export async function testOpenRouter(apiKey: string, model: string, timeoutMs = 8000): Promise<string | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(CHAT_URL, {
       method: "POST",
+      signal: ctrl.signal,
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -96,15 +100,24 @@ export async function testOpenRouter(apiKey: string, model: string): Promise<str
     const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     return err.error?.message ?? `Erreur ${res.status}`;
   } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") return "Délai dépassé";
     return e instanceof Error ? e.message : "Connexion impossible";
+  } finally {
+    clearTimeout(timer);
   }
 }
 
 // ── LLM risk scoring ──────────────────────────────────────────────────────
 import { analyzeRisk, levelFor, type RiskLevel } from "./risk";
 
-/** Per-sync AI context: decrypted key, model, and a shared LLM-call budget. */
-export type AiRiskCtx = { apiKey: string; model: string; budget: { n: number } } | null;
+/**
+ * Per-sync AI context: decrypted key, model, a shared LLM-call budget, and an
+ * optional absolute wall-clock `deadline` (ms epoch). The deadline bounds the
+ * TOTAL time the LLM can add to a sync regardless of how many texts are scored —
+ * once it passes, remaining texts fall back to the heuristic instantly, so a slow
+ * OpenRouter can't stall (or 504) the whole sync request.
+ */
+export type AiRiskCtx = { apiKey: string; model: string; budget: { n: number }; deadline?: number } | null;
 
 /**
  * Risk score for a text: always the fast heuristic, and — when the parent has
@@ -119,19 +132,27 @@ export async function combinedRisk(
 ): Promise<{ score: number; level: RiskLevel; topCategory: string | null }> {
   const h = analyzeRisk(text);
   const heur = { score: h.score, level: h.level, topCategory: h.topCategory };
-  if (!ctx || ctx.budget.n <= 0) return heur;
+  // No budget, no context, or blank text → heuristic only (don't spend budget on
+  // whitespace: empty search titles would otherwise starve real texts).
+  if (!ctx || ctx.budget.n <= 0 || !text.trim()) return heur;
+  // Respect the shared deadline: if too little time is left, skip the LLM.
+  const remaining = ctx.deadline ? ctx.deadline - Date.now() : 6000;
+  if (remaining <= 250) return heur;
   ctx.budget.n -= 1;
-  const llm = await analyzeRiskWithLLM(ctx.apiKey, ctx.model, text);
+  const llm = await analyzeRiskWithLLM(ctx.apiKey, ctx.model, text, Math.min(6000, remaining));
   if (!llm) return heur;
   return llm.score >= heur.score ? { ...llm, topCategory: llm.topCategory ?? heur.topCategory } : heur;
 }
 
-const RISK_CATEGORIES = ["automutilation", "grooming", "harcelement", "sexuel", "drogues", "violence", "none"] as const;
+// Spellings MUST match risk.ts categories & RISK_CATEGORY_LABELS (e.g. "drogue",
+// not "drogues") or the LLM path renders a generic label and won't dedup with the
+// heuristic path.
+const RISK_CATEGORIES = ["automutilation", "grooming", "harcelement", "sexuel", "drogue", "violence", "none"] as const;
 
 const SYSTEM_PROMPT =
   "Tu es un système de sécurité pour le contrôle parental. On te donne un court texte (message ou recherche) provenant de l'appareil d'un enfant mineur. Évalue le RISQUE POUR L'ENFANT — automutilation/suicide, prédation/grooming, harcèlement, contenu sexuel, drogues, violence. " +
   "Réponds UNIQUEMENT par un objet JSON strict, sans texte autour : " +
-  '{"score": <entier 0-100>, "category": "<automutilation|grooming|harcelement|sexuel|drogues|violence|none>"}. ' +
+  '{"score": <entier 0-100>, "category": "<automutilation|grooming|harcelement|sexuel|drogue|violence|none>"}. ' +
   "0 = aucun risque, 100 = danger critique immédiat. Usage défensif de protection de l'enfant uniquement.";
 
 /**
