@@ -103,7 +103,10 @@ export default function Location() {
   }
 
   const here = useMemo(() => fenceContaining(latest, fences), [latest, fences]);
-  const history = latest ? pings.slice(1) : pings;
+  // Exclude the "latest" ping from the history list by id, not by position — a
+  // positional slice(1) would drop a real point (or duplicate latest) if the
+  // API's `latest` isn't exactly `pings[0]`.
+  const history = latest ? pings.filter((p) => p.id !== latest.id) : pings;
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: c.bg }}>
