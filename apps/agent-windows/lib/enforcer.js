@@ -5,6 +5,18 @@ import { log } from "./logger.js";
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 
+/**
+ * Today's effective screen-time limit in minutes (0 = free day / no limit set).
+ * A free day (no base limit for this weekday) STAYS free even when bonus minutes
+ * were granted — matching the server's computeScreenTimeToday and the mobile
+ * client. Previously the bonus was added unconditionally, so on an unlimited day
+ * a reward grant turned into a hard cap after only `bonus` minutes.
+ */
+function effectiveLimitMinutes(dailyLimits, weekdayKey, bonusMinutesToday = 0) {
+  const base = dailyLimits?.[weekdayKey] ?? 0;
+  return base > 0 ? base + (bonusMinutesToday ?? 0) : 0;
+}
+
 function isBedtimeNow(bedtimes, now = new Date()) {
   const todayWd = WEEKDAYS[now.getDay()];
   const prevWd = WEEKDAYS[(now.getDay() + 6) % 7]; // yesterday's weekday
@@ -94,8 +106,7 @@ export class Enforcer {
       block = { reason: "bedtime", title: "Heure du coucher 🌙", message: "C'est l'heure de dormir. À demain !" };
     } else if (policy.screenTime?.enabled) {
       const wd = WEEKDAYS[new Date().getDay()];
-      const baseLimit = policy.screenTime.dailyLimits?.[wd] ?? 0;
-      const limitMin = baseLimit + (policy.screenTime.bonusMinutesToday ?? 0);
+      const limitMin = effectiveLimitMinutes(policy.screenTime.dailyLimits, wd, policy.screenTime.bonusMinutesToday);
       const total = tracker.totalTodaySeconds();
       if (limitMin > 0 && total >= limitMin * 60) {
         // Local date, so the "limit reached" notice re-arms at local midnight
@@ -131,4 +142,4 @@ export class Enforcer {
   }
 }
 
-export { isBedtimeNow };
+export { isBedtimeNow, effectiveLimitMinutes };
