@@ -13,6 +13,11 @@ import { clampTzOffset } from "@/lib/localdate";
 import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
 import { decrypt } from "@/lib/crypto";
 
+// Sync can call the parent's LLM for risk scoring; give the function headroom so
+// a slow model can't kill the request mid-write (the LLM step is itself bounded
+// by the per-sync `deadline` below, well under this ceiling).
+export const maxDuration = 30;
+
 const eventSchema = z.object({
   type: z.string(),
   title: z.string().optional(),
@@ -144,7 +149,10 @@ export async function POST(req: NextRequest) {
       select: { aiEnabled: true, aiModel: true, aiApiKey: true },
     });
     if (p?.aiEnabled && p.aiApiKey && p.aiModel) {
-      aiCtx = { apiKey: decrypt(p.aiApiKey), model: p.aiModel, budget: { n: 5 } };
+      // Shared 7s wall-clock deadline caps total LLM latency across BOTH risk
+      // loops (messages + searches), keeping the sync well under maxDuration even
+      // if OpenRouter is slow — remaining texts fall back to the heuristic.
+      aiCtx = { apiKey: decrypt(p.aiApiKey), model: p.aiModel, budget: { n: 5 }, deadline: Date.now() + 7000 };
     }
   }
 
