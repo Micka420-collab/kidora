@@ -112,6 +112,10 @@ export default function DevicesTab() {
   if (error) return <ErrorCard onRetry={load} />;
   if (loading) return <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>;
 
+  // Server URL for the enrollment snippets (the justAdded block is only shown
+  // after a client action, so window is always defined by then).
+  const winServer = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -170,11 +174,14 @@ export default function DevicesTab() {
               >
                 {t.getAgent}
               </a>
+              <p className="mt-3 text-sm text-muted">{t.winInstall}</p>
+              <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+{`msiexec /i kidora-agent.msi /qn TOKEN=${justAdded.enrollToken} SERVER=${winServer} CHILDUSER="PC\\Enfant"`}
+              </pre>
               <p className="mt-3 text-sm text-muted">{t.winSourceNote}</p>
               <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
-{`# Sur le PC enfant (PowerShell) :
-cd kidora-agent
-node agent.js --token ${justAdded.enrollToken} --server ${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}`}
+{`cd kidora-agent
+node agent.js --token ${justAdded.enrollToken} --server ${winServer}`}
               </pre>
             </>
           )}
