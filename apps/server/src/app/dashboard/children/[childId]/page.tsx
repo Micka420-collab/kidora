@@ -133,7 +133,7 @@ export default async function ChildOverview({
             {dates.map((d) => {
               const v = byDay.get(d) ?? 0;
               const h = Math.round((v / maxDay) * 100);
-              const wd = new Date(d).toLocaleDateString("fr-FR", { weekday: "short" });
+              const wd = new Date(d + "T00:00:00").toLocaleDateString("fr-FR", { weekday: "short" });
               return (
                 <div key={d} className="flex flex-1 flex-col items-center gap-1">
                   <div className="flex w-full flex-1 items-end">

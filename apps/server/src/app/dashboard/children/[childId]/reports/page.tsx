@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/client";
 import { formatDuration } from "@/lib/format";
+import { csvCell, csvWithBom } from "@/lib/csv";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
@@ -70,8 +71,8 @@ export default function ReportsTab() {
       ...report.topApps.map((a) => ["app", a.appName, String(Math.round(a.seconds / 60)) + " min"]),
       ...report.web.topDomains.map((d) => ["domaine", d.domain, `${d.count} visites (${d.blocked} bloquées)`]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    const csv = csvWithBom(rows.map((r) => r.map(csvCell).join(",")).join("\r\n"));
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -116,7 +117,7 @@ export default function ReportsTab() {
               <div className="flex w-full flex-1 items-end">
                 <div className="w-full rounded-t bg-brand-400 hover:bg-brand-500" style={{ height: `${Math.max((t.seconds / maxDay) * 100, 2)}%` }} title={formatDuration(t.seconds)} />
               </div>
-              <span className="text-[9px] text-muted">{new Date(t.date).getDate()}</span>
+              <span className="text-[9px] text-muted">{new Date(t.date + "T00:00:00").getDate()}</span>
             </div>
           ))}
         </div>
