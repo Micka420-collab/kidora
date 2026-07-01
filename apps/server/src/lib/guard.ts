@@ -17,6 +17,16 @@ export function accessibleChildWhere(parentId: string) {
   };
 }
 
+/**
+ * Prisma `where` matching every alert a parent may SEE — any alert on a child
+ * they can access (owner or co-guardian), regardless of which parent the alert
+ * row was originally addressed to. Without this a co-guardian's alert feed is
+ * empty even though they can access the child and issue commands.
+ */
+export function accessibleAlertWhere(parentId: string) {
+  return { child: accessibleChildWhere(parentId) };
+}
+
 /** Ensure a parent can access a child (as owner or co-guardian), else 403/404. */
 export async function requireOwnedChild(parentId: string, childId: string) {
   const child = await prisma.child.findUnique({ where: { id: childId } });

@@ -59,6 +59,20 @@ export function getVapidPublicKey(): string | null {
 
 export type PushPayload = { title: string; body: string; url?: string };
 
+/** Send a push to every guardian of a child (owner + co-guardians), so a
+ *  critical alert reaches BOTH parents, not just the owning one. */
+export async function sendPushToChildGuardians(childId: string, payload: PushPayload): Promise<number> {
+  const child = await prisma.child.findUnique({
+    where: { id: childId },
+    select: { parentId: true, guardianships: { select: { parentId: true } } },
+  });
+  if (!child) return 0;
+  const ids = new Set<string>([child.parentId, ...child.guardianships.map((g) => g.parentId)]);
+  let sent = 0;
+  for (const id of ids) sent += await sendPushToParent(id, payload);
+  return sent;
+}
+
 /** Send a push to all of a parent's subscriptions; prune dead ones. */
 export async function sendPushToParent(parentId: string, payload: PushPayload): Promise<number> {
   if (!loadVapid()) return 0; // push not configured (e.g. missing VAPID env in prod)

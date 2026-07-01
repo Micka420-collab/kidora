@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
-import { accessibleChildWhere } from "@/lib/guard";
+import { accessibleChildWhere, accessibleAlertWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { formatDuration, relativeTime } from "@/lib/format";
 import { FamilyPause } from "@/components/family-pause";
@@ -56,13 +56,13 @@ export default async function OverviewPage() {
       _sum: { seconds: true },
     }),
     prisma.alert.findMany({
-      where: { parentId: parent.id },
+      where: accessibleAlertWhere(parent.id),
       orderBy: { ts: "desc" },
       take: 6,
       include: { child: { select: { name: true, avatar: true } } },
     }),
     // Real unread total — the tile must not be capped at the 6 fetched above.
-    prisma.alert.count({ where: { parentId: parent.id, read: false } }),
+    prisma.alert.count({ where: { ...accessibleAlertWhere(parent.id), read: false } }),
     prisma.activityEvent.findMany({
       where: { childId: { in: kidIds }, type: { in: ["app_open", "web_visit", "search", "blocked"] } },
       orderBy: { ts: "desc" },
@@ -73,7 +73,7 @@ export default async function OverviewPage() {
     prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: prevFrom, lt: curFrom } } }),
     prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
     prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
-    prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
+    prisma.alert.count({ where: { ...accessibleAlertWhere(parent.id), ts: { gte: weekAgo } } }),
   ]);
   const usageMap = new Map(usageToday.map((u) => [u.childId, u._sum.seconds ?? 0]));
   const kidById = new Map(kids.map((k) => [k.id, k]));

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentParent } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { accessibleChildWhere } from "@/lib/guard";
+import { accessibleChildWhere, accessibleAlertWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
@@ -29,7 +29,7 @@ export default async function DashboardLayout({
     select: { id: true, name: true, avatar: true },
   });
   const unread = await prisma.alert.count({
-    where: { parentId: parent.id, read: false },
+    where: { ...accessibleAlertWhere(parent.id), read: false },
   });
 
   const locale = await getLocale();

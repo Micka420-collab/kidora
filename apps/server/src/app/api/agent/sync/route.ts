@@ -5,7 +5,7 @@ import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
 import { riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
-import { sendPushToParent } from "@/lib/push";
+import { sendPushToChildGuardians } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 import { safeDate, capAlerts } from "@/lib/ingest";
@@ -430,11 +430,19 @@ export async function POST(req: NextRequest) {
       await prisma.alert.createMany({ data: kept });
       const critical = kept.filter((a) => a.severity === "critical");
       if (critical.length) {
-        sendPushToParent(parentId, {
-          title: `Kidora — alerte (${device.child.name})`,
-          body: critical[0].message,
-          url: `/dashboard/children/${childId}`,
-        }).catch(() => {});
+        // Fan out to every guardian (owner + co-guardians), not just the owner.
+        // One push per distinct critical message so several (e.g. SOS + a risk
+        // hit) in one sync aren't collapsed into just the first.
+        const seenMsg = new Set<string>();
+        for (const c of critical) {
+          if (seenMsg.has(c.message)) continue;
+          seenMsg.add(c.message);
+          sendPushToChildGuardians(childId, {
+            title: `Kidora — alerte (${device.child.name})`,
+            body: c.message,
+            url: `/dashboard/children/${childId}`,
+          }).catch(() => {});
+        }
       }
     }
   }
