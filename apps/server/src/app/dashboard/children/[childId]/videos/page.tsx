@@ -92,7 +92,9 @@ export default function VideosTab() {
                   {v.platform === "phone" ? <Smartphone size={12} /> : <Monitor size={12} />}
                   {v.platform === "phone" ? "Téléphone" : "PC"}
                 </span>
-                {v.url && (
+                {v.url && /^https?:\/\//i.test(v.url) && (
+                  // Only http(s) — v.url is captured from the child's device, so
+                  // never render a javascript:/data: URL as a clickable link.
                   <a href={v.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-brand-600" aria-label="Ouvrir la vidéo">
                     <ExternalLink size={16} />
                   </a>

@@ -40,6 +40,7 @@ export default function DevicesTab() {
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!justAdded || (justAdded.platform !== "android" && justAdded.platform !== "ios")) {
@@ -70,12 +71,17 @@ export default function DevicesTab() {
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name) return;
-    const res = await api.post<{ device: Device }>(`/api/children/${childId}/devices`, form);
-    setJustAdded(res.device);
-    setAdding(false);
-    setForm({ name: "", platform: "windows" });
-    load();
+    if (!form.name || creating) return; // guard double-submit → no duplicate device
+    setCreating(true);
+    try {
+      const res = await api.post<{ device: Device }>(`/api/children/${childId}/devices`, form);
+      setJustAdded(res.device);
+      setAdding(false);
+      setForm({ name: "", platform: "windows" });
+      load();
+    } finally {
+      setCreating(false);
+    }
   }
 
   function copyToken(t: string) {
@@ -138,7 +144,9 @@ export default function DevicesTab() {
               <option value="macos">macOS</option>
             </select>
           </div>
-          <button className="btn btn-primary">{t.create}</button>
+          <button className="btn btn-primary" disabled={creating}>
+            {creating ? <Loader2 size={16} className="spinner" /> : null} {t.create}
+          </button>
         </form>
       )}
 
