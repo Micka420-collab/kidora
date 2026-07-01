@@ -6,6 +6,7 @@ import { api } from "@/lib/client";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { relativeTime } from "@/lib/format";
 import { useT } from "@/components/i18n-provider";
+import { useToast } from "@/components/toast";
 import { ErrorCard } from "@/components/error-card";
 import { Loader2, Plus, Trash2, ShieldCheck, Search, Eye, Globe, Ban, History, Download } from "lucide-react";
 
@@ -23,6 +24,7 @@ export default function WebTab() {
   const { childId } = useParams<{ childId: string }>();
   const { t: tr } = useT();
   const t = tr.web;
+  const toast = useToast();
   const [filter, setFilter] = useState<Filter | null>(null);
   const [rules, setRules] = useState<WebRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,13 +38,23 @@ export default function WebTab() {
   async function addKeyword(e: React.FormEvent) {
     e.preventDefault();
     if (kw.trim().length < 2) return;
-    const res = await api.post<{ keyword: Keyword }>(`/api/children/${childId}/keywords`, { term: kw.trim() });
-    setKeywords((ks) => [res.keyword, ...ks.filter((k) => k.id !== res.keyword.id)]);
-    setKw("");
+    try {
+      const res = await api.post<{ keyword: Keyword }>(`/api/children/${childId}/keywords`, { term: kw.trim() });
+      setKeywords((ks) => [res.keyword, ...ks.filter((k) => k.id !== res.keyword.id)]);
+      setKw("");
+    } catch {
+      toast(tr.common.error, "error");
+    }
   }
   async function removeKeyword(id: string) {
+    const prev = keywords;
     setKeywords((ks) => ks.filter((k) => k.id !== id));
-    await api.del(`/api/children/${childId}/keywords?id=${id}`);
+    try {
+      await api.del(`/api/children/${childId}/keywords?id=${id}`);
+    } catch {
+      setKeywords(prev);
+      toast(tr.common.error, "error");
+    }
   }
 
   const load = useCallback(async () => {
@@ -70,9 +82,17 @@ export default function WebTab() {
   }, [childId]);
   useEffect(() => { load(); }, [load]);
 
+  // Safety-critical: if the save fails, restore the previous filter and warn, so
+  // a category/toggle never LOOKS blocked while the server still allows it.
   async function saveFilter(next: Filter) {
+    const prev = filter;
     setFilter(next);
-    await api.put(`/api/children/${childId}/webfilter`, next);
+    try {
+      await api.put(`/api/children/${childId}/webfilter`, next);
+    } catch {
+      setFilter(prev);
+      toast(tr.common.error, "error");
+    }
   }
   function toggleCategory(cat: string) {
     if (!filter) return;
@@ -85,15 +105,25 @@ export default function WebTab() {
   async function addDomain(e: React.FormEvent) {
     e.preventDefault();
     if (!domain.trim()) return;
-    const res = await api.post<{ rule: WebRule }>(`/api/children/${childId}/rules/web`, {
-      kind: "domain", value: domain.trim(), action: domainAction,
-    });
-    setRules((rs) => [...rs.filter((r) => r.value !== res.rule.value), res.rule]);
-    setDomain("");
+    try {
+      const res = await api.post<{ rule: WebRule }>(`/api/children/${childId}/rules/web`, {
+        kind: "domain", value: domain.trim(), action: domainAction,
+      });
+      setRules((rs) => [...rs.filter((r) => r.value !== res.rule.value), res.rule]);
+      setDomain("");
+    } catch {
+      toast(tr.common.error, "error"); // keep the input so the parent can retry
+    }
   }
   async function removeRule(r: WebRule) {
+    const prev = rules;
     setRules((rs) => rs.filter((x) => x.id !== r.id));
-    await api.del(`/api/children/${childId}/rules/web?id=${r.id}`);
+    try {
+      await api.del(`/api/children/${childId}/rules/web?id=${r.id}`);
+    } catch {
+      setRules(prev);
+      toast(tr.common.error, "error");
+    }
   }
 
   if (error) return <ErrorCard onRetry={load} />;
