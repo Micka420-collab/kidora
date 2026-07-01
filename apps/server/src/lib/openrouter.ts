@@ -188,4 +188,50 @@ export async function analyzeRiskWithLLM(
   }
 }
 
+const SUMMARY_SYSTEM =
+  "Tu es un assistant bienveillant de contrôle parental (Kidora). À partir de STATISTIQUES HEBDOMADAIRES agrégées (aucun contenu privé, aucun message), rédige pour le parent un court résumé en français : 3 à 5 phrases, ton chaleureux et rassurant, non-alarmiste. Souligne les points positifs, mentionne factuellement ce qui ressort, et termine par 1 ou 2 suggestions douces. N'invente aucune donnée absente. Réponds uniquement par le texte du résumé, sans titre ni puces.";
+
+/**
+ * Generate a warm weekly summary for the parent from AGGREGATE stats only
+ * (no message/search content). Returns the text, or null on error.
+ */
+export async function summarizeWeekWithLLM(
+  apiKey: string,
+  model: string,
+  data: unknown,
+  timeoutMs = 15000,
+): Promise<string | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CHAT_URL, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": REFERER,
+        "X-Title": TITLE,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 320,
+        temperature: 0.4,
+        messages: [
+          { role: "system", content: SUMMARY_SYSTEM },
+          { role: "user", content: JSON.stringify(data) },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const text = body.choices?.[0]?.message?.content?.trim();
+    return text || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export { CHAT_URL, REFERER, TITLE };

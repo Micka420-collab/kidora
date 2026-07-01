@@ -7,6 +7,7 @@ import { formatDuration } from "@/lib/format";
 import { CATEGORY_META, type Category } from "@/lib/categories";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
+import { AiSummaryCard } from "@/components/ai-summary-card";
 import { Loader2, Clock, Ban, Globe, BellRing, Download } from "lucide-react";
 
 type Report = {
@@ -104,6 +105,8 @@ export default function ReportsTab() {
         <Kpi icon={Ban} tint="bg-red-50 text-red-600" value={String(report.web.blockedVisits)} label={t.blockedVisits} />
         <Kpi icon={BellRing} tint="bg-amber-50 text-amber-600" value={String(report.alerts.total)} label={t.alerts} />
       </div>
+
+      <AiSummaryCard childId={childId} />
 
       <div className="card p-5">
         <h3 className="mb-4 text-base font-semibold">{t.dailyScreenTime}</h3>
