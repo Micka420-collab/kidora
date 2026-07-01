@@ -56,8 +56,11 @@ export async function POST(req: NextRequest) {
       data: { passwordHash: await hashPassword(newPassword), tokenVersion: { increment: 1 } },
       select: { tokenVersion: true },
     });
-    await setSessionCookie(await signSession({ parentId: parent.id, email: parent.email, tokenVersion: updated.tokenVersion }));
+    const token = await signSession({ parentId: parent.id, email: parent.email, tokenVersion: updated.tokenVersion });
+    await setSessionCookie(token);
     await audit(parent.id, "account.password_change", "Mot de passe modifié");
-    return json({ ok: true });
+    // Return the fresh token too: the mobile app sends its token manually (not a
+    // cookie), so it must swap in the new one — the old tokenVersion is now void.
+    return json({ ok: true, token });
   });
 }
