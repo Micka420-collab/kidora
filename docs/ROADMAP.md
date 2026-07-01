@@ -1,5 +1,9 @@
 # Roadmap Kidora
 
+## 🤖 IA configurable par le parent (OpenRouter) — 2026-07-01
+- [x] Le parent branche sa **propre clé OpenRouter** (chiffrée au repos) et **choisit le modèle** (DeepSeek, GPT-4o-mini, Gemini Flash, Claude Haiku…) via un **tableau comparatif de prix** ($/1M tokens) et de contexte, alimenté par le catalogue **live** d'OpenRouter (routes `GET/PUT /api/account/ai`, `GET /ai/models`, `POST /ai/test`).
+- [x] Le modèle choisi **affine la détection de risque** des messages/recherches (`combinedRisk` = heuristique + LLM, le plus sévère l'emporte) ; **borné** (budget par sync, timeout 6 s, JSON strict) et **repli automatique** sur l'heuristique en cas d'échec → jamais de régression.
+
 ## 🛡️ Audit & durcissement (nuit du 2026-07-01)
 
 Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 correctifs vérifiés** (#208–#227), `main` resté vert. Corrigés :

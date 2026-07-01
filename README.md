@@ -62,7 +62,7 @@ Une **landing animée** accueille les visiteurs non connectés : défilement ave
 | 🌐 **Filtrage web** | Blocage par **catégorie** (adulte, jeux d'argent, violence, drogues, rencontres…), SafeSearch forcé, listes blanche/noire |
 | 🎮 **Applications** | Autoriser / bloquer / **limiter** chaque app, **usage du jour vs limite**, détection des nouvelles apps |
 | 🔍 **Mots-clés sensibles** | Alerte si des termes à risque (automutilation, violence…) ou personnalisés apparaissent dans les recherches |
-| 🛡️ **Détection de risque (IA)** | Analyse des **messages** & recherches : score de risque pondéré détectant **grooming/prédation**, automutilation, harcèlement → alertes par sévérité |
+| 🛡️ **Détection de risque (IA)** | Analyse des **messages** & recherches : score de risque pondéré détectant **grooming/prédation**, automutilation, harcèlement → alertes par sévérité. **LLM optionnel** : branchez votre **clé OpenRouter** et choisissez le modèle (DeepSeek, GPT-4o-mini…) avec **comparaison des prix** ; repli automatique sur l'heuristique |
 | ▶️ **Vidéos & Messages** | **Vidéos YouTube** regardées (PC + téléphone, avec miniatures) et **SMS** reçus/envoyés, avec **export CSV** |
 | 🌐 **Historique de navigation** | Derniers sites visités par enfant (catégorie, blocages signalés, export CSV) |
 | 📍 **Localisation** | Position temps réel, historique, **zones de sécurité (géofences)** avec alertes entrée/sortie |

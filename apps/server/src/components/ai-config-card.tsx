@@ -103,7 +103,7 @@ export function AiConfigCard() {
           </div>
         ) : (
           <>
-            <input className="input font-mono" type="password" autoComplete="off" placeholder="sk-or-v1-…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+            <input className="input font-mono" type="password" autoComplete="off" placeholder="sk-or-…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
             <p className="mt-1 text-xs text-muted">
               Obtenez une clé sur <a className="text-brand-600 hover:underline" href="https://openrouter.ai/keys" target="_blank" rel="noreferrer">openrouter.ai/keys <ExternalLink size={11} className="inline" /></a>. Stockée chiffrée, jamais réaffichée.
             </p>
