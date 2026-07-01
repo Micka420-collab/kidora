@@ -28,7 +28,11 @@ export default function ChildMode() {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [granted, setGranted] = useState<number | null>(null); // celebration: parent just granted +X min
   const [welcome, setWelcome] = useState(false); // first-launch greeting banner
+  const [parentMsg, setParentMsg] = useState<string | null>(null); // a "message" command from a parent
+  const [remoteLocked, setRemoteLocked] = useState(false); // a "lock" command from a parent (best-effort)
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Command results to ack on the next sync (so delivered commands don't hang).
+  const pendingResults = useRef<{ id: string; status: "done" | "failed"; result?: string }[]>([]);
   // Per-app cumulative-usage baseline, persisted so it survives app restarts —
   // otherwise the first sync after a cold start would resend the whole day's
   // cumulative usage as a "delta" and the server would double-count it.
@@ -167,12 +171,18 @@ export default function ChildMode() {
         }
       }
 
+      const toAck = pendingResults.current.slice();
       const res = await childAgent.sync({
         online: true,
         location,
         usage,
         events: [{ type: "location", title: "Position mise à jour" }],
+        ...(toAck.length ? { commandResults: toAck } : {}),
       });
+      // Drop the results we just acknowledged (keep any added since).
+      pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
+      // Apply remote commands the parent issued (lock / message / locate…).
+      processCommands(res.commands);
       setPaused(res.policy.paused);
       // today's screen-time allowance (daily limit for this weekday + bonus granted)
       const st = res.policy.screenTime;
@@ -202,6 +212,41 @@ export default function ChildMode() {
       setStatus(res.policy.paused ? "⏸ Mis en pause par un parent" : "Protection active 🛡️");
     } catch (e) {
       setStatus("Erreur de synchronisation");
+    }
+  }
+
+  // Handle remote commands the parent issued from the dashboard/app, and queue an
+  // ack for each so it isn't left "delivered" forever. Mobile can't truly lock a
+  // phone, so lock/message are surfaced as banners (best-effort).
+  function processCommands(commands?: { id: string; type: string; payload?: Record<string, unknown> }[]) {
+    for (const cmd of commands ?? []) {
+      let status: "done" | "failed" = "done";
+      let result: string | undefined;
+      switch (cmd.type) {
+        case "message": {
+          const text = typeof cmd.payload?.text === "string" ? cmd.payload.text : "";
+          if (text) setParentMsg(text);
+          break;
+        }
+        case "lock":
+        case "pause":
+          setRemoteLocked(true);
+          break;
+        case "unlock":
+        case "resume":
+          setRemoteLocked(false);
+          break;
+        case "locate":
+          break; // position is already sent on every sync
+        case "screenshot":
+          status = "failed";
+          result = "Capture d'écran non disponible sur ce téléphone";
+          break;
+        default:
+          status = "failed";
+          result = "Commande non supportée";
+      }
+      pendingResults.current.push({ id: cmd.id, status, ...(result ? { result } : {}) });
     }
   }
 
@@ -295,6 +340,22 @@ export default function ChildMode() {
           <View style={s.welcome}>
             <Text style={s.welcomeText}>🎉 Bienvenue dans Kidora !</Text>
             <Text style={s.welcomeSub}>Ici, tu es protégé·e. Bonne journée ! ✨</Text>
+          </View>
+        )}
+
+        {remoteLocked && (
+          <View style={{ backgroundColor: "rgba(254,226,226,0.96)", borderRadius: 18, paddingVertical: 14, paddingHorizontal: 18, marginBottom: 12, width: "100%", alignItems: "center" }}>
+            <Text style={{ color: "#b91c1c", fontWeight: "800", fontSize: 15 }}>🔒 Ton téléphone est verrouillé par un parent</Text>
+          </View>
+        )}
+
+        {parentMsg && (
+          <View style={{ backgroundColor: "rgba(255,255,255,0.96)", borderRadius: 18, padding: 16, marginBottom: 12, width: "100%" }}>
+            <Text style={{ color: "#4338ca", fontWeight: "800", fontSize: 13, marginBottom: 4 }}>💬 Message d'un parent</Text>
+            <Text style={{ color: "#1e1b4b", fontSize: 15, lineHeight: 21 }}>{parentMsg}</Text>
+            <Pressable onPress={() => setParentMsg(null)} accessibilityRole="button" accessibilityLabel="J'ai lu le message" style={{ alignSelf: "flex-end", marginTop: 10, backgroundColor: "#6366f1", borderRadius: 12, paddingVertical: 8, paddingHorizontal: 18 }}>
+              <Text style={{ color: "#fff", fontWeight: "700" }}>J'ai lu 💜</Text>
+            </Pressable>
           </View>
         )}
 
