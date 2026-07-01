@@ -12,6 +12,12 @@ const nextConfig: NextConfig = {
     "web-push",
   ],
   async headers() {
+    // HTTPS-forcing headers (HSTS + upgrade-insecure-requests) belong ONLY in
+    // production. Over plain http (local dev / LAN testing on an IP) they upgrade
+    // every request to https on a server with no TLS → ERR_SSL_PROTOCOL_ERROR and
+    // a blank page. So gate them on NODE_ENV.
+    const isProd = process.env.NODE_ENV === "production";
+
     // Content-Security-Policy. 'unsafe-inline' is kept for styles/scripts that
     // Next injects without a nonce; everything else is locked to 'self'.
     // img-src allows YouTube thumbnails; connect-src 'self' for the API.
@@ -30,7 +36,7 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "object-src 'none'",
-      "upgrade-insecure-requests",
+      ...(isProd ? ["upgrade-insecure-requests"] : []),
     ].join("; ");
     return [
       {
@@ -41,7 +47,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()" },
-          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+          // HSTS only in production (in dev it would pin the LAN IP to https for 2y).
+          ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }] : []),
           { key: "X-DNS-Prefetch-Control", value: "on" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
