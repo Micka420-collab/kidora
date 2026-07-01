@@ -35,9 +35,18 @@ export function GuardiansCard() {
       setBusy(false);
     }
   }
-  async function remove(id: string) {
-    setGuardians((g) => g.filter((x) => x.id !== id));
-    await api.del(`/api/guardians?parentId=${id}`);
+  async function remove(g: Guardian) {
+    // Destructive (revokes another adult's access to all shared children) →
+    // confirm, and roll back if the request fails.
+    if (!confirm(`Retirer ${g.name} ? Cette personne n'aura plus accès à vos enfants.`)) return;
+    const prev = guardians;
+    setGuardians((gs) => gs.filter((x) => x.id !== g.id));
+    try {
+      await api.del(`/api/guardians?parentId=${g.id}`);
+    } catch {
+      setGuardians(prev);
+      setMsg({ kind: "err", text: "Échec du retrait. Réessayez." });
+    }
   }
 
   return (
@@ -70,7 +79,7 @@ export function GuardiansCard() {
                 <div className="text-sm font-medium">{g.name}</div>
                 <div className="text-xs text-muted">{g.email} · accès à {g.children.length} enfant(s)</div>
               </div>
-              <button className="text-slate-400 hover:text-red-500" onClick={() => remove(g.id)}><Trash2 size={16} /></button>
+              <button className="text-slate-400 hover:text-red-500" onClick={() => remove(g)}><Trash2 size={16} /></button>
             </div>
           ))}
         </div>
