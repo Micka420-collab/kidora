@@ -211,8 +211,11 @@ export function updateHostsFile(domains) {
   for (const d of domains) {
     const dom = d.replace(/^https?:\/\//, "").replace(/^www\./, "").trim();
     if (!dom) continue;
+    // apex + the common bypass subdomains (a flat hosts list can't do the DNS
+    // proxy's suffix matching, so cover the frequent www./m. mobile bypasses).
     lines.push(`127.0.0.1 ${dom}`);
     lines.push(`127.0.0.1 www.${dom}`);
+    lines.push(`127.0.0.1 m.${dom}`);
   }
   lines.push(MARK_END);
 

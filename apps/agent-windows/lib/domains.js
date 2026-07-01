@@ -62,6 +62,21 @@ export function registrableDomain(domain) {
   return parts.slice(-2).join(".");
 }
 
+/**
+ * All known domains whose category is in `categories`. Used by the hosts-file
+ * fallback, which — unlike the DNS proxy — can't categorize at query time, so it
+ * must be handed the concrete domain list for each blocked category.
+ */
+export function domainsForCategories(categories) {
+  const set = categories instanceof Set ? categories : new Set(categories || []);
+  if (set.size === 0) return [];
+  const out = [];
+  for (const [domain, cat] of Object.entries(DOMAIN_CATEGORY)) {
+    if (set.has(cat)) out.push(domain);
+  }
+  return out;
+}
+
 export function categorizeDomain(input) {
   const domain = normalizeDomain(input);
   const reg = registrableDomain(domain);
