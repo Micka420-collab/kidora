@@ -16,6 +16,9 @@ TaskManager.defineTask(LOCATION_TASK, async ({ data, error }) => {
   try {
     await childAgent.sync({
       online: true,
+      // Background task can't act on commands — don't let it consume (and lose)
+      // pending parent commands; the foreground sync delivers them.
+      deliverCommands: false,
       location: {
         lat: last.coords.latitude,
         lng: last.coords.longitude,

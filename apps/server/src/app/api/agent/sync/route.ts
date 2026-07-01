@@ -100,6 +100,11 @@ const syncSchema = z.object({
     .object({ minutes: z.number().int().min(5).max(480), reason: z.string().max(200).optional() })
     .optional(),
   panic: z.boolean().optional(),
+  // When false, this sync does NOT consume pending commands (they stay "pending"
+  // for the next full sync). Set by callers that can't act on commands — e.g. the
+  // mobile background location task — so a parent command isn't marked delivered
+  // and lost. Defaults to true (full delivery).
+  deliverCommands: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -434,11 +439,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 8. pending commands → deliver
-  const pending = await prisma.command.findMany({
-    where: { childId, status: "pending", OR: [{ deviceId: device.id }, { deviceId: null }] },
-    orderBy: { createdAt: "asc" },
-  });
+  // 8. pending commands → deliver. A caller that can't act on commands (e.g. the
+  //    background location task) passes deliverCommands:false so they're left
+  //    "pending" for the next full sync instead of being marked delivered & lost.
+  const pending =
+    body.deliverCommands === false
+      ? []
+      : await prisma.command.findMany({
+          where: { childId, status: "pending", OR: [{ deviceId: device.id }, { deviceId: null }] },
+          orderBy: { createdAt: "asc" },
+        });
   if (pending.length) {
     await prisma.command.updateMany({
       where: { id: { in: pending.map((c) => c.id) } },
