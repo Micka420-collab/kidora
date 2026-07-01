@@ -93,4 +93,92 @@ export async function testOpenRouter(apiKey: string, model: string): Promise<str
   }
 }
 
+// ── LLM risk scoring ──────────────────────────────────────────────────────
+import { analyzeRisk, levelFor, type RiskLevel } from "./risk";
+
+/** Per-sync AI context: decrypted key, model, and a shared LLM-call budget. */
+export type AiRiskCtx = { apiKey: string; model: string; budget: { n: number } } | null;
+
+/**
+ * Risk score for a text: always the fast heuristic, and — when the parent has
+ * AI enabled and the per-sync budget isn't exhausted — refined by their chosen
+ * LLM (the more severe of the two wins; LLM catches subtler grooming/context the
+ * heuristic misses). Any LLM failure silently falls back to the heuristic.
+ * The budget is decremented synchronously so Promise.all callers stay bounded.
+ */
+export async function combinedRisk(
+  text: string,
+  ctx: AiRiskCtx,
+): Promise<{ score: number; level: RiskLevel; topCategory: string | null }> {
+  const h = analyzeRisk(text);
+  const heur = { score: h.score, level: h.level, topCategory: h.topCategory };
+  if (!ctx || ctx.budget.n <= 0) return heur;
+  ctx.budget.n -= 1;
+  const llm = await analyzeRiskWithLLM(ctx.apiKey, ctx.model, text);
+  if (!llm) return heur;
+  return llm.score >= heur.score ? { ...llm, topCategory: llm.topCategory ?? heur.topCategory } : heur;
+}
+
+const RISK_CATEGORIES = ["automutilation", "grooming", "harcelement", "sexuel", "drogues", "violence", "none"] as const;
+
+const SYSTEM_PROMPT =
+  "Tu es un système de sécurité pour le contrôle parental. On te donne un court texte (message ou recherche) provenant de l'appareil d'un enfant mineur. Évalue le RISQUE POUR L'ENFANT — automutilation/suicide, prédation/grooming, harcèlement, contenu sexuel, drogues, violence. " +
+  "Réponds UNIQUEMENT par un objet JSON strict, sans texte autour : " +
+  '{"score": <entier 0-100>, "category": "<automutilation|grooming|harcelement|sexuel|drogues|violence|none>"}. ' +
+  "0 = aucun risque, 100 = danger critique immédiat. Usage défensif de protection de l'enfant uniquement.";
+
+/**
+ * Score a text with the parent's chosen OpenRouter model. Returns a
+ * RiskResult-shaped object, or null on any error/timeout (caller falls back to
+ * the heuristic). Bounded: short timeout, tiny max_tokens, JSON output.
+ */
+export async function analyzeRiskWithLLM(
+  apiKey: string,
+  model: string,
+  text: string,
+  timeoutMs = 6000,
+): Promise<{ score: number; level: RiskLevel; topCategory: string | null } | null> {
+  const clean = (text || "").slice(0, 2000);
+  if (!clean.trim()) return { score: 0, level: "none", topCategory: null };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(CHAT_URL, {
+      method: "POST",
+      signal: ctrl.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": REFERER,
+        "X-Title": TITLE,
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 40,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: clean },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const content = body.choices?.[0]?.message?.content;
+    if (!content) return null;
+    const parsed = JSON.parse(content) as { score?: unknown; category?: unknown };
+    const score = Math.max(0, Math.min(100, Math.round(Number(parsed.score))));
+    if (!Number.isFinite(score)) return null;
+    const cat = typeof parsed.category === "string" && (RISK_CATEGORIES as readonly string[]).includes(parsed.category) && parsed.category !== "none"
+      ? parsed.category
+      : null;
+    return { score, level: levelFor(score), topCategory: cat };
+  } catch {
+    return null; // timeout / network / bad JSON → heuristic fallback
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export { CHAT_URL, REFERER, TITLE };
