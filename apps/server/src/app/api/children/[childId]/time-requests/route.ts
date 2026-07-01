@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { audit } from "@/lib/audit";
+import { localDateString } from "@/lib/localdate";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+// "Today" in the family's local timezone, so a bonus granted in the evening
+// lands on the day it's meant to offset (not the next UTC day).
+function today(tzOffsetMinutes: number) {
+  return localDateString(Date.now(), tzOffsetMinutes);
 }
 
 // GET: pending/recent requests + today's bonus total
@@ -16,10 +19,10 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
     const [requests, grants] = await Promise.all([
       prisma.timeRequest.findMany({ where: { childId }, orderBy: { createdAt: "desc" }, take: 20 }),
-      prisma.timeGrant.findMany({ where: { childId, date: today() } }),
+      prisma.timeGrant.findMany({ where: { childId, date: today(child.tzOffsetMinutes) } }),
     ]);
     return json({
       requests,
@@ -35,12 +38,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
     const parsed = postSchema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
 
     await prisma.timeGrant.create({
-      data: { childId, date: today(), minutes: parsed.data.minutes, source: "parent" },
+      data: { childId, date: today(child.tzOffsetMinutes), minutes: parsed.data.minutes, source: "parent" },
     });
     // lift a manual pause/limit lock implicitly by resuming
     await prisma.command.create({ data: { childId, type: "resume", payload: "{}" } });
@@ -59,7 +62,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
     const parsed = patchSchema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
 
@@ -82,7 +85,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (claimed.count === 0) return json({ ok: true, alreadyProcessed: true });
       await prisma.$transaction([
         prisma.timeGrant.create({
-          data: { childId, date: today(), minutes: reqRow.minutes, source: "request" },
+          data: { childId, date: today(child.tzOffsetMinutes), minutes: reqRow.minutes, source: "request" },
         }),
         prisma.command.create({ data: { childId, type: "resume", payload: "{}" } }),
       ]);

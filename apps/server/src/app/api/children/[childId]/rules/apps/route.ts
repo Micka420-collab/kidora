@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { categorizeApp } from "@/lib/categories";
+import { localDateString } from "@/lib/localdate";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -11,13 +12,13 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
     const rules = await prisma.appRule.findMany({
       where: { childId },
       orderBy: { appName: "asc" },
     });
-    // Today's usage per app, so the UI can show "used X / limit".
-    const today = new Date().toISOString().slice(0, 10);
+    // Today's usage per app (family-local day), so the UI can show "used X / limit".
+    const today = localDateString(Date.now(), child.tzOffsetMinutes);
     const usage = await prisma.appUsage.groupBy({
       by: ["appId"],
       where: { childId, date: today },

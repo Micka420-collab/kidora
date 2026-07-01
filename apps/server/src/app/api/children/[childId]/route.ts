@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { computeScreenTimeToday } from "@/lib/policy";
+import { localDateString } from "@/lib/localdate";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -28,7 +29,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
     // Additive: today's screen-time allowance (parsed limit + bonus granted),
     // so clients can show "remaining today" without re-parsing the raw row.
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString(Date.now(), child.tzOffsetMinutes);
     const grants = await prisma.timeGrant.findMany({ where: { childId, date: today } });
     const bonusMinutes = grants.reduce((a, g) => a + g.minutes, 0);
     const screenTimeToday = computeScreenTimeToday(child.screenTime, bonusMinutes);

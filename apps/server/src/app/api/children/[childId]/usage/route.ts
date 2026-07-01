@@ -2,29 +2,26 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
+import { localDateString, localDateStringDaysAgo } from "@/lib/localdate";
 
 type Ctx = { params: Promise<{ childId: string }> };
-
-function localDate(d = new Date()): string {
-  return d.toISOString().slice(0, 10);
-}
 
 // GET /api/children/:id/usage?date=YYYY-MM-DD&days=7
 export async function GET(req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
+    const tz = child.tzOffsetMinutes;
 
     const url = new URL(req.url);
     // clampLimit guards NaN/negative (?days=abc no longer yields an empty trend).
     const days = clampLimit(url.searchParams.get("days"), 7, 31);
 
+    const now = Date.now();
     const dates: string[] = [];
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      dates.push(localDate(d));
+      dates.push(localDateStringDaysAgo(now, i, tz));
     }
 
     const rows = await prisma.appUsage.findMany({
@@ -32,7 +29,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     });
 
     // by app (today) and by day (trend)
-    const today = localDate();
+    const today = localDateString(now, tz);
     const byApp = new Map<string, { appId: string; appName: string; category: string | null; seconds: number }>();
     const byDay = new Map<string, number>(dates.map((d) => [d, 0]));
 
