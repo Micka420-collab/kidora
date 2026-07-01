@@ -267,7 +267,19 @@ export default function ChildMode() {
         const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
       } catch { /* send without location if unavailable */ }
-      await childAgent.sync({ online: true, panic: true, location, events: [{ type: "panic", title: "SOS déclenché" }] });
+      // The server marks EVERY pending command "delivered" on any sync — so this
+      // SOS sync must also carry pending acks and process returned commands, or a
+      // parent command issued just before an SOS would be silently lost.
+      const toAck = pendingResults.current.slice();
+      const res = await childAgent.sync({
+        online: true,
+        panic: true,
+        location,
+        ...(toAck.length ? { commandResults: toAck } : {}),
+        events: [{ type: "panic", title: "SOS déclenché" }],
+      });
+      pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
+      processCommands(res.commands);
       RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
     } catch {
       RNAlert.alert("Erreur", "Impossible d'envoyer le SOS. Réessaie.");
@@ -280,11 +292,18 @@ export default function ChildMode() {
     setReqStatus("sending");
     setPickTime(false);
     try {
-      await childAgent.sync({
+      // Like SOS above: carry pending acks + process returned commands so a
+      // command issued right before this request isn't lost to the server's
+      // "mark all delivered on every sync" step.
+      const toAck = pendingResults.current.slice();
+      const res = await childAgent.sync({
         online: true,
         timeRequest: { minutes, reason: "Demande depuis l'appareil" },
+        ...(toAck.length ? { commandResults: toAck } : {}),
         events: [{ type: "time_request", title: `Demande de +${minutes} min` }],
       });
+      pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
+      processCommands(res.commands);
       setReqStatus("sent");
       pop.setValue(0);
       Animated.spring(pop, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
