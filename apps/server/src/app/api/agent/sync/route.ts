@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
-import { analyzeRisk, riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
+import { riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
 import { sendPushToParent } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 import { safeDate, capAlerts } from "@/lib/ingest";
 import { clampTzOffset } from "@/lib/localdate";
+import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
+import { decrypt } from "@/lib/crypto";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -127,6 +129,24 @@ export async function POST(req: NextRequest) {
   }
 
   const alerts: { parentId: string; childId: string; type: string; severity: string; message: string }[] = [];
+
+  // Optional LLM risk scoring with the parent's own OpenRouter model. Loaded
+  // once, only when there's text to analyze; a small per-sync budget bounds
+  // cost/latency (heuristic covers the rest).
+  let aiCtx: AiRiskCtx = null;
+  const hasRiskText =
+    (body.messages?.length ?? 0) > 0 ||
+    (body.webVisits?.length ?? 0) > 0 ||
+    (body.events ?? []).some((e) => e.type === "search" || e.type === "web_visit");
+  if (hasRiskText) {
+    const p = await prisma.parent.findUnique({
+      where: { id: parentId },
+      select: { aiEnabled: true, aiModel: true, aiApiKey: true },
+    });
+    if (p?.aiEnabled && p.aiApiKey && p.aiModel) {
+      aiCtx = { apiKey: decrypt(p.aiApiKey), model: p.aiModel, budget: { n: 5 } };
+    }
+  }
 
   // 2. activity events
   if (body.events?.length) {
@@ -249,8 +269,10 @@ export async function POST(req: NextRequest) {
       })),
     });
     // Scan each message for risk signals (grooming, self-harm, bullying…).
-    for (const m of body.messages) {
-      const r = analyzeRisk(m.body);
+    // Heuristic + optional LLM, in parallel (budget-bounded).
+    const scored = await Promise.all(body.messages.map((m) => combinedRisk(m.body, aiCtx)));
+    body.messages.forEach((m, i) => {
+      const r = scored[i];
       if (r.level === "medium" || r.level === "high" || r.level === "critical") {
         const cat = RISK_CATEGORY_LABELS[r.topCategory ?? ""] ?? "Risque";
         const who = m.contact ? ` (${m.direction === "in" ? "de" : "à"} ${m.contact})` : "";
@@ -263,7 +285,7 @@ export async function POST(req: NextRequest) {
           message: `⚠️ ${cat} détecté dans un message${who} — « ${preview} »`,
         });
       }
-    }
+    });
   }
 
   // 5. location + geofence transitions
@@ -349,6 +371,7 @@ export async function POST(req: NextRequest) {
     for (const w of body.webVisits ?? []) texts.push(`${w.title ?? ""} ${w.url ?? ""} ${w.domain}`);
 
     const flagged = new Set<string>();
+    // Keyword scan (fast, synchronous).
     for (const t of texts) {
       for (const hit of scanText(t, customTerms)) {
         if (flagged.has(hit.keyword)) continue;
@@ -361,9 +384,11 @@ export async function POST(req: NextRequest) {
           message: `Mot-clé sensible détecté (${hit.category}) : « ${hit.keyword} »`,
         });
       }
-      // Risk scorer over searches/titles too — only escalate high+ here to
-      // avoid noise (messages already cover medium+).
-      const r = analyzeRisk(t);
+    }
+    // Risk scorer over searches/titles (heuristic + optional LLM, in parallel) —
+    // only escalate high+ here to avoid noise (messages already cover medium+).
+    const scoredTexts = await Promise.all(texts.map((t) => combinedRisk(t, aiCtx)));
+    for (const r of scoredTexts) {
       if ((r.level === "high" || r.level === "critical") && !flagged.has(`risk:${r.topCategory}`)) {
         flagged.add(`risk:${r.topCategory}`);
         alerts.push({

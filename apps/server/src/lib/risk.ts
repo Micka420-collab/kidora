@@ -45,7 +45,7 @@ const PATTERNS: Pattern[] = [
   { category: "violence", label: "armes/violence", weight: 55, re: /(fabriquer une bombe|make a bomb|school shooting|je vais (le|la|les) tuer|tuer ma classe|ramene un couteau)/ },
 ];
 
-function levelFor(score: number): RiskLevel {
+export function levelFor(score: number): RiskLevel {
   if (score >= 75) return "critical";
   if (score >= 50) return "high";
   if (score >= 25) return "medium";
