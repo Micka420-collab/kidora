@@ -93,6 +93,7 @@ model Child {
   avatar    String? // emoji or url
   paused    Boolean   @default(false) // internet/app pause "right now" (indefinite)
   pausedUntil DateTime? // timed pause: effectively paused until this instant
+  tzOffsetMinutes Int   @default(0) // family local-time offset from UTC (minutes), reported by the last-syncing device
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
