@@ -425,7 +425,7 @@ export async function POST(req: NextRequest) {
     const muted = parseMutedTypes(parentPrefs?.alertPrefs);
     // Collapse a flood (one sync can produce 100s of blocked-attempt/new-app
     // events) into a capped, de-duplicated set before muting + persisting.
-    const kept = capAlerts(alerts).filter((a) => !isAlertMuted(muted, a.type));
+    const kept = capAlerts(alerts).filter((a) => !isAlertMuted(muted, a.type, a.severity));
     if (kept.length) {
       await prisma.alert.createMany({ data: kept });
       const critical = kept.filter((a) => a.severity === "critical");

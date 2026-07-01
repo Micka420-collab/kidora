@@ -1,5 +1,7 @@
 // Alert types a parent may mute. Safety-critical types (panic, risk) are
-// intentionally NOT mutable and are always delivered.
+// intentionally NOT mutable, and NO critical-severity alert of any type is ever
+// muted (see isAlertMuted) — so muting the noisy "keyword" warnings can never
+// silence a self-harm/violence keyword hit, which is emitted at "critical".
 export const MUTABLE_ALERT_TYPES = [
   "new_app",
   "limit_reached",
@@ -34,10 +36,15 @@ export function sanitizeMutedTypes(types: unknown): MutableAlertType[] {
 }
 
 /**
- * Whether an alert of `type` should be suppressed given the muted list.
- * Non-mutable (safety / unknown) types are never muted.
+ * Whether an alert should be suppressed given the muted list.
+ * - A `critical`-severity alert is NEVER muted (SOS, high risk, and self-harm /
+ *   violence keyword hits) — muting the "keyword" category can only silence its
+ *   warning-level entries (drugs/adult/bullying/dating/custom), never the
+ *   critical ones.
+ * - Otherwise only mutable types in the muted list are suppressed.
  */
-export function isAlertMuted(mutedTypes: readonly string[], type: string): boolean {
+export function isAlertMuted(mutedTypes: readonly string[], type: string, severity?: string): boolean {
+  if (severity === "critical") return false;
   if (!MUTABLE.has(type)) return false;
   return mutedTypes.includes(type);
 }
