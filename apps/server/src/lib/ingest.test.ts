@@ -67,4 +67,21 @@ describe("capAlerts", () => {
     const out = capAlerts(Array.from({ length: 12 }, (_, i) => mk("new_app", `app ${i}`)), 8);
     expect(out.every((x) => x.type === "new_app")).toBe(true);
   });
+
+  it("never collapses critical-severity alerts — each is kept in full", () => {
+    const many = Array.from({ length: 15 }, (_, i) => mk("risk", `⚠️ Grooming détecté ${i}`, "critical"));
+    const out = capAlerts(many, 8);
+    expect(out).toHaveLength(15); // all kept
+    expect(out.some((x) => x.message.startsWith("+"))).toBe(false); // no summary
+  });
+
+  it("critical alerts don't count toward a warning type's cap", () => {
+    const a = [
+      ...Array.from({ length: 4 }, (_, i) => mk("keyword", `crit ${i}`, "critical")),
+      ...Array.from({ length: 10 }, (_, i) => mk("keyword", `warn ${i}`, "warning")),
+    ];
+    const out = capAlerts(a, 8);
+    expect(out.filter((x) => x.severity === "critical")).toHaveLength(4); // all kept
+    expect(out.filter((x) => x.severity === "warning")).toHaveLength(8); // 7 + summary
+  });
 });

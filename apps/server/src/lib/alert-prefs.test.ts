@@ -32,4 +32,14 @@ describe("isAlertMuted", () => {
     expect(isAlertMuted([], "new_app")).toBe(false);
     expect(isAlertMuted(["geofence"], "keyword")).toBe(false);
   });
+  it("never mutes a critical-severity alert, even a muted keyword type", () => {
+    // self-harm / violence keyword hits are emitted at "critical"
+    expect(isAlertMuted(["keyword"], "keyword", "critical")).toBe(false);
+    // any critical alert is protected regardless of type/prefs
+    expect(isAlertMuted(["blocked_attempt"], "blocked_attempt", "critical")).toBe(false);
+  });
+  it("still mutes warning-level keyword alerts when the category is muted", () => {
+    expect(isAlertMuted(["keyword"], "keyword", "warning")).toBe(true);
+    expect(isAlertMuted([], "keyword", "warning")).toBe(false);
+  });
 });
