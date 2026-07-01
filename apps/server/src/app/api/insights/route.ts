@@ -25,7 +25,9 @@ export async function GET() {
       prisma.appUsage.aggregate({ _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: prevFrom, lt: prevTo } } }),
       prisma.appUsage.groupBy({ by: ["category"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
       prisma.appUsage.groupBy({ by: ["date"], _sum: { seconds: true }, where: { childId: { in: kidIds }, date: { gte: curFrom } } }),
-      prisma.alert.count({ where: { parentId: parent.id, ts: { gte: weekAgo } } }),
+      // Scope alerts to the accessible children (same as the rest of this
+      // endpoint), so a co-guardian's weekly count isn't stuck at 0.
+      prisma.alert.count({ where: { childId: { in: kidIds }, ts: { gte: weekAgo } } }),
     ]);
 
     let topCategory: { category: string; seconds: number } | null = null;
