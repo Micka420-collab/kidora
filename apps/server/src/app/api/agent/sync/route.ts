@@ -9,6 +9,7 @@ import { sendPushToParent } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 import { safeDate, capAlerts } from "@/lib/ingest";
+import { clampTzOffset } from "@/lib/localdate";
 
 const eventSchema = z.object({
   type: z.string(),
@@ -23,6 +24,8 @@ const syncSchema = z.object({
   online: z.boolean().optional(),
   battery: z.number().int().min(0).max(100).optional(),
   agentVersion: z.string().optional(),
+  tzOffset: z.number().optional(), // minutes to add to UTC for the device's local time
+
   events: z.array(eventSchema).max(500).optional(),
   usage: z
     .array(
@@ -113,6 +116,15 @@ export async function POST(req: NextRequest) {
       ...(body.agentVersion && { agentVersion: body.agentVersion }),
     },
   });
+
+  // Record the family's local-time offset (used to bucket the screen-time day,
+  // bonus grants and "today's usage" in local time). Written only when it changes.
+  if (body.tzOffset !== undefined) {
+    const tz = clampTzOffset(body.tzOffset);
+    if (tz !== device.child.tzOffsetMinutes) {
+      await prisma.child.update({ where: { id: childId }, data: { tzOffsetMinutes: tz } });
+    }
+  }
 
   const alerts: { parentId: string; childId: string; type: string; severity: string; message: string }[] = [];
 
