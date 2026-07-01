@@ -4,6 +4,7 @@ import { relativeTime } from "@/lib/format";
 import { getLocale, getDict } from "@/lib/i18n";
 import { User, Shield, Smartphone, ScrollText } from "lucide-react";
 import { GuardiansCard } from "@/components/guardians-card";
+import { AiConfigCard } from "@/components/ai-config-card";
 import { AccountDataCard } from "@/components/account-data-card";
 import { PushToggle } from "@/components/push-toggle";
 import { WeeklyReportToggle } from "@/components/weekly-report-toggle";
@@ -89,6 +90,8 @@ export default async function SettingsPage() {
       />
 
       <GuardiansCard />
+
+      <AiConfigCard />
 
       <div className="card p-6">
         <h2 className="mb-4 flex items-center gap-2 text-base font-semibold"><ScrollText size={18} /> {t.journal}</h2>
