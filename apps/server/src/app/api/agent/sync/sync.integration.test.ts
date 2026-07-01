@@ -90,4 +90,22 @@ describe("/agent/sync (integration)", () => {
     const after = await prisma.command.findUnique({ where: { id: cmd.id } });
     expect(after.status).toBe("pending"); // untouched, waits for a full sync
   });
+
+  it("fires geofence enter/exit with hysteresis (no flap in the jitter band)", async () => {
+    // 100 m fence → outer band ≈ 125 m. Latitude: ~111 m per 0.001°.
+    await prisma.geofence.create({
+      data: { childId, name: "École", lat: 48, lng: 2, radius: 100, notifyOnEnter: true, notifyOnExit: true },
+    });
+    const ping = (lat: number, lng: number) => POST(syncReq({ location: { lat, lng, accuracy: 10 } }));
+    await ping(48, 2); //          inside (first ping) → ENTER
+    await ping(48.00108, 2); //    ~120 m: in the hysteresis band → NO exit
+    await ping(48, 2); //          back inside → NO re-enter (no flap)
+    await ping(48.02, 2); //       ~2.2 km: clearly beyond the band → EXIT
+
+    const geo = await prisma.alert.findMany({ where: { childId, type: "geofence" }, orderBy: { ts: "asc" } });
+    const msgs = geo.map((a: any) => a.message);
+    expect(msgs.filter((m: string) => m.includes("Arrivée"))).toHaveLength(1); // exactly one enter
+    expect(msgs.filter((m: string) => m.includes("Départ"))).toHaveLength(1); //  exactly one exit
+    expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
+  });
 });
