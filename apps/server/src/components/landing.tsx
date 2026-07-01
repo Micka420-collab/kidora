@@ -121,7 +121,6 @@ export function Landing() {
   const heroImgScale = useTransform(scrollY, [0, 700], [1, 1.08]);
   const heroTextY = useTransform(scrollY, [0, 600], [0, 80]);
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
-  const mascotY = useTransform(scrollY, [0, 1200], [0, -160]);
 
   // Interactive 3D tilt on the hero card (mouse-follow, spring-smoothed).
   const tiltXRaw = useMotionValue(0);
@@ -316,12 +315,6 @@ export function Landing() {
           </motion.div>
         </motion.div>
 
-        {/* floating mascot */}
-        <motion.div style={{ y: mascotY }} className="pointer-events-none absolute right-2 top-8 hidden sm:block lg:right-10">
-          <motion.div animate={reduce ? undefined : { y: [0, -14, 0] }} transition={reduce ? undefined : { duration: 4, repeat: Infinity, ease: "easeInOut" }}>
-            <Image src="/mascot.png" alt="" width={96} height={96} unoptimized className="drop-shadow-2xl" />
-          </motion.div>
-        </motion.div>
       </section>
 
       {/* stats / trust strip */}
