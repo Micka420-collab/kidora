@@ -47,10 +47,12 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self), interest-cohort=()" },
-          // HSTS only in production (in dev it would pin the LAN IP to https for 2y).
+          // HSTS + COOP only in production. Over plain http they're ignored (COOP
+          // needs a trustworthy origin) or actively harmful (HSTS pins the LAN IP
+          // to https for 2y), which breaks local/LAN testing.
           ...(isProd ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }] : []),
+          ...(isProd ? [{ key: "Cross-Origin-Opener-Policy", value: "same-origin" }] : []),
           { key: "X-DNS-Prefetch-Control", value: "on" },
-          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
     ];
