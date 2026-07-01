@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/kidora-logo.svg" alt="Kidora" width="380" />
+<img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/assets/kidora-logo.png" alt="Kidora" width="380" />
 
 ### 🛡️ Contrôle parental multi-plateforme, bienveillant et complet
 
@@ -26,7 +26,31 @@ Windows · Android · iPhone, pilotés depuis un tableau de bord unique.
 Une **landing animée** accueille les visiteurs non connectés : défilement avec **parallaxe et profondeur 3D**, hero qui s'incline vers le curseur, illustrations générées et **scrollytelling** présentant chaque pilier, compteurs animés, FAQ — le tout respectueux de `prefers-reduced-motion`. Les comptes déjà connectés sont redirigés vers le tableau de bord.
 
 <div align="center">
-<img src="apps/server/public/hero.jpg" alt="Page d'accueil Kidora" width="760" />
+<img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/apps/server/public/hero.jpg" alt="Page d'accueil Kidora" width="760" />
+</div>
+
+## 🖼️ Aperçu
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/apps/server/public/show-screentime.jpg" alt="Temps d'écran & coucher" width="280" /><br/>
+      <b>⏱️ Temps d'écran & coucher</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/apps/server/public/show-location.jpg" alt="Localisation & zones de sécurité" width="280" /><br/>
+      <b>📍 Localisation & zones</b>
+    </td>
+    <td align="center" width="33%">
+      <img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/apps/server/public/show-filter.jpg" alt="Filtrage web par catégorie" width="280" /><br/>
+      <b>🌐 Filtrage web</b>
+    </td>
+  </tr>
+</table>
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/Micka420-collab/kidora/main/apps/server/public/dashboard.jpg" alt="Tableau de bord & app mobile" width="720" /><br/>
+<sub>Un tableau de bord web unique + apps mobiles, synchronisés en temps réel.</sub>
 </div>
 
 ## ✨ Fonctionnalités
