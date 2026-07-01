@@ -122,6 +122,7 @@ async function main() {
     const enforceEvents = enforcer.drainEvents();
     const webVisits = drainBlockedHosts(filter.blocked);
     const watchedVideos = videos.drain();
+    const cmdResults = pendingCmdResults.splice(0);
     const battery = await getBattery();
     try {
       const res = await api.sync({
@@ -132,7 +133,7 @@ async function main() {
         events: [...events, ...enforceEvents],
         webVisits,
         videos: watchedVideos.length ? watchedVideos : undefined,
-        commandResults: pendingCmdResults.splice(0),
+        commandResults: cmdResults,
       });
       policy = res.policy;
       filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
@@ -154,6 +155,14 @@ async function main() {
       }
     } catch (e) {
       log.error("sync:", e.message);
+      // Transient failure → the server didn't commit, so re-queue everything we
+      // drained instead of dropping it. Usage matters most: losing it would
+      // under-count screen time and hand the child extra time.
+      tracker.restore({ usage, events });
+      enforcer.restoreEvents(enforceEvents);
+      for (const v of webVisits) filter.blocked.set(v.domain, v.category ? `category:${v.category}` : "blocked");
+      videos.restore(watchedVideos);
+      if (cmdResults.length) pendingCmdResults.unshift(...cmdResults);
     }
   }
 

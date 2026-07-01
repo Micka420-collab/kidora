@@ -51,4 +51,9 @@ export class VideoCollector {
     this.buffer = [];
     return b;
   }
+
+  /** Re-queue drained videos after a failed sync (capped like the live buffer). */
+  restore(items) {
+    if (items?.length) this.buffer = [...items, ...this.buffer].slice(0, 100);
+  }
 }

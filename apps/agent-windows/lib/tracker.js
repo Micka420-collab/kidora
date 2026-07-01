@@ -86,9 +86,26 @@ export class Tracker {
       date: this.today,
       seconds,
     }));
-    const events = this.events.map((e) => ({ ...e, ts: new Date().toISOString() }));
+    // Keep an event's original timestamp if it already has one (i.e. it was
+    // drained before and is being re-drained after a failed sync).
+    const events = this.events.map((e) => ({ ...e, ts: e.ts || new Date().toISOString() }));
     this.pending.clear();
     this.events = [];
     return { usage, events };
+  }
+
+  /**
+   * Merge a previously-drained batch back in after a FAILED sync, so it is
+   * resent next time instead of being silently dropped. Losing `usage` would
+   * under-count screen time and hand the child extra time — the wrong way to
+   * fail for a control app. Safe because the failed request never committed
+   * server-side.
+   */
+  restore({ usage, events } = {}) {
+    for (const u of usage || []) {
+      if (!u?.appId) continue;
+      this.pending.set(u.appId, (this.pending.get(u.appId) ?? 0) + (u.seconds || 0));
+    }
+    if (events?.length) this.events = [...events, ...this.events];
   }
 }

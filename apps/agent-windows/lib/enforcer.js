@@ -59,6 +59,11 @@ export class Enforcer {
     return e;
   }
 
+  /** Re-queue events after a failed sync so they aren't dropped. */
+  restoreEvents(events) {
+    if (events?.length) this.events = [...events, ...this.events];
+  }
+
   async _kill(appId, name, reason) {
     const now = Date.now();
     if (now - (this.lastKill.get(appId) ?? 0) < 15000) return; // throttle 15s
