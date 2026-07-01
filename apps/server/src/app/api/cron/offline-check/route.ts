@@ -41,22 +41,31 @@ export async function GET(req: NextRequest) {
 
   let alerted = 0;
   for (const d of stale) {
-    const muted = parseMutedTypes(d.child.parent.alertPrefs);
-    if (isAlertMuted(muted, "device_offline")) continue;
+    const muted = isAlertMuted(parseMutedTypes(d.child.parent.alertPrefs), "device_offline");
     if (dryRun) {
-      alerted++;
+      if (!muted) alerted++; // would alert (no mutation in dry run)
       continue;
     }
+    // Atomically CLAIM this outage: overlapping cron runs can't both alert, and a
+    // muted device is still marked so a later un-mute doesn't fire a stale alert.
+    const claim = await prisma.device.updateMany({
+      where: { id: d.id, offlineNotified: false },
+      data: { offlineNotified: true },
+    });
+    if (claim.count !== 1) continue; // another run already handled this outage
+    if (muted) continue; // claimed (won't re-fire), but the alert itself is muted
+
+    // Report the ACTUAL outage length, not the threshold.
+    const sinceH = d.lastSeen ? Math.max(hours, Math.round((Date.now() - d.lastSeen.getTime()) / 3600_000)) : hours;
     await prisma.alert.create({
       data: {
         parentId: d.child.parentId,
         childId: d.child.id,
         type: "device_offline",
         severity: "warning",
-        message: `📵 L'appareil « ${d.name} » de ${d.child.name} n'a plus donné de nouvelles depuis ${hours} h.`,
+        message: `📵 L'appareil « ${d.name} » de ${d.child.name} n'a plus donné de nouvelles depuis ${sinceH} h.`,
       },
     });
-    await prisma.device.update({ where: { id: d.id }, data: { offlineNotified: true } });
     sendPushToParent(d.child.parentId, {
       title: `Kidora — appareil hors-ligne (${d.child.name})`,
       body: `« ${d.name} » ne répond plus.`,
