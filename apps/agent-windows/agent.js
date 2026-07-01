@@ -9,6 +9,7 @@ import { Enforcer } from "./lib/enforcer.js";
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
+import { scanInstalledApps } from "./lib/scan-apps.js";
 import { VideoCollector } from "./lib/videos.js";
 import { writeHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
@@ -56,6 +57,15 @@ async function main() {
     log.error("Échec de l'enrôlement :", e.message);
     process.exit(1);
   }
+
+  // Full PC app scan (once, at startup, read-only) → sent on the first sync so
+  // the parent sees EVERY installed app in the dashboard, ready to allow/block/
+  // limit, without waiting for the child to open each one.
+  let pendingInstalledApps = [];
+  try {
+    pendingInstalledApps = scanInstalledApps();
+    if (pendingInstalledApps.length) log.ok(`Scan applis : ${pendingInstalledApps.length} applications installées détectées.`);
+  } catch { /* scan unavailable → fall back to on-use detection */ }
 
   // Web filtering: prefer the local DNS proxy (category-level, catches new
   // domains); fall back to the hosts file if not admin or the port is taken.
@@ -134,7 +144,9 @@ async function main() {
         webVisits,
         videos: watchedVideos.length ? watchedVideos : undefined,
         commandResults: cmdResults,
+        ...(pendingInstalledApps.length ? { installedApps: pendingInstalledApps } : {}),
       });
+      pendingInstalledApps = []; // sent once; the tracker catches anything new after
       policy = res.policy;
       filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
       const total = Math.round(tracker.totalTodaySeconds() / 60);
