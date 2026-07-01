@@ -11,6 +11,7 @@ export type WeeklyRunSummary = {
   candidates: number;
   sent: number;
   skippedNoActivity: number;
+  skippedAlreadySent: number;
   errors: number;
   dryRun: boolean;
 };
@@ -27,7 +28,7 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
 
   const parents = await prisma.parent.findMany({
     where: { weeklyReportEmail: true },
-    select: { id: true, name: true, email: true, aiEnabled: true, aiModel: true, aiApiKey: true },
+    select: { id: true, name: true, email: true, aiEnabled: true, aiModel: true, aiApiKey: true, lastWeeklyReportAt: true },
   });
 
   const summary: WeeklyRunSummary = {
@@ -35,11 +36,24 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
     candidates: parents.length,
     sent: 0,
     skippedNoActivity: 0,
+    skippedAlreadySent: 0,
     errors: 0,
     dryRun,
   };
 
+  // Idempotency: don't re-send (or re-charge the LLM) to a parent already sent
+  // within this window, so a cron retry/overlap after a mid-run timeout resumes
+  // instead of re-emailing everyone. A dry run never records a send, so it's
+  // exempt from this skip.
+  const resendCutoffMs = Date.now() - Math.floor(days * 0.9) * 86_400_000;
+
   for (const parent of parents) {
+    // Already sent this window (real runs only) → skip before any report build /
+    // LLM call, so a retry doesn't re-email or re-charge them.
+    if (!dryRun && parent.lastWeeklyReportAt && parent.lastWeeklyReportAt.getTime() > resendCutoffMs) {
+      summary.skippedAlreadySent++;
+      continue;
+    }
     const children = await prisma.child.findMany({
       where: { parentId: parent.id },
       select: { id: true, name: true, tzOffsetMinutes: true },
@@ -78,6 +92,9 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
       }
       const { subject, html, text } = renderWeeklyEmail(parent.name, items, days);
       await sendMail({ to: parent.email, subject, html, text });
+      // Record the send BEFORE counting it, so a crash right after can't leave a
+      // parent eligible for a duplicate on the retry.
+      await prisma.parent.update({ where: { id: parent.id }, data: { lastWeeklyReportAt: new Date() } });
       summary.sent++;
     } catch {
       summary.errors++;

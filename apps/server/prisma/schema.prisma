@@ -34,6 +34,7 @@ model Parent {
   aiEnabled    Boolean  @default(false) // use an LLM (OpenRouter) for risk detection instead of heuristics only
   aiApiKey     String?  // parent's own OpenRouter API key (encrypted at rest)
   aiModel      String   @default("") // chosen OpenRouter model id (e.g. deepseek/deepseek-chat)
+  lastWeeklyReportAt DateTime? // when the weekly report email was last sent (idempotency: no re-send / LLM re-charge on a cron retry)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
