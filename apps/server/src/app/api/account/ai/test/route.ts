@@ -1,0 +1,32 @@
+import { NextRequest } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { json, readJson, apiError } from "@/lib/http";
+import { requireParent, withGuard } from "@/lib/guard";
+import { decrypt } from "@/lib/crypto";
+import { testOpenRouter } from "@/lib/openrouter";
+
+const schema = z.object({
+  model: z.string().min(1).max(120),
+  apiKey: z.string().max(400).optional(), // use this key if given, else the stored one
+});
+
+// POST /api/account/ai/test — verify a key + model with a tiny completion.
+export async function POST(req: NextRequest) {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const parsed = schema.safeParse(await readJson(req));
+    if (!parsed.success) return apiError("Données invalides", 422);
+
+    let apiKey = parsed.data.apiKey?.trim();
+    if (!apiKey) {
+      const row = await prisma.parent.findUnique({ where: { id: parent.id }, select: { aiApiKey: true } });
+      apiKey = row?.aiApiKey ? decrypt(row.aiApiKey) : "";
+    }
+    if (!apiKey) return apiError("Aucune clé API OpenRouter fournie.", 400);
+
+    const err = await testOpenRouter(apiKey, parsed.data.model);
+    if (err) return json({ ok: false, error: err });
+    return json({ ok: true });
+  });
+}

@@ -31,6 +31,9 @@ model Parent {
   emailVerified    Boolean   @default(false) // email confirmed (auto-true when SMTP is off)
   emailVerifyToken String?   @unique // pending email-verification token
   emailVerifyTokenExpiry DateTime? // verification token validity (24h)
+  aiEnabled    Boolean  @default(false) // use an LLM (OpenRouter) for risk detection instead of heuristics only
+  aiApiKey     String?  // parent's own OpenRouter API key (encrypted at rest)
+  aiModel      String   @default("") // chosen OpenRouter model id (e.g. deepseek/deepseek-chat)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
