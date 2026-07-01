@@ -15,7 +15,7 @@ Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 c
 - **Client** : plus de spinner/bouton bloqué sur erreur réseau (routines, temps d'écran, alertes, demandes de temps) ; `routines-card` ne plante plus sur JSON malformé.
 
 **Reste à décider/faire** (suivi, non bloquant) :
-- [ ] **Fuseau horaire bout-en-bout** : `AppUsage.date` est local (agent) mais le « aujourd'hui » serveur + `localDate` agent + bonus (`TimeGrant.date`) sont en **UTC** → décalage près de minuit. Nécessite un modèle de fuseau (par appareil/enfant) — décision produit.
+- [x] **Fuseau horaire bout-en-bout** (fait, PRs #242/#249/#250) : `Child.tzOffsetMinutes` rapporté par les agents (`-getTimezoneOffset()`), stocké au sync ; le serveur bucketise le jour de temps d'écran, les bonus et « aujourd'hui » en heure locale (`lib/localdate`) ; les agents datent l'usage en local. La limite roule à **minuit local**.
 - [ ] **Idempotence du sync + ack des commandes** : un retry après réponse perdue peut re-compter l'usage ; les commandes non-idempotentes (message) ne doivent être appliquées qu'une fois → clé d'idempotence agent + ack at-least-once.
 - [ ] **Anti-bruteforce robuste en prod** : le limiteur/verrou est en mémoire (par-instance sur serverless) et l'IP vient du XFF (spoofable) → store partagé (Redis/KV) + IP de confiance.
 - [ ] **Mineurs** : expiry du token de vérification d'email ; ré-vérification d'email au changement d'adresse.
