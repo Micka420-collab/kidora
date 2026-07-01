@@ -133,15 +133,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
                 <label className="label">Code de vérification (2FA)</label>
                 <input
                   className="input tracking-widest"
-                  inputMode="numeric"
                   autoComplete="one-time-code"
-                  maxLength={6}
+                  maxLength={12}
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Code 2FA ou code de secours"
                   autoFocus
                 />
-                <p className="mt-1 text-xs text-muted">Saisissez le code à 6 chiffres de votre application d&apos;authentification.</p>
+                <p className="mt-1 text-xs text-muted">Le code à 6 chiffres de votre application d&apos;authentification, ou l&apos;un de vos codes de secours.</p>
               </div>
             )}
 
