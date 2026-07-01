@@ -38,31 +38,42 @@ export default function AlertsPage() {
   const router = useRouter();
   const { t } = useT();
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [counts, setCounts] = useState({ all: 0, unread: 0, critical: 0, warning: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = useCallback(async () => {
+  // The filter is applied SERVER-side, so the chip counts and pagination reflect
+  // ALL matching alerts (incl. those past the loaded page), never just what's
+  // currently on screen — a paginated "Critical" view can't undercount.
+  const filterQuery = (f: Filter) =>
+    f === "unread" ? "?unread=1" : f === "critical" ? "?severity=critical" : f === "warning" ? "?severity=warning" : "";
+
+  type AlertsResp = { alerts: Alert[]; nextCursor: string | null; counts: typeof counts };
+
+  const load = useCallback(async (f: Filter) => {
     setError(false);
     try {
-      const res = await api.get<{ alerts: Alert[]; nextCursor: string | null }>("/api/alerts");
+      const res = await api.get<AlertsResp>(`/api/alerts${filterQuery(f)}`);
       setAlerts(res.alerts);
       setNextCursor(res.nextCursor);
+      setCounts(res.counts);
     } catch {
       setError(true);
     } finally {
       setLoading(false);
     }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(filter); }, [load, filter]);
 
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const res = await api.get<{ alerts: Alert[]; nextCursor: string | null }>(`/api/alerts?cursor=${encodeURIComponent(nextCursor)}`);
+      const q = filterQuery(filter);
+      const res = await api.get<AlertsResp>(`/api/alerts${q}${q ? "&" : "?"}cursor=${encodeURIComponent(nextCursor)}`);
       // De-dupe defensively in case a new alert shifted the window.
       setAlerts((prev) => {
         const seen = new Set(prev.map((a) => a.id));
@@ -76,17 +87,7 @@ export default function AlertsPage() {
     }
   }
 
-  const counts = {
-    all: alerts.length,
-    unread: alerts.filter((a) => !a.read).length,
-    critical: alerts.filter((a) => a.severity === "critical").length,
-    warning: alerts.filter((a) => a.severity === "warning").length,
-  };
-  const matchesFilter = (a: Alert) =>
-    filter === "all" ? true
-    : filter === "unread" ? !a.read
-    : a.severity === filter;
-  const visible = alerts.filter(matchesFilter);
+  const visible = alerts; // already filtered server-side
 
   const FILTERS: { key: Filter; label: string }[] = [
     { key: "all", label: t.alerts.filterAll },
@@ -97,11 +98,14 @@ export default function AlertsPage() {
 
   async function markAll() {
     setAlerts((as) => as.map((a) => ({ ...a, read: true })));
+    setCounts((c) => ({ ...c, unread: 0 }));
     await api.patch("/api/alerts", { all: true });
     router.refresh();
   }
   async function markOne(id: string) {
+    const wasUnread = alerts.some((a) => a.id === id && !a.read);
     setAlerts((as) => as.map((a) => (a.id === id ? { ...a, read: true } : a)));
+    if (wasUnread) setCounts((c) => ({ ...c, unread: Math.max(0, c.unread - 1) }));
     await api.patch("/api/alerts", { ids: [id] });
     router.refresh();
   }
@@ -133,7 +137,7 @@ export default function AlertsPage() {
         </div>
       </div>
 
-      {!loading && alerts.length > 0 && (
+      {!loading && counts.all > 0 && (
         <div className="flex flex-wrap gap-2">
           {FILTERS.map((f) => {
             const active = filter === f.key;
@@ -157,8 +161,8 @@ export default function AlertsPage() {
       {loading ? (
         <div className="grid place-items-center py-16"><Loader2 className="spinner text-muted" /></div>
       ) : error ? (
-        <ErrorCard onRetry={() => { setLoading(true); load(); }} />
-      ) : alerts.length === 0 ? (
+        <ErrorCard onRetry={() => { setLoading(true); load(filter); }} />
+      ) : counts.all === 0 ? (
         <div className="card grid place-items-center gap-2 py-16 text-center text-muted">
           <ShieldAlert size={28} />
           <p>{t.alerts.empty}</p>
