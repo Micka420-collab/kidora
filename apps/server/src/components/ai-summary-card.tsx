@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/client";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Settings } from "lucide-react";
 
 export function AiSummaryCard({ childId }: { childId: string }) {
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null); // null = still checking
   const [summary, setSummary] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Only offer generation when the parent actually configured AI — otherwise the
+  // button would just 400. Checked once on mount.
+  useEffect(() => {
+    api.get<{ enabled: boolean }>("/api/account/ai")
+      .then((c) => setAiEnabled(c.enabled))
+      .catch(() => setAiEnabled(false));
+  }, []);
 
   async function generate() {
     setBusy(true); setError(null);
@@ -17,6 +26,23 @@ export function AiSummaryCard({ childId }: { childId: string }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally { setBusy(false); }
+  }
+
+  // While checking, or when AI is off, keep the card unobtrusive.
+  if (aiEnabled === null) return null;
+
+  if (!aiEnabled) {
+    return (
+      <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
+        <p className="flex items-center gap-2 text-sm text-muted">
+          <Sparkles size={18} className="text-brand-400" />
+          Activez l&apos;IA (votre clé OpenRouter) pour un résumé hebdomadaire rédigé par votre modèle.
+        </p>
+        <a href="/dashboard/settings" className="btn btn-outline py-1.5 text-sm">
+          <Settings size={15} /> Configurer l&apos;IA
+        </a>
+      </div>
+    );
   }
 
   return (
