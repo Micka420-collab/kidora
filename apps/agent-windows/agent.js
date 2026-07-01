@@ -124,6 +124,7 @@ async function main() {
       const res = await api.sync({
         online: true,
         battery: battery ?? undefined,
+        tzOffset: -new Date().getTimezoneOffset(), // minutes to add to UTC → local
         usage,
         events: [...events, ...enforceEvents],
         webVisits,

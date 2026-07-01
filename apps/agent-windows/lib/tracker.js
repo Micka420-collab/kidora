@@ -1,8 +1,14 @@
 // Accumulates foreground app usage and produces telemetry deltas.
 import { categorize, SYSTEM_PROCS } from "./categorize.js";
 
+// LOCAL calendar date "YYYY-MM-DD" (not UTC) — so the daily-usage day rolls over
+// at the family's local midnight, matching the server (which buckets by the
+// tzOffset the agent reports) and the enforcer's local weekday/hour checks.
 function localDate(d = new Date()) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export class Tracker {
