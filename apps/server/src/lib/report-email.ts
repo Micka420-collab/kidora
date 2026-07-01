@@ -11,7 +11,7 @@ export function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 }
 
-export type ReportItem = { childName: string; report: ChildReport };
+export type ReportItem = { childName: string; report: ChildReport; aiSummary?: string };
 
 /** True when the child had any activity worth reporting in the window. */
 export function hasActivity(r: ChildReport): boolean {
@@ -21,6 +21,13 @@ export function hasActivity(r: ChildReport): boolean {
 function childBlock(item: ReportItem): string {
   const { childName, report: r } = item;
   const topApps = r.topApps.slice(0, 3);
+  // Optional warm summary from the parent's own LLM (aggregate stats only).
+  const aiBlock = item.aiSummary
+    ? `<div style="margin-top:12px;padding:12px 14px;border-radius:10px;background:#eef2ff;border:1px solid #e0e7ff">
+         <div style="font-size:12px;font-weight:700;color:${BRAND};margin-bottom:4px">✨ Résumé de la semaine par IA</div>
+         <div style="font-size:13px;color:#334155;line-height:1.5">${esc(item.aiSummary).replace(/\n/g, "<br>")}</div>
+       </div>`
+    : "";
   const appsRows = topApps.length
     ? topApps
         .map(
@@ -54,6 +61,7 @@ function childBlock(item: ReportItem): string {
       </table>
       <div style="font-size:12px;font-weight:600;color:${MUTED};text-transform:uppercase;letter-spacing:.04em;margin:12px 0 4px">Top applications</div>
       <table width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${appsRows}</table>
+      ${aiBlock}
     </div>`;
 }
 
@@ -99,6 +107,7 @@ export function renderWeeklyEmail(parentName: string, items: ReportItem[], days:
         `  Visites web : ${r.web.totalVisits} (${r.web.blockedVisits} bloquées)`,
         `  Alertes : ${r.alerts.total}`,
         `  Top apps : ${r.topApps.slice(0, 3).map((a) => `${a.appName} (${formatDuration(a.seconds)})`).join(", ") || "—"}`,
+        ...(it.aiSummary ? [`  Résumé IA : ${it.aiSummary.replace(/\n+/g, " ")}`] : []),
       ].join("\n");
     }),
     "",

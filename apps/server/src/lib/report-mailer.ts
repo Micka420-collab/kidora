@@ -2,6 +2,9 @@ import { prisma } from "./prisma";
 import { buildChildReport } from "./report";
 import { sendMail, isMailConfigured } from "./mailer";
 import { renderWeeklyEmail, hasActivity, type ReportItem } from "./report-email";
+import { decrypt } from "./crypto";
+import { summarizeWeekWithLLM } from "./openrouter";
+import { buildAiSummaryInput } from "./ai-summary-input";
 
 export type WeeklyRunSummary = {
   configured: boolean;
@@ -24,7 +27,7 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
 
   const parents = await prisma.parent.findMany({
     where: { weeklyReportEmail: true },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, aiEnabled: true, aiModel: true, aiApiKey: true },
   });
 
   const summary: WeeklyRunSummary = {
@@ -62,6 +65,17 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
     }
 
     try {
+      // Enhance the email with a warm per-child AI summary when the parent has
+      // AI enabled — uses their own OpenRouter key, aggregate stats only, and
+      // only for real sends (not dry runs) and children with activity.
+      if (parent.aiEnabled && parent.aiApiKey && parent.aiModel) {
+        const key = decrypt(parent.aiApiKey);
+        for (const it of items) {
+          if (!hasActivity(it.report)) continue;
+          const s = await summarizeWeekWithLLM(key, parent.aiModel, buildAiSummaryInput(it.childName, it.report, days));
+          if (s) it.aiSummary = s;
+        }
+      }
       const { subject, html, text } = renderWeeklyEmail(parent.name, items, days);
       await sendMail({ to: parent.email, subject, html, text });
       summary.sent++;
