@@ -79,7 +79,7 @@ export function GuardiansCard() {
                 <div className="text-sm font-medium">{g.name}</div>
                 <div className="text-xs text-muted">{g.email} · accès à {g.children.length} enfant(s)</div>
               </div>
-              <button className="text-slate-400 hover:text-red-500" onClick={() => remove(g)}><Trash2 size={16} /></button>
+              <button className="text-slate-400 hover:text-red-500" onClick={() => remove(g)} aria-label={`Retirer ${g.name}`}><Trash2 size={16} /></button>
             </div>
           ))}
         </div>

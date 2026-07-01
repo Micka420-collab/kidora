@@ -153,10 +153,10 @@ export function RoutinesCard({ childId }: { childId: string }) {
                   <div className="text-xs text-muted">{days.map((d) => WEEKDAYS.find((w) => w.key === d)?.label).join(" ")} · {appCount} app(s) bloquée(s)</div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => toggle(r)} className={`relative h-5 w-9 rounded-full transition ${r.enabled ? "bg-brand-600" : "bg-slate-300"}`}>
+                  <button onClick={() => toggle(r)} role="switch" aria-checked={r.enabled} aria-label={`Routine « ${r.name} » ${r.enabled ? "activée" : "désactivée"}`} className={`relative h-5 w-9 rounded-full transition ${r.enabled ? "bg-brand-600" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${r.enabled ? "left-[18px]" : "left-0.5"}`} />
                   </button>
-                  <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r.id)}><Trash2 size={16} /></button>
+                  <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r.id)} aria-label={`Supprimer la routine ${r.name}`}><Trash2 size={16} /></button>
                 </div>
               </div>
             );
