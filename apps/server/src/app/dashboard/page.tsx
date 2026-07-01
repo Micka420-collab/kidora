@@ -13,11 +13,8 @@ import { isDeviceOnline } from "@/lib/device-status";
 import { isPausedNow } from "@/lib/pause";
 import { buildInsights, type Insight } from "@/lib/insights";
 import { weekWindows } from "@/lib/insights";
+import { localDateString } from "@/lib/localdate";
 import { Smartphone, Clock, ShieldAlert, Plus } from "lucide-react";
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 // Date window for the "this week" vs "last week" insights (kept in a helper so
 // the impure Date calls stay out of the component render body).
@@ -26,7 +23,7 @@ function today() {
 // equal-length 7-day windows (the old d7/d14 made "this week" 8 days).
 function overviewWindows() {
   const now = Date.now();
-  return { ...weekWindows(now), weekAgo: new Date(now - 7 * 86400000) };
+  return { ...weekWindows(now), weekAgo: new Date(now - 7 * 86400000), now };
 }
 
 export default async function OverviewPage() {
@@ -40,17 +37,22 @@ export default async function OverviewPage() {
   });
 
   const kidIds = kids.map((k) => k.id);
-  const { curFrom, prevFrom, weekAgo } = overviewWindows();
+  const { curFrom, prevFrom, weekAgo, now: todayNow } = overviewWindows();
+  // "Today" per child in ITS local timezone (families can span zones); each
+  // usage row (dated in the device's local day) is matched to its own child.
+  const todayWhere = kids.length
+    ? { OR: kids.map((k) => ({ childId: k.id, date: localDateString(todayNow, k.tzOffsetMinutes) })) }
+    : { childId: { in: kidIds } };
   // All independent dashboard queries in a single round-trip.
   const [usageToday, topApps, recentAlerts, unreadCount, recentActivity, thisWeekAgg, lastWeekAgg, catAgg, dayAgg, alertsThisWeek] = await Promise.all([
     prisma.appUsage.groupBy({
       by: ["childId"],
-      where: { childId: { in: kidIds }, date: today() },
+      where: todayWhere,
       _sum: { seconds: true },
     }),
     prisma.appUsage.groupBy({
       by: ["category"],
-      where: { childId: { in: kidIds }, date: today() },
+      where: todayWhere,
       _sum: { seconds: true },
     }),
     prisma.alert.findMany({

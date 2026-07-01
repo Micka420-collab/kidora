@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { DEFAULT_BLOCKLIST } from "./categories";
 import { isBedtimeNow, todayWeekday } from "./schedule";
 import { isPausedNow } from "./pause";
+import { localDateString } from "./localdate";
 
 // Re-exported for existing importers.
 export { isBedtimeNow, todayWeekday };
@@ -85,7 +86,9 @@ export async function buildPolicy(childId: string): Promise<EffectivePolicy> {
   });
   if (!child) throw new Error("child not found");
 
-  const today = new Date().toISOString().slice(0, 10);
+  // "Today" in the family's local timezone (offset reported by the agent), so
+  // the daily limit/bonus roll over at local midnight, not the server's UTC.
+  const today = localDateString(Date.now(), child.tzOffsetMinutes);
   const grants = await prisma.timeGrant.findMany({ where: { childId, date: today } });
   const bonusMinutesToday = grants.reduce((a, g) => a + g.minutes, 0);
 
