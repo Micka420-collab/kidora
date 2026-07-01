@@ -157,7 +157,11 @@ export const parent = {
     return req<{ ok: true; granted: number }>(`/api/children/${id}/time-requests`, { method: "POST", body: { minutes }, headers: await this.authHeader() });
   },
   async changePassword(currentPassword: string, newPassword: string) {
-    return req<{ ok: true }>("/api/account/password", { method: "POST", body: { currentPassword, newPassword }, headers: await this.authHeader() });
+    const res = await req<{ ok: true; token?: string }>("/api/account/password", { method: "POST", body: { currentPassword, newPassword }, headers: await this.authHeader() });
+    // The server bumps tokenVersion (logout-everywhere); store the fresh token so
+    // THIS device stays logged in (it authenticates with the token, not a cookie).
+    if (res.token) await storage.set("parentToken", res.token);
+    return res;
   },
   async changeEmail(email: string, currentPassword: string) {
     return req<{ ok: true; email: string }>("/api/account/email", { method: "POST", body: { email, currentPassword }, headers: await this.authHeader() });
