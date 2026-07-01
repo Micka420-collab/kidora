@@ -5,6 +5,7 @@ import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { decrypt } from "@/lib/crypto";
 import { testOpenRouter } from "@/lib/openrouter";
+import { rateLimit } from "@/lib/ratelimit";
 
 const schema = z.object({
   model: z.string().min(1).max(120),
@@ -15,6 +16,14 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
+    // Each test spends the parent's OpenRouter quota — throttle it.
+    const rl = rateLimit(`aitest:${parent.id}`, 10, 5 * 60_000);
+    if (!rl.ok) {
+      return Response.json(
+        { error: "Trop de tests. Réessayez plus tard." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
     const parsed = schema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Données invalides", 422);
 

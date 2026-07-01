@@ -36,12 +36,18 @@ export function pricePer1M(raw: unknown): number {
   return Number.isFinite(n) ? Math.round(n * 1_000_000 * 1000) / 1000 : 0;
 }
 
+// Small in-instance cache — the catalogue changes rarely and every parent opening
+// the picker would otherwise re-fetch ~300 models.
+let modelCache: { at: number; models: OpenRouterModel[] } | null = null;
+const MODELS_TTL_MS = 60 * 60 * 1000; // 1h
+
 /**
  * Fetch the live model catalogue (public endpoint, no key needed). Normalizes
  * pricing to $/1M tokens and flags the recommended subset. Recommended first,
- * then cheapest.
+ * then cheapest. Cached for 1h per instance.
  */
-export async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
+export async function fetchOpenRouterModels(nowMs = 0): Promise<OpenRouterModel[]> {
+  if (modelCache && nowMs && nowMs - modelCache.at < MODELS_TTL_MS) return modelCache.models;
   const res = await fetch(MODELS_URL, { headers: { "HTTP-Referer": REFERER, "X-Title": TITLE } });
   if (!res.ok) throw new Error(`OpenRouter models: ${res.status}`);
   const body = (await res.json()) as { data?: unknown[] };
@@ -64,6 +70,7 @@ export async function fetchOpenRouterModels(): Promise<OpenRouterModel[]> {
     if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
     return a.promptPer1M + a.completionPer1M - (b.promptPer1M + b.completionPer1M);
   });
+  if (nowMs) modelCache = { at: nowMs, models };
   return models;
 }
 

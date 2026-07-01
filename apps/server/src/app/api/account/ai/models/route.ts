@@ -9,7 +9,7 @@ export async function GET() {
   return withGuard(async () => {
     await requireParent(); // parent-only, but no key needed (public endpoint)
     try {
-      const models = await fetchOpenRouterModels();
+      const models = await fetchOpenRouterModels(Date.now()); // 1h cache
       return json({ models });
     } catch {
       return apiError("Impossible de récupérer la liste des modèles OpenRouter.", 502);
