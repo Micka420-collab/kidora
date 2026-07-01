@@ -5,6 +5,7 @@ import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { scanText } from "@/lib/keywords";
 import { riskSeverity, RISK_CATEGORY_LABELS } from "@/lib/risk";
+import { categorizeApp } from "@/lib/categories";
 import { sendPushToChildGuardians } from "@/lib/push";
 import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
@@ -98,6 +99,12 @@ const syncSchema = z.object({
     .optional(),
   timeRequest: z
     .object({ minutes: z.number().int().min(5).max(480), reason: z.string().max(200).optional() })
+    .optional(),
+  // Full inventory of installed apps from the agent's startup PC scan → each new
+  // one becomes an "allow" rule so the parent sees every app upfront.
+  installedApps: z
+    .array(z.object({ appId: z.string().min(1).max(120), appName: z.string().min(1).max(160) }))
+    .max(1000)
     .optional(),
   panic: z.boolean().optional(),
   // When false, this sync does NOT consume pending commands (they stay "pending"
@@ -222,6 +229,34 @@ export async function POST(req: NextRequest) {
         },
         update: { seconds: { increment: u.seconds }, appName: u.appName },
       });
+    }
+  }
+
+  // 3b. installed-apps inventory (agent's startup PC scan): create an "allow"
+  //     rule for each app NOT already ruled, so the parent sees every installed
+  //     app in the Apps tab without waiting for the child to open it. Existing
+  //     rules are never touched (a parent's block/limit is preserved).
+  if (body.installedApps?.length) {
+    const existing = await prisma.appRule.findMany({ where: { childId }, select: { appId: true } });
+    const have = new Set(existing.map((r) => r.appId));
+    const seen = new Set<string>();
+    const toAdd = body.installedApps.filter((a) => {
+      if (have.has(a.appId) || seen.has(a.appId)) return false;
+      seen.add(a.appId);
+      return true;
+    });
+    if (toAdd.length) {
+      await prisma.appRule
+        .createMany({
+          data: toAdd.map((a) => ({
+            childId,
+            appId: a.appId,
+            appName: a.appName,
+            category: categorizeApp(a.appId, a.appName),
+            action: "allow",
+          })),
+        })
+        .catch(() => {}); // ignore a rare race with a concurrent create
     }
   }
 

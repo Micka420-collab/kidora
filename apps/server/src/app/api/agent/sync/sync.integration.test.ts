@@ -108,4 +108,27 @@ describe("/agent/sync (integration)", () => {
     expect(msgs.filter((m: string) => m.includes("Départ"))).toHaveLength(1); //  exactly one exit
     expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
   });
+
+  it("creates 'allow' rules from an installed-apps scan, never overwriting existing rules", async () => {
+    // a parent-set block that MUST survive the scan
+    await prisma.appRule.create({ data: { childId, appId: "chrome.exe", appName: "Chrome", action: "block" } });
+    const res = await POST(
+      syncReq({
+        installedApps: [
+          { appId: "chrome.exe", appName: "Google Chrome" }, // already ruled → keep the block
+          { appId: "firefox.exe", appName: "Mozilla Firefox" }, // new → allow
+          { appId: "steam.exe", appName: "Steam" }, // new → allow
+          { appId: "firefox.exe", appName: "dup" }, // duplicate in the batch → ignored
+        ],
+      }),
+    );
+    expect(res.status).toBe(200);
+    const rules = await prisma.appRule.findMany({ where: { childId, appId: { in: ["chrome.exe", "firefox.exe", "steam.exe"] } } });
+    const byId: Record<string, any> = Object.fromEntries(rules.map((r: any) => [r.appId, r]));
+    expect(byId["chrome.exe"].action).toBe("block"); // preserved, NOT reset to allow
+    expect(byId["firefox.exe"].action).toBe("allow"); // new app auto-added
+    expect(byId["steam.exe"].action).toBe("allow");
+    expect(byId["firefox.exe"].category).toBe("browser"); // categorized server-side
+    expect(rules.length).toBe(3); // no duplicate firefox row
+  });
 });
