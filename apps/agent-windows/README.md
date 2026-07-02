@@ -242,10 +242,16 @@ injoignable** (réseau coupé, serveur en panne, PC redémarré sans Internet) :
   au cache altéré. Un horodatage signé (`iat`) bloque le **rejeu** d'une ancienne
   politique plus permissive.
 
-Le fichier `state.json` est écrit dans le dossier de l'agent, verrouillé pour les
-comptes standard par les mêmes ACL que les autres fichiers de l'agent (au même
-titre que `heartbeat.json`) — l'enfant ne peut pas simplement le supprimer pour
-réinitialiser le compteur.
+**Emplacement des données** : les fichiers **inscriptibles au runtime** (config,
+`heartbeat.json`, `state.json`, staging des mises à jour) sont stockés dans
+**`%ProgramData%\Kidora`** (`lib/paths.js`) — inscriptible par le **compte enfant
+standard**, alors que les **scripts** restent verrouillés en lecture seule dans
+le dossier d'installation. C'est le modèle Windows classique (code en lecture
+seule, données inscriptibles) : sans cela, sous les ACL d'auto-protection,
+l'agent ne pourrait pas écrire son propre état. `SYSTEM`/Administrateurs gardent
+le contrôle total (le gardien peut lire/remplacer). L'installateur crée ce
+dossier et migre une config existante lors d'une mise à jour. Repli sur le
+dossier de l'agent si `%ProgramData%` est indisponible (aucune régression).
 
 ## Notes
 

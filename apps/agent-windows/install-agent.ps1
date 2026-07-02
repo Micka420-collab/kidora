@@ -28,6 +28,10 @@ $AgentDir = $PSScriptRoot
 $AgentJs = Join-Path $AgentDir "agent.js"
 $GuardianPs1 = Join-Path $AgentDir "guardian.ps1"
 $TaskXml = Join-Path $AgentDir "$TaskName.xml"
+# Writable runtime data (config, heartbeat, offline cache, update staging) lives
+# here so the standard child account can write it while the scripts stay locked.
+# Must match lib/paths.js and guardian.ps1.
+$DataDir = if ($env:ProgramData) { Join-Path $env:ProgramData "Kidora" } else { $AgentDir }
 
 function Invoke-Step([string]$desc, [scriptblock]$action) {
   if ($DryRun) { Write-Host "[DRYRUN] $desc" -ForegroundColor Yellow; return }
@@ -68,6 +72,11 @@ if ($Uninstall) {
   Invoke-Step "nettoyer les fichiers d'état (heartbeat, xml, logs)" {
     Remove-Item (Join-Path $AgentDir "heartbeat.json"), $TaskXml, (Join-Path $AgentDir "guardian.log") -ErrorAction SilentlyContinue
   }
+  Invoke-Step "supprimer le dossier de données $DataDir" {
+    if ($DataDir -ne $AgentDir -and (Test-Path $DataDir)) {
+      Remove-Item -Recurse -Force $DataDir -ErrorAction SilentlyContinue
+    }
+  }
   Write-Host "Agent Kidora désinstallé." -ForegroundColor Green
   exit 0
 }
@@ -85,6 +94,18 @@ if ($selfProtect -and -not (Test-Admin)) {
 }
 
 $userId = if ($ChildUser) { $ChildUser } else { "$env:USERDOMAIN\$env:USERNAME" }
+
+# Dossier de données inscriptible par l'enfant (compte standard) : l'agent y
+# écrit config/heartbeat/état/mises à jour même quand les scripts sont en lecture
+# seule. SYSTEM/Admins gardent le contrôle total (hérité de ProgramData) → le
+# gardien peut lire/remplacer ; les scripts, eux, restent protégés dans $AgentDir.
+Invoke-Step "créer le dossier de données $DataDir (inscriptible par l'enfant)" {
+  if (-not (Test-Path $DataDir)) { New-Item -ItemType Directory -Path $DataDir -Force | Out-Null }
+  if ($DataDir -ne $AgentDir) {
+    # Grant BUILTIN\Users Modify (create/write/delete their own runtime files).
+    icacls "$DataDir" /grant:r "*S-1-5-32-545:(OI)(CI)M" /C /Q | Out-Null
+  }
+}
 
 # Persiste la config (jeton/serveur) sans démarrer la boucle.
 Invoke-Step "enregistrer la configuration (enroll-only)" {

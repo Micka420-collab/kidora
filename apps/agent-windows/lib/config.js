@@ -1,10 +1,9 @@
 // Agent configuration persistence (token, server, identifiers).
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { configPath } from "./paths.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG_PATH = join(__dirname, "..", "config.json");
+// Writable data location (%ProgramData%\Kidora on Windows; see lib/paths.js).
+const CONFIG_PATH = configPath();
 
 export function loadConfig() {
   if (existsSync(CONFIG_PATH)) {

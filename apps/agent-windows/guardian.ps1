@@ -15,8 +15,13 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
-$logPath = Join-Path $AgentDir "guardian.log"
-$hbPath = Join-Path $AgentDir "heartbeat.json"
+# Runtime/writable files live in %ProgramData%\Kidora (writable by the standard
+# child account); scripts stay in $AgentDir. Matches lib/paths.js. Falls back to
+# $AgentDir until the agent's first run creates the data dir.
+$DataDir = if ($env:ProgramData) { Join-Path $env:ProgramData "Kidora" } else { $AgentDir }
+if (-not (Test-Path $DataDir)) { $DataDir = $AgentDir }
+$logPath = Join-Path $DataDir "guardian.log"
+$hbPath = Join-Path $DataDir "heartbeat.json"
 
 function Write-GLog([string]$msg) {
   $prefix = if ($DryRun) { "[DRYRUN] " } else { "" }
@@ -57,10 +62,10 @@ if ($task -and $task.State -eq "Disabled") {
 # --- 2.5 Apply a staged, signature-verified self-update (swap + rollback) ---
 # The agent (running as the child) downloads & verifies a newer version and stages
 # it here; the guardian (SYSTEM) has the rights to replace the ACL-protected files.
-$stagingDir = Join-Path $AgentDir ".update-staging"
+$stagingDir = Join-Path $DataDir ".update-staging"
 $readyFile = Join-Path $stagingDir ".update-ready"
 if (Test-Path $readyFile) {
-  $backupDir = Join-Path $AgentDir ".update-backup"
+  $backupDir = Join-Path $DataDir ".update-backup"
   $target = "?"
   try { $target = (Get-Content $readyFile -Raw | ConvertFrom-Json).version } catch {}
 

@@ -6,11 +6,12 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { log } from "./logger.js";
+import { overlayStatePath } from "./paths.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SENSOR = join(__dirname, "..", "sensor.ps1");
+const SENSOR = join(__dirname, "..", "sensor.ps1"); // scripts stay in the install dir
 const OVERLAY = join(__dirname, "..", "overlay.ps1");
-const OVERLAY_STATE = join(__dirname, "..", "overlay-state.json");
+const OVERLAY_STATE = overlayStatePath(); // runtime state → writable data dir
 let overlayProc = null;
 const HOSTS = "C:\\Windows\\System32\\drivers\\etc\\hosts";
 const MARK_START = "# >>> KIDORA START (géré automatiquement, ne pas éditer)";

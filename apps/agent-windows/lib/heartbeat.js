@@ -2,11 +2,9 @@
 // guardian can tell a *hung* agent (process alive but stuck) from a healthy one
 // and restart it. Stored next to config.json.
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { heartbeatPath } from "./paths.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-export const HEARTBEAT_PATH = join(__dirname, "..", "heartbeat.json");
+export const HEARTBEAT_PATH = heartbeatPath();
 
 export function writeHeartbeat() {
   try {
