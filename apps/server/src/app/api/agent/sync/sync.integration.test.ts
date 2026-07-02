@@ -156,6 +156,16 @@ describe("/agent/sync (integration)", () => {
     expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
   });
 
+  it("a panic event raises ONE critical SOS alert even when re-flushed (offline queue)", async () => {
+    const ev = { id: "sos-evt-1", type: "panic", title: "SOS", detail: JSON.stringify({ lat: 48.85, lng: 2.35 }) };
+    await POST(syncReq({ events: [ev] }));
+    await POST(syncReq({ events: [ev] })); // the offline queue re-flushes the same SOS
+    const alerts = await prisma.alert.findMany({ where: { childId, type: "panic" } });
+    expect(alerts.length).toBe(1); // deduped by the event id
+    expect(alerts[0].severity).toBe("critical");
+    expect(alerts[0].message).toContain("position"); // location carried in the event detail
+  });
+
   it("dedups activity events by id on a retried sync (no duplicate rows or alerts)", async () => {
     const ev = { id: "evt-dedup-1", type: "new_app", title: "Roblox", detail: "roblox.exe" };
     await POST(syncReq({ events: [ev] }));

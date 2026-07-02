@@ -7,6 +7,7 @@ import { childAgent } from "@/api";
 import { formatDuration } from "@/theme";
 import { isBedtimeNow, nextBedtimeStart } from "@/schedule";
 import * as storage from "@/storage";
+import * as sosQueue from "@/sos-queue";
 import * as AppUsage from "../modules/app-usage";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
 
@@ -197,14 +198,19 @@ export default function ChildMode() {
       }
 
       const toAck = pendingResults.current.slice();
+      // Flush any SOS queued while offline as panic events (server → critical
+      // alert; deduped by id if re-flushed).
+      const queuedSos = await sosQueue.list();
       const res = await childAgent.sync({
         online: true,
         tzOffset: -new Date().getTimezoneOffset(), // minutes to add to UTC → local
         location,
         usage,
-        events: [{ type: "location", title: "Position mise à jour" }],
+        events: [{ type: "location", title: "Position mise à jour" }, ...sosQueue.toEvents(queuedSos)],
         ...(toAck.length ? { commandResults: toAck } : {}),
       });
+      // Sync succeeded → the queued SOS were delivered; clear them.
+      if (queuedSos.length) sosQueue.removeIds(queuedSos.map((e) => e.id)).catch(() => undefined);
       // Sync succeeded → NOW commit the usage baseline (a restart won't re-send).
       if (nextBaseline) {
         prevUsage.current = nextBaseline.perApp;
@@ -317,20 +323,36 @@ export default function ChildMode() {
         const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
         location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
       } catch { /* send without location if unavailable */ }
+      // SOS as a panic EVENT with a stable id (deduped server-side, queue-able).
+      const sos = { id: sosQueue.newId(), lat: location?.lat, lng: location?.lng, accuracy: location?.accuracy, ts: new Date().toISOString() };
+      const sosEvent = {
+        id: sos.id,
+        type: "panic" as const,
+        title: "SOS déclenché",
+        detail: location ? JSON.stringify({ lat: location.lat, lng: location.lng }) : undefined,
+      };
       // The server marks EVERY pending command "delivered" on any sync — so this
       // SOS sync must also carry pending acks and process returned commands, or a
       // parent command issued just before an SOS would be silently lost.
       const toAck = pendingResults.current.slice();
-      const res = await childAgent.sync({
-        online: true,
-        panic: true,
-        location,
-        ...(toAck.length ? { commandResults: toAck } : {}),
-        events: [{ type: "panic", title: "SOS déclenché" }],
-      });
-      pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
-      processCommands(res.commands);
-      RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
+      // Also flush anything queued from an earlier offline SOS.
+      const queuedSos = await sosQueue.list();
+      try {
+        const res = await childAgent.sync({
+          online: true,
+          location,
+          ...(toAck.length ? { commandResults: toAck } : {}),
+          events: [sosEvent, ...sosQueue.toEvents(queuedSos)],
+        });
+        if (queuedSos.length) sosQueue.removeIds(queuedSos.map((e) => e.id)).catch(() => undefined);
+        pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
+        processCommands(res.commands);
+        RNAlert.alert("SOS envoyé", "Tes parents ont été prévenus avec ta position.");
+      } catch {
+        // Offline → don't lose it: queue for delivery on the next successful sync.
+        await sosQueue.enqueue(sos);
+        RNAlert.alert("SOS enregistré", "Pas de réseau pour l'instant — ton SOS sera envoyé automatiquement dès que possible.");
+      }
     } catch {
       RNAlert.alert("Erreur", "Impossible d'envoyer le SOS. Réessaie.");
     } finally { sosInFlight.current = false; }
