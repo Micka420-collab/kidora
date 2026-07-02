@@ -14,12 +14,10 @@ import { discover } from "./lib/discover.js";
 import { isNewer, verifyBundle, stageUpdate, verifyStagedDir } from "./lib/updater.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { stagingDir } from "./lib/paths.js";
 
 const pexec = promisify(execFile);
-const AGENT_DIR = dirname(fileURLToPath(import.meta.url));
-const STAGING_DIR = join(AGENT_DIR, ".update-staging");
+const STAGING_DIR = stagingDir(); // %ProgramData%\Kidora\.update-staging (writable)
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";

@@ -12,11 +12,9 @@
 // Writes are atomic (temp file + rename) so a crash mid-write can never leave a
 // half-written, unparseable state file that would wipe enforcement on restart.
 import { readFileSync, writeFileSync, renameSync, existsSync, unlinkSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { statePath } from "./paths.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const STATE_PATH = join(__dirname, "..", "state.json");
+const STATE_PATH = statePath();
 const TMP_PATH = STATE_PATH + ".tmp";
 
 const STATE_VERSION = 1;
