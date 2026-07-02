@@ -5,13 +5,24 @@
 #
 # Usage :
 #   git clone https://github.com/Micka420-collab/kidora && cd kidora
-#   bash install.sh            # installe puis build + démarre (prod)
+#   bash install.sh            # installe puis build + démarre (prod) — base VIDE,
+#                              # vous créez votre compte sur /register
 #   bash install.sh --dev      # mode développement (hot reload)
+#   bash install.sh --demo     # ajoute un jeu de données de démonstration (éval)
 #
+# Une vraie installation ne crée AUCUN compte par défaut (pas d'identifiants connus
+# en production). Utilisez --demo (ou KIDORA_SEED=1) uniquement pour évaluer.
 set -euo pipefail
 
 MODE="prod"
-[ "${1:-}" = "--dev" ] && MODE="dev"
+DEMO="${KIDORA_SEED:-0}"          # démo désactivée par défaut ; KIDORA_SEED=1 ou --demo pour l'activer
+for arg in "$@"; do
+  case "$arg" in
+    --dev) MODE="dev" ;;
+    --demo) DEMO="1" ;;
+    *) : ;;
+  esac
+done
 
 say()  { printf "\033[36m▸\033[0m %s\n" "$1"; }
 ok()   { printf "\033[32m✓\033[0m %s\n" "$1"; }
@@ -70,20 +81,30 @@ fi
 say "Préparation de la base de données…"
 npx prisma generate
 npx prisma migrate deploy
-if [ ! -s dev.db ] || [ "${KIDORA_SEED:-1}" = "1" ]; then
-  npm run seed || warn "Seed ignoré (déjà des données ?)"
+if [ "$DEMO" = "1" ]; then
+  say "Insertion des données de démonstration (--demo)…"
+  # SEED_DEMO=1 lève le garde anti-production ; SEED_FORCE=1 autorise l'écrasement
+  # d'une base déjà semée pour ré-évaluer proprement.
+  SEED_DEMO=1 SEED_FORCE=1 npm run seed || warn "Seed de démo ignoré."
+else
+  say "Aucune donnée de démonstration (installation réelle) — créez votre compte sur /register."
 fi
 ok "Base prête"
 
 # 5. Démarrage
+if [ "$DEMO" = "1" ]; then
+  login_hint="démo : demo@kidora.app / kidora1234"
+else
+  login_hint="créez votre compte : http://localhost:3000/register"
+fi
 if [ "$MODE" = "dev" ]; then
   ok "Installation terminée. Démarrage en mode développement…"
-  echo "   → http://localhost:3000  (démo : demo@kidora.app / kidora1234)"
+  echo "   → http://localhost:3000  ($login_hint)"
   exec npm run dev
 else
   say "Build de production…"
   npm run build
   ok "Installation terminée. Démarrage du serveur…"
-  echo "   → http://localhost:3000  (démo : demo@kidora.app / kidora1234)"
+  echo "   → http://localhost:3000  ($login_hint)"
   exec npm start
 fi
