@@ -100,10 +100,18 @@ if (-not $Server) {
     $agentJs = Join-Path $Root "agent.js"
     $found = @(& node $agentJs discover 2>$null | Where-Object { $_ -match '^https?://' })
   } catch {}
+  # Ask the parent to CONFIRM a discovered server — LAN announcements are
+  # unauthenticated, so never auto-trust one for enrollment (a rogue advertiser
+  # could otherwise redirect the agent to an attacker's server).
+  $confirmed = $false
   if ($found.Count -ge 1) {
-    Write-Ok "Serveur detecte sur le reseau : $($found[0])"
-    $Server = $found[0]
-  } else {
+    Write-Host "  Serveur detecte sur le reseau : $($found[0])" -ForegroundColor White
+    $ans = Read-Host "  Est-ce bien VOTRE serveur Kidora ? [O/n]"
+    if ([string]::IsNullOrWhiteSpace($ans) -or $ans -match '^[oOyY]') {
+      $Server = $found[0]; $confirmed = $true
+    }
+  }
+  if (-not $confirmed) {
     Write-Host "  Adresse du serveur Kidora (ex. https://kidora.mondomaine.fr)" -ForegroundColor White
     $Server = Read-Host "  Serveur [http://localhost:3000]"
     if ([string]::IsNullOrWhiteSpace($Server)) { $Server = "http://localhost:3000" }

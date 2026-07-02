@@ -9,8 +9,8 @@
 //   - the signature binds to a hash of ALL files, so no file can be swapped;
 //   - staging is separate from the live dir, and the guardian keeps a backup.
 import { createHash, verify } from "node:crypto";
-import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { writeFileSync, readFileSync, mkdirSync, rmSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join, dirname, relative, sep } from "node:path";
 
 /** Semver-ish "is remote strictly newer than local?" (numeric dotted parts). */
 export function isNewer(remote, local) {
@@ -73,7 +73,7 @@ export function isSafeEntryName(name) {
  * marker naming the target version. The guardian reads the marker and swaps.
  * Returns { stagingDir, count }.
  */
-export function stageUpdate(files, version, stagingDir) {
+export function stageUpdate(files, version, stagingDir, meta = {}) {
   if (existsSync(stagingDir)) rmSync(stagingDir, { recursive: true, force: true });
   mkdirSync(stagingDir, { recursive: true });
   let count = 0;
@@ -84,6 +84,46 @@ export function stageUpdate(files, version, stagingDir) {
     writeFileSync(dest, Buffer.from(b64, "base64"));
     count++;
   }
-  writeFileSync(join(stagingDir, ".update-ready"), JSON.stringify({ version, at: new Date().toISOString(), count }), "utf8");
+  // Persist the server's signature envelope in the marker so the SYSTEM guardian
+  // can RE-VERIFY the staged files against the pinned key before swapping — even
+  // if the staging dir were somehow writable, unsigned/tampered files are refused.
+  writeFileSync(
+    join(stagingDir, ".update-ready"),
+    JSON.stringify({ version, at: new Date().toISOString(), count, signed: meta.signed, sig: meta.sig }),
+    "utf8",
+  );
   return { stagingDir, count };
+}
+
+/** Recursively read a staged dir into a {relativeName: base64} map (excludes the
+ *  marker). Matches the shape `bundleHash`/`verifyBundle` expect. */
+function collectStagedFiles(dir, base = dir, out = {}) {
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) {
+      collectStagedFiles(full, base, out);
+    } else {
+      const rel = relative(base, full).split(sep).join("/");
+      if (rel === ".update-ready") continue;
+      out[rel] = readFileSync(full).toString("base64");
+    }
+  }
+  return out;
+}
+
+/**
+ * Re-verify a staged update against the pinned public key: the marker's signed
+ * envelope must have a valid server signature AND its content hash must match
+ * the files actually on disk. Used by the guardian right before the swap, so a
+ * tampered/planted staging dir is rejected regardless of filesystem ACLs.
+ */
+export function verifyStagedDir(stagingDir, publicKey) {
+  try {
+    const marker = JSON.parse(readFileSync(join(stagingDir, ".update-ready"), "utf8"));
+    if (!marker.signed || !marker.sig || !publicKey) return false;
+    const files = collectStagedFiles(stagingDir);
+    return verifyBundle({ signed: marker.signed, sig: marker.sig, files }, publicKey) !== null;
+  } catch {
+    return false;
+  }
 }

@@ -1,10 +1,10 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { existsSync, rmSync, readFileSync } from "node:fs";
+import { existsSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { isNewer, bundleHash, verifyBundle, isSafeEntryName, stageUpdate } from "./updater.js";
+import { isNewer, bundleHash, verifyBundle, isSafeEntryName, stageUpdate, verifyStagedDir } from "./updater.js";
 
 test("isNewer compares dotted numeric versions", () => {
   assert.equal(isNewer("1.1.0", "1.0.9"), true);
@@ -79,4 +79,35 @@ test("stageUpdate writes files + a .update-ready marker", () => {
 
 test("stageUpdate refuses an unsafe entry name", () => {
   assert.throws(() => stageUpdate({ "../evil.js": "AA" }, "1.0.0", STAGING), /unsafe/);
+});
+
+test("verifyStagedDir accepts a validly-signed staging dir (guardian re-check)", () => {
+  const files = {
+    "agent.js": Buffer.from("// agent").toString("base64"),
+    "lib/api.js": Buffer.from("// api").toString("base64"),
+  };
+  const pkg = serverBundle(files, "2.0.0");
+  stageUpdate(files, pkg.version, STAGING, { signed: pkg.signed, sig: pkg.sig });
+  assert.equal(verifyStagedDir(STAGING, publicKey), true);
+});
+
+test("verifyStagedDir rejects a staged file tampered AFTER staging", () => {
+  const files = { "agent.js": Buffer.from("good").toString("base64") };
+  const pkg = serverBundle(files, "2.0.0");
+  stageUpdate(files, pkg.version, STAGING, { signed: pkg.signed, sig: pkg.sig });
+  writeFileSync(join(STAGING, "agent.js"), "EVIL PAYLOAD"); // attacker overwrites staged file
+  assert.equal(verifyStagedDir(STAGING, publicKey), false);
+});
+
+test("verifyStagedDir rejects staging with no signature envelope", () => {
+  stageUpdate({ "agent.js": "QQ==" }, "2.0.0", STAGING); // staged without meta → no sig
+  assert.equal(verifyStagedDir(STAGING, publicKey), false);
+});
+
+test("verifyStagedDir rejects a wrong-key signature", () => {
+  const files = { "agent.js": "QQ==" };
+  const pkg = serverBundle(files, "2.0.0");
+  stageUpdate(files, pkg.version, STAGING, { signed: pkg.signed, sig: pkg.sig });
+  const other = generateKeyPairSync("ed25519");
+  assert.equal(verifyStagedDir(STAGING, other.publicKey), false);
 });

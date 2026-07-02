@@ -63,6 +63,25 @@ if (Test-Path $readyFile) {
   $backupDir = Join-Path $AgentDir ".update-backup"
   $target = "?"
   try { $target = (Get-Content $readyFile -Raw | ConvertFrom-Json).version } catch {}
+
+  # Re-verify the staged update's SERVER signature (via node) before trusting it —
+  # defence in depth so a planted/tampered staging dir is never swapped in, even
+  # if its ACL were weakened. Reject and discard staging on failure.
+  $node = (Get-Command node -ErrorAction SilentlyContinue).Source
+  $agentJs = Join-Path $AgentDir "agent.js"
+  $verified = $false
+  if ($node -and (Test-Path $agentJs)) {
+    try {
+      & $node $agentJs verify-update $stagingDir 2>$null | Out-Null
+      $verified = ($LASTEXITCODE -eq 0)
+    } catch { $verified = $false }
+  }
+  if (-not $verified) {
+    Write-GLog "mise a jour $target REJETEE (signature invalide) — staging supprime"
+    if (-not $DryRun) { Remove-Item -Recurse -Force $stagingDir -ErrorAction SilentlyContinue }
+    return
+  }
+
   Invoke-Step "appliquer la mise a jour de l'agent -> $target" {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     Start-Sleep -Seconds 2

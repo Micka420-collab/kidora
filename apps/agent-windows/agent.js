@@ -11,7 +11,7 @@ import { TrustedClock } from "./lib/clock.js";
 import { runDoctor } from "./lib/doctor.js";
 import { importPublicKey, openSignedPolicy, LOCKDOWN_POLICY } from "./lib/policy-verify.js";
 import { discover } from "./lib/discover.js";
-import { isNewer, verifyBundle, stageUpdate } from "./lib/updater.js";
+import { isNewer, verifyBundle, stageUpdate, verifyStagedDir } from "./lib/updater.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -47,6 +47,18 @@ async function probeScheduledTask(name) {
 
 async function main() {
   const cfg = resolveConfig(argv);
+
+  // `kidora-agent verify-update <stagingDir>` — used by the SYSTEM guardian to
+  // RE-VERIFY a staged self-update against the pinned server key BEFORE swapping.
+  // Exits 0 only if the staged files carry a valid server signature.
+  if (argv.includes("verify-update")) {
+    const dir = argv[argv.indexOf("verify-update") + 1] || STAGING_DIR;
+    const key = cfg.policyPublicKey ? importPublicKey(cfg.policyPublicKey) : null;
+    const ok = key ? verifyStagedDir(dir, key) : false;
+    console.log(ok ? "update signature OK" : "update signature INVALID");
+    process.exitCode = ok ? 0 : 1;
+    return;
+  }
 
   // `kidora-agent discover` — find Kidora servers on the LAN (used by the
   // installer to avoid typing the server URL). Prints one URL per line.
@@ -265,7 +277,7 @@ async function main() {
         if (!verified) log.warn("Mise à jour refusée : signature/hachage invalide.");
         return;
       }
-      stageUpdate(verified.files, verified.version, STAGING_DIR);
+      stageUpdate(verified.files, verified.version, STAGING_DIR, { signed: pkg.signed, sig: pkg.sig });
       stagedVersion = verified.version;
       log.ok(`Mise à jour ${verified.version} vérifiée et préparée — appliquée au prochain redémarrage par le gardien.`);
     } catch (e) {
