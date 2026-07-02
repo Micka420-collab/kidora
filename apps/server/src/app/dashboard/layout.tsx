@@ -6,6 +6,7 @@ import { accessibleChildWhere, accessibleAlertWhere } from "@/lib/guard";
 import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
+import { OfflineBanner } from "@/components/offline-banner";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ToastProvider } from "@/components/toast";
 
@@ -43,6 +44,7 @@ export default async function DashboardLayout({
           kids={kids}
           unread={unread}
         >
+          <OfflineBanner />
           {!parent.emailVerified && <VerifyEmailBanner />}
           {children}
         </DashboardShell>

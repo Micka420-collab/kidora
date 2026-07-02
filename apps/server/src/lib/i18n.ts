@@ -26,6 +26,8 @@ const fr = {
     delete: "Supprimer",
     language: "Langue",
     error: "Une erreur est survenue",
+    offlineBanner: "Vous êtes hors ligne — les dernières données affichées peuvent ne pas être à jour.",
+    backOnline: "De nouveau en ligne ✓",
   },
   overview: {
     hello: "Bonjour",
@@ -276,6 +278,8 @@ const en: typeof fr = {
     delete: "Delete",
     language: "Language",
     error: "Something went wrong",
+    offlineBanner: "You are offline — the data shown may be out of date.",
+    backOnline: "Back online ✓",
   },
   overview: {
     hello: "Hello",
