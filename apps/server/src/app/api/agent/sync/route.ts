@@ -49,6 +49,21 @@ const syncSchema = z.object({
     )
     .max(500)
     .optional(),
+  // Cumulative daily totals (idempotent). When present, the server SETs the
+  // daily total monotonically instead of incrementing — a retried sync after a
+  // lost response can't double-count. Same row shape as `usage`.
+  usageToday: z
+    .array(
+      z.object({
+        appId: z.string(),
+        appName: z.string(),
+        category: z.string().optional(),
+        date: z.string(),
+        seconds: z.number().int().min(0).max(86400),
+      }),
+    )
+    .max(500)
+    .optional(),
   webVisits: z
     .array(
       z.object({
@@ -226,8 +241,35 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 3. app usage (incremental seconds)
-  if (body.usage?.length) {
+  // 3. app usage. Prefer the IDEMPOTENT cumulative report (`usageToday`): SET the
+  //    daily total monotonically so a retried sync (lost response) can't
+  //    double-count screen time. Fall back to the legacy incremental `usage` for
+  //    older agents that don't send cumulative totals.
+  if (body.usageToday?.length) {
+    for (const u of body.usageToday) {
+      // Ensure the row exists (without lowering an existing higher total)…
+      await prisma.appUsage.upsert({
+        where: { deviceId_appId_date: { deviceId: device.id, appId: u.appId, date: u.date } },
+        create: {
+          childId,
+          deviceId: device.id,
+          appId: u.appId,
+          appName: u.appName,
+          category: u.category,
+          date: u.date,
+          seconds: u.seconds,
+        },
+        update: { appName: u.appName }, // seconds handled by the monotonic raise below
+      });
+      // …then raise the total only if the reported cumulative value is higher.
+      // Re-sending the same value is a no-op (idempotent); a stale/reordered
+      // lower value can't decrease the count.
+      await prisma.appUsage.updateMany({
+        where: { deviceId: device.id, appId: u.appId, date: u.date, seconds: { lt: u.seconds } },
+        data: { seconds: u.seconds },
+      });
+    }
+  } else if (body.usage?.length) {
     for (const u of body.usage) {
       await prisma.appUsage.upsert({
         where: { deviceId_appId_date: { deviceId: device.id, appId: u.appId, date: u.date } },

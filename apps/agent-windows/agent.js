@@ -323,6 +323,10 @@ async function main() {
         battery: battery ?? undefined,
         tzOffset: -new Date().getTimezoneOffset(), // minutes to add to UTC → local
         usage,
+        // Cumulative daily totals → the server SETs (not increments) so a retry
+        // after a lost response can't double-count screen time. Old servers
+        // ignore this and use `usage`; old agents omit it and servers fall back.
+        usageToday: tracker.cumulativeUsage(),
         events: [...events, ...enforceEvents],
         webVisits,
         videos: watchedVideos.length ? watchedVideos : undefined,

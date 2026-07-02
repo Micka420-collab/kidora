@@ -109,6 +109,35 @@ describe("/agent/sync (integration)", () => {
     expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
   });
 
+  it("cumulative usageToday is idempotent and monotonic (a retry can't double-count screen time)", async () => {
+    const date = "2026-07-02";
+    const send = (seconds: number) =>
+      POST(syncReq({ usageToday: [{ appId: "game.exe", appName: "Game", category: "game", date, seconds }] }));
+
+    await send(600); // 10 min today
+    await send(600); // RETRY of the same batch (lost response) → must stay 600, not 1200
+    let row = await prisma.appUsage.findFirst({ where: { childId, appId: "game.exe", date } });
+    expect(row.seconds).toBe(600);
+
+    await send(900); // usage grew to 15 min → total is raised
+    row = await prisma.appUsage.findFirst({ where: { childId, appId: "game.exe", date } });
+    expect(row.seconds).toBe(900);
+
+    await send(300); // stale / reordered lower value → must NOT lower the total
+    row = await prisma.appUsage.findFirst({ where: { childId, appId: "game.exe", date } });
+    expect(row.seconds).toBe(900);
+  });
+
+  it("legacy incremental `usage` still accumulates (backward compatible with old agents)", async () => {
+    const date = "2026-07-03";
+    const send = (seconds: number) =>
+      POST(syncReq({ usage: [{ appId: "legacy.exe", appName: "Legacy", category: "other", date, seconds }] }));
+    await send(100);
+    await send(50);
+    const row = await prisma.appUsage.findFirst({ where: { childId, appId: "legacy.exe", date } });
+    expect(row.seconds).toBe(150); // increment path unchanged when usageToday is absent
+  });
+
   it("creates 'allow' rules from an installed-apps scan, never overwriting existing rules", async () => {
     // a parent-set block that MUST survive the scan
     await prisma.appRule.create({ data: { childId, appId: "chrome.exe", appName: "Chrome", action: "block" } });

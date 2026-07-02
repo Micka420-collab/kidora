@@ -60,6 +60,18 @@ test("todayByApp (for limits) is unaffected by drain/restore", () => {
   assert.equal(t.todaySeconds("game.exe"), 50);
 });
 
+test("cumulativeUsage reports today's totals (idempotent, not deltas)", () => {
+  const t = new Tracker();
+  t.tick(fg("chrome", 1), 30);
+  t.drain(); // draining deltas must NOT change the cumulative total
+  t.tick(fg("chrome", 1), 30);
+  const cum = t.cumulativeUsage();
+  const chrome = cum.find((u) => u.appId === "chrome.exe");
+  assert.equal(chrome.seconds, 60); // 30 + 30 total today, regardless of drains
+  // Re-reading returns the SAME value (idempotent) — a server SET won't double it.
+  assert.equal(t.cumulativeUsage().find((u) => u.appId === "chrome.exe").seconds, 60);
+});
+
 test("snapshot → rehydrate preserves today's counter (reboot can't reset the limit)", () => {
   const t = new Tracker();
   t.tick(fg("game", 1), 300); // 5 min used today

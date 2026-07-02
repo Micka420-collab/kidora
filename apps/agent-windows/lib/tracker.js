@@ -117,6 +117,23 @@ export class Tracker {
     this.events.push(ev);
   }
 
+  /**
+   * CUMULATIVE seconds-per-app for today (not deltas). Sent alongside the delta
+   * usage so an idempotency-aware server can SET (not increment) the daily total
+   * — a retried sync after a lost response then can't double-count screen time
+   * (which would hand the child extra time). Self-healing: always the current
+   * truth, so nothing is lost on a failed sync either.
+   */
+  cumulativeUsage() {
+    return [...this.todayByApp.entries()].map(([appId, seconds]) => ({
+      appId,
+      appName: appId.replace(/\.exe$/i, "").replace(/^\w/, (c) => c.toUpperCase()),
+      category: categorize(appId),
+      date: this.today,
+      seconds,
+    }));
+  }
+
   /** Return telemetry payload and reset deltas. */
   drain() {
     const usage = [...this.pending.entries()].map(([appId, seconds]) => ({
