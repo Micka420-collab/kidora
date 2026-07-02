@@ -15,10 +15,11 @@ import { NextRequest } from "next/server";
 // SMTP. Everything else (auth verify, password check, prisma writes) is real.
 const TEST_DB = "file:./test-email.db";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 const mocks = vi.hoisted(() => ({
   session: { value: "" }, // set to a real signed JWT in beforeAll
   mailConfigured: { value: true }, // toggled per test
-  sendMail: vi.fn(async () => {}),
+  sendMail: vi.fn(async (opts: any) => { void opts; }),
 }));
 
 vi.mock("next/headers", () => ({
@@ -31,10 +32,9 @@ vi.mock("next/headers", () => ({
 
 vi.mock("@/lib/mailer", () => ({
   isMailConfigured: () => mocks.mailConfigured.value,
-  sendMail: (...args: unknown[]) => mocks.sendMail(...(args as [])),
+  sendMail: (opts: any) => mocks.sendMail(opts),
 }));
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 let prisma: any;
 let POST: (req: NextRequest) => Promise<Response>;
 let parentId = "";
@@ -82,7 +82,7 @@ describe("/account/email", () => {
     expect(p.emailVerifyToken).toBeTruthy();
     expect(p.emailVerifyTokenExpiry).toBeTruthy();
     expect(mocks.sendMail).toHaveBeenCalledTimes(1);
-    expect((mocks.sendMail.mock.calls[0][0] as any).to).toBe("new@ex.dev");
+    expect(mocks.sendMail.mock.calls[0][0].to).toBe("new@ex.dev");
   });
 
   it("rejects a wrong password (403) and does not change the email", async () => {
