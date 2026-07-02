@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, radius, space } from "./theme";
+import { useTheme, radius, space, layout, fontCap } from "./theme";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -22,7 +22,9 @@ export function Screen({
 }) {
   const { c } = useTheme();
   const inner = (
-    <View style={[{ padding: space.lg, gap: space.lg }, style]}>{children}</View>
+    <View style={[{ width: "100%", maxWidth: layout.contentMax, alignSelf: "center", padding: space.lg, gap: space.lg }, style]}>
+      {children}
+    </View>
   );
   return (
     <SafeAreaView edges={edges} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -99,8 +101,13 @@ export function Muted({ children, style, numberOfLines }: { children: React.Reac
 
 // ── Icon bubble ────────────────────────────────────────────────────────
 export function IconBubble({ icon, color, size = 40, bg }: { icon: string; color: string; size?: number; bg?: string }) {
+  // Decorative: always paired with a text label, so hide from screen readers.
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: bg ?? color + "22", alignItems: "center", justifyContent: "center" }}>
+    <View
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      style={{ width: size, height: size, borderRadius: size / 3, backgroundColor: bg ?? color + "22", alignItems: "center", justifyContent: "center" }}
+    >
       <Ionicons name={icon as IoniconName} size={size * 0.5} color={color} />
     </View>
   );
@@ -166,9 +173,9 @@ export function Pill({ label, tone = "neutral", icon }: { label: string; tone?: 
     brand: { bg: c.tint, fg: c.primaryDark },
   }[tone];
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: map.bg, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill, alignSelf: "flex-start" }}>
+    <View accessible accessibilityLabel={label} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: map.bg, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radius.pill, alignSelf: "flex-start" }}>
       {icon && <Ionicons name={icon as IoniconName} size={12} color={map.fg} />}
-      <Text style={{ color: map.fg, fontSize: 12, fontWeight: "700" }}>{label}</Text>
+      <Text maxFontSizeMultiplier={fontCap.chip} style={{ color: map.fg, fontSize: 12, fontWeight: "700" }}>{label}</Text>
     </View>
   );
 }
@@ -178,10 +185,10 @@ export function Stat({ icon, value, label, color }: { icon: string; value: strin
   const { c } = useTheme();
   const tint = color ?? c.primary;
   return (
-    <View style={{ flex: 1, backgroundColor: c.surfaceAlt, borderRadius: radius.md, padding: space.md, gap: 6 }}>
+    <View accessible accessibilityLabel={`${label} : ${value}`} style={{ flex: 1, backgroundColor: c.surfaceAlt, borderRadius: radius.md, padding: space.md, gap: 6 }}>
       <Ionicons name={icon as IoniconName} size={18} color={tint} />
-      <Text style={{ fontSize: 18, fontWeight: "800", color: c.text }} numberOfLines={1}>{value}</Text>
-      <Text style={{ fontSize: 11, color: c.textMuted, fontWeight: "600" }} numberOfLines={1}>{label}</Text>
+      <Text maxFontSizeMultiplier={fontCap.tile} style={{ fontSize: 18, fontWeight: "800", color: c.text }} numberOfLines={1}>{value}</Text>
+      <Text maxFontSizeMultiplier={fontCap.tile} style={{ fontSize: 11, color: c.textMuted, fontWeight: "600" }} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -217,9 +224,14 @@ export function Btn({
     </>
   );
   const base: ViewStyle = { minHeight: 50, borderRadius: radius.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: space.lg, opacity: disabled ? 0.5 : 1, alignSelf: full ? "stretch" : "auto" };
+  const a11y = {
+    accessibilityRole: "button" as const,
+    accessibilityLabel: title,
+    accessibilityState: { disabled: !!(disabled || loading), busy: !!loading },
+  };
   if (variant === "primary") {
     return (
-      <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }], alignSelf: full ? "stretch" : "auto" })}>
+      <Pressable onPress={onPress} disabled={disabled || loading} {...a11y} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }], alignSelf: full ? "stretch" : "auto" })}>
         <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={base}>{content("#fff")}</LinearGradient>
       </Pressable>
     );
@@ -230,7 +242,7 @@ export function Btn({
     danger: { bg: c.dangerSoft, fg: c.danger },
   }[variant];
   return (
-    <Pressable onPress={onPress} disabled={disabled || loading} style={({ pressed }) => [base, { backgroundColor: styles.bg, borderWidth: variant === "ghost" ? StyleSheet.hairlineWidth : 0, borderColor: c.border, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+    <Pressable onPress={onPress} disabled={disabled || loading} {...a11y} style={({ pressed }) => [base, { backgroundColor: styles.bg, borderWidth: variant === "ghost" ? StyleSheet.hairlineWidth : 0, borderColor: c.border, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
       {content(styles.fg)}
     </Pressable>
   );
@@ -243,7 +255,9 @@ export function SectionHeader({ title, actionLabel, onAction }: { title: string;
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
       <H2>{title}</H2>
       {actionLabel && (
-        <Pressable onPress={onAction}><Text style={{ color: c.primary, fontWeight: "700", fontSize: 13 }}>{actionLabel}</Text></Pressable>
+        <Pressable onPress={onAction} accessibilityRole="button" accessibilityLabel={actionLabel} hitSlop={8}>
+          <Text style={{ color: c.primary, fontWeight: "700", fontSize: 13 }}>{actionLabel}</Text>
+        </Pressable>
       )}
     </View>
   );
