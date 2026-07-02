@@ -18,6 +18,10 @@ build/
 *.db-journal
 *.sqlite
 
+# database backups (self-host)
+backups/
+apps/server/backups/
+
 # logs
 *.log
 npm-debug.log*

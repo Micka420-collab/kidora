@@ -33,6 +33,7 @@ export const CRON_PLAN: [string, number, number][] = [
   ["/api/cron/offline-check", HOUR, 60_000],
   ["/api/cron/cleanup", 24 * HOUR, 5 * 60_000],
   ["/api/cron/reports", 24 * HOUR, 10 * 60_000],
+  ["/api/cron/backup", 24 * HOUR, 15 * 60_000], // SQLite self-host snapshot (no-op on Postgres)
 ];
 
 let started = false;
