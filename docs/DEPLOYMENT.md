@@ -55,6 +55,11 @@ passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 > Prisma pour le bon dialecte. Sur Vercel les variables d'env sont dispo au build
 > par défaut. Sinon, posez `DATABASE_PROVIDER=postgresql` (override explicite).
 
+> **Vérifier la configuration** : une fois déployé, ouvrez **`/status`** — une
+> liste de contrôle (base de données, secrets, push, e-mails, HTTPS…) qui indique
+> ce qui reste à configurer, sans afficher aucune valeur secrète. Version JSON :
+> `/api/status`.
+
 ### 3. Schéma Postgres — automatique
 
 Le `buildCommand` de `vercel.json` est `npm run vercel-build`
