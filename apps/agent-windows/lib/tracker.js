@@ -59,17 +59,19 @@ export class Tracker {
     };
   }
 
-  _rollDate() {
-    const now = localDate();
-    if (now !== this.today) {
-      this.today = now;
+  _rollDate(now = new Date()) {
+    const day = localDate(now);
+    if (day !== this.today) {
+      this.today = day;
       this.todayByApp.clear();
     }
   }
 
-  /** Account `intervalSec` seconds to the current foreground app. */
-  tick(sample, intervalSec) {
-    this._rollDate();
+  /** Account `intervalSec` seconds to the current foreground app. `now` is the
+   *  TRUSTED time so the daily counter rolls over at the real local midnight, not
+   *  a midnight the child faked by moving the system clock. */
+  tick(sample, intervalSec, now = new Date()) {
+    this._rollDate(now);
     const name = sample?.fg?.name;
     if (!name) return;
     const key = name.toLowerCase();

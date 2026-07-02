@@ -180,6 +180,12 @@ injoignable** (réseau coupé, serveur en panne, PC redémarré sans Internet) :
   après un échec réseau ou un crash — le temps d'écran n'est jamais sous-compté.
 - **Requêtes bornées** : les appels réseau ont un **délai maximal** (timeout) —
   un serveur qui accepte la connexion sans répondre ne peut plus figer l'agent.
+- **Anti-triche horloge** (`lib/clock.js`) : l'application des règles (coucher,
+  limites, changement de jour) utilise une **horloge de confiance** ancrée sur
+  l'heure du serveur + le temps **monotone** — **modifier l'heure système ne
+  déplace ni le coucher ni la limite** et ne réinitialise pas le compteur du
+  jour ; l'heure de confiance ne peut jamais **reculer** (même après reboot). Un
+  décalage important entre l'horloge locale et le serveur **alerte le parent**.
 
 Le fichier `state.json` est écrit dans le dossier de l'agent, verrouillé pour les
 comptes standard par les mêmes ACL que les autres fichiers de l'agent (au même

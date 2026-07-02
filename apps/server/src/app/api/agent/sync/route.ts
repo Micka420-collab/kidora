@@ -210,6 +210,17 @@ export async function POST(req: NextRequest) {
           message: `Limite de temps atteinte : ${e.title ?? ""}`,
         });
       }
+      if (e.type === "clock_change") {
+        // Anti-tamper: the child moved the device clock to try to dodge bedtime
+        // or reset the daily limit. Not mutable (see alert-prefs).
+        alerts.push({
+          parentId,
+          childId,
+          type: "clock_change",
+          severity: "warning",
+          message: `⏱️ Heure système modifiée sur l'appareil de ${device.child.name}${e.detail ? ` (${e.detail})` : ""}`,
+        });
+      }
     }
   }
 

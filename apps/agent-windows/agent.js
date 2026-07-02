@@ -7,6 +7,7 @@ import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
 import { loadState, saveState } from "./lib/store.js";
+import { TrustedClock } from "./lib/clock.js";
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
@@ -47,10 +48,13 @@ async function main() {
   const state = loadState();
   const tracker = new Tracker(state.tracker);
   const enforcer = new Enforcer({ dryRun: DRY_RUN });
+  // Trusted clock — enforcement (bedtime/limits/day rollover) uses this instead
+  // of the raw system clock so the child can't win time by changing the date.
+  const clock = new TrustedClock(state.clock);
 
-  /** Persist the current policy + tracker snapshot atomically. Best-effort. */
+  /** Persist the current policy + tracker + clock snapshot atomically. Best-effort. */
   function persistState() {
-    saveState({ policy, tracker: tracker.snapshot() });
+    saveState({ policy, tracker: tracker.snapshot(), clock: clock.snapshot() });
   }
 
   // 1. Enroll — but degrade gracefully to OFFLINE mode when the server can't be
@@ -127,7 +131,8 @@ async function main() {
   // 2. Sensor loop (frequent sampling + live enforcement)
   startSensor(SAMPLE_INTERVAL, async (sample) => {
     lastSample = sample;
-    tracker.tick(sample, SAMPLE_INTERVAL);
+    const now = clock.now(); // trusted time — immune to a tampered system clock
+    tracker.tick(sample, SAMPLE_INTERVAL, now);
     const newVideo = videos.observe(sample);
     if (newVideo) {
       // best-effort: recover the URL (→ video id → thumbnail) from the address bar
@@ -136,7 +141,7 @@ async function main() {
       }).catch(() => {});
     }
     try {
-      await enforcer.apply(policy, sample, tracker);
+      await enforcer.apply(policy, sample, tracker, now);
     } catch (e) {
       log.error("enforce:", e.message);
     }
@@ -175,6 +180,20 @@ async function main() {
       pendingInstalledApps = []; // sent once; the tracker catches anything new after
       policy = res.policy;
       filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
+      // Anchor the trusted clock on the server's authoritative time and flag a
+      // tampered system clock (child moving the date to dodge bedtime/limits).
+      if (res.serverTime) {
+        const { skewMs, tampered } = clock.onServerTime(res.serverTime);
+        if (tampered) {
+          const mins = Math.round(skewMs / 60000);
+          log.warn(`Horloge locale décalée de ${mins} min vs serveur — signalement anti-triche.`);
+          tracker.pushEvent({
+            type: "clock_change",
+            title: "Modification de l'heure système détectée",
+            detail: `Décalage d'environ ${mins} min par rapport au serveur`,
+          });
+        }
+      }
       if (offline) {
         offline = false;
         log.ok("Reconnecté au serveur — politique à jour.");
