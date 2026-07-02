@@ -224,9 +224,19 @@ export default function ChildDetail() {
             )}
 
             {/* devices */}
-            {(child?.devices?.length ?? 0) > 0 && (
-              <View style={{ gap: space.sm }}>
+            <View style={{ gap: space.sm }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <H2>Appareils</H2>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/add-child", params: { childId: id, childName: child?.name ?? "" } })}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ajouter un appareil"
+                >
+                  <Text style={{ color: c.primary, fontWeight: "700", fontSize: 14 }}>+ Ajouter</Text>
+                </Pressable>
+              </View>
+              {(child?.devices?.length ?? 0) > 0 ? (
                 <Card>
                   {child!.devices.map((d, i) => {
                     const dOnline = isDeviceOnline(d);
@@ -248,8 +258,10 @@ export default function ChildDetail() {
                     );
                   })}
                 </Card>
-              </View>
-            )}
+              ) : (
+                <Card><Muted>Aucun appareil connecté. Touchez « + Ajouter » pour en connecter un.</Muted></Card>
+              )}
+            </View>
 
             {/* videos + messages + web history shortcuts */}
             <View style={{ flexDirection: "row", gap: space.sm }}>

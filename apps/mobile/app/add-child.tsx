@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { View, Text, TextInput, ScrollView, Pressable, Alert as RNAlert } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { parent, getServer } from "@/api";
@@ -19,14 +19,18 @@ const PLATFORMS: { key: string; label: string }[] = [
 // token + deep-link — so a parent never has to open the web dashboard first.
 export default function AddChild() {
   const { c } = useTheme();
-  const [step, setStep] = useState<"child" | "device" | "done">("child");
+  // When opened with ?childId=… we're adding a device to an EXISTING child, so we
+  // skip the child-creation step.
+  const params = useLocalSearchParams<{ childId?: string; childName?: string }>();
+  const existing = !!params.childId;
+  const [step, setStep] = useState<"child" | "device" | "done">(existing ? "device" : "child");
   const [busy, setBusy] = useState(false);
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState(params.childName ?? "");
   const [avatar, setAvatar] = useState(AVATARS[0]);
-  const [childId, setChildId] = useState<string | null>(null);
+  const [childId, setChildId] = useState<string | null>(params.childId ?? null);
 
-  const [deviceName, setDeviceName] = useState("");
+  const [deviceName, setDeviceName] = useState(existing && params.childName ? `PC de ${params.childName}` : "");
   const [platform, setPlatform] = useState("windows");
   const [token, setToken] = useState<string | null>(null);
   const [server, setServer] = useState("");
@@ -69,7 +73,7 @@ export default function AddChild() {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: space.md }}>
         <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Retour"><Ionicons name="chevron-back" size={26} color={c.text} /></Pressable>
-        <Text style={{ fontSize: 20, fontWeight: "800", color: c.text }}>Ajouter un enfant</Text>
+        <Text style={{ fontSize: 20, fontWeight: "800", color: c.text }}>{existing ? "Ajouter un appareil" : "Ajouter un enfant"}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg }} keyboardShouldPersistTaps="handled">
