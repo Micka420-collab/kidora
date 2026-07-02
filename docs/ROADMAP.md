@@ -63,6 +63,16 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   puis **rejoué** au prochain sync réussi (événement `panic` → alerte critique côté
   serveur, dédupliqué par id) ; l'enfant voit « SOS enregistré, envoyé dès que
   possible ». Plus aucun SOS perdu. (+1 test d'intégration).
+- [x] **Onboarding mobile complet** : inscription **dans l'app** (`/api/auth/register`),
+  **ajout d'un enfant** puis **d'un appareil** (jeton + lien d'appairage) — sans
+  passer par le web. + persistance de la policy côté Kids (démarrage à froid correct).
+- [x] **Dashboard hors-ligne (service worker)** : SW **network-first** (aucun
+  changement en ligne ; `/api` jamais mis en cache) → page hors-ligne soignée au
+  lieu de l'écran d'erreur du navigateur ; assets figés en cache-first ; **prod
+  uniquement**. Logique vérifiée par `sw.test.ts` (6 tests exécutant le vrai sw.js).
+- [x] **Auto-hébergement Docker** : `docker-compose.yml` (serveur + PostgreSQL) +
+  `Dockerfile` (openssl pour Prisma) + entrypoint (schéma puis démarrage). Une
+  commande. *Marqué non-construit-en-CI* (pas d'environnement Docker ici).
 
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
