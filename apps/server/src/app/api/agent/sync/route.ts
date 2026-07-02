@@ -262,6 +262,26 @@ export async function POST(req: NextRequest) {
           message: `⏱️ Heure système modifiée sur l'appareil de ${device.child.name}${e.detail ? ` (${e.detail})` : ""}`,
         });
       }
+      if (e.type === "panic") {
+        // SOS as an event → a critical alert. Used by the mobile app (incl. its
+        // OFFLINE queue, which flushes queued SOS as events on reconnect); the
+        // stable event id dedups a retried flush. Location, if any, is carried in
+        // the event detail as JSON.
+        let where = "";
+        try {
+          const d = JSON.parse(e.detail ?? "");
+          if (typeof d?.lat === "number" && typeof d?.lng === "number") {
+            where = ` (position : ${d.lat.toFixed(5)}, ${d.lng.toFixed(5)})`;
+          }
+        } catch { /* no location */ }
+        alerts.push({
+          parentId,
+          childId,
+          type: "panic",
+          severity: "critical",
+          message: `🆘 ${device.child.name} a déclenché une alerte SOS${where}`,
+        });
+      }
     }
   }
 
