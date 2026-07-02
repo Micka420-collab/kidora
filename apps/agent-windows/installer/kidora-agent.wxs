@@ -48,6 +48,7 @@
       <Component><File Source="$(AgentSrc)\lib\api.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\categorize.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\clock.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\command-dedup.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\config.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\discover.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\dns.js" /></Component>
