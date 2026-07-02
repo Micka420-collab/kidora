@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="kidora_accessibility_description">Permet à Kidora de fermer les applications bloquées par les parents et d\'appliquer les pauses. Kidora ne lit jamais le contenu de l\'écran.</string>
+</resources>

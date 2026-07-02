@@ -9,7 +9,46 @@ import { isBedtimeNow, nextBedtimeStart } from "@/schedule";
 import * as storage from "@/storage";
 import * as sosQueue from "@/sos-queue";
 import * as AppUsage from "../modules/app-usage";
+import * as AppBlocker from "../modules/app-blocker";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
+
+type KidsPolicy = {
+  paused?: boolean;
+  appRules?: unknown[];
+  screenTime?: { enabled?: boolean; dailyLimits?: Record<string, number>; bonusMinutesToday?: number; bedtimes?: { days: string[]; start: string; end: string }[] };
+};
+
+/** Package names to block right now: outright "block" rules, plus "limit" rules
+ *  whose daily allowance is already used up (per-app seconds when known).
+ *  Android app ids double as package names. */
+function blockedPackagesFromPolicy(policy: KidsPolicy, perAppSec?: Record<string, number>): string[] {
+  const rules = (policy.appRules ?? []) as { appId?: string; action?: string; dailyLimitMinutes?: number | null }[];
+  const out: string[] = [];
+  for (const r of rules) {
+    if (!r?.appId) continue;
+    if (r.action === "block") out.push(r.appId);
+    else if (r.action === "limit" && r.dailyLimitMinutes != null && perAppSec && (perAppSec[r.appId] ?? 0) >= r.dailyLimitMinutes * 60) out.push(r.appId);
+  }
+  return out;
+}
+
+/** Push the current policy to the native blocker (no-op off Android / Expo Go).
+ *  "Paused" (= every non-essential app blocked) when a parent paused or remote-
+ *  locked the device, during bedtime, or once today's screen-time allowance is
+ *  spent — the same conditions the Windows agent enforces with its lock screen. */
+function applyNativeBlocking(
+  policy: KidsPolicy,
+  opts: { remoteLocked?: boolean; perAppSec?: Record<string, number>; totalSec?: number | null } = {},
+): void {
+  if (!AppBlocker.isAvailable) return;
+  const st = policy.screenTime;
+  const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
+  const baseMin = st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) : 0;
+  const limitMin = baseMin > 0 ? baseMin + (st?.bonusMinutesToday ?? 0) : 0;
+  const limitSpent = limitMin > 0 && opts.totalSec != null && opts.totalSec >= limitMin * 60;
+  AppBlocker.setPaused(!!policy.paused || !!opts.remoteLocked || isBedtimeNow(st?.bedtimes) || limitSpent);
+  AppBlocker.setBlockedPackages(blockedPackagesFromPolicy(policy, opts.perAppSec));
+}
 
 const SYNC_MS = 60_000;
 
@@ -26,6 +65,7 @@ export default function ChildMode() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [paused, setPaused] = useState(false);
   const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
+  const [needsBlockerPerm, setNeedsBlockerPerm] = useState(false);
   const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
   const [limitMin, setLimitMin] = useState(0); // today's screen-time limit (+ bonus), 0 = none
   const [bedtime, setBedtime] = useState(false);
@@ -39,6 +79,7 @@ export default function ChildMode() {
   const [welcome, setWelcome] = useState(false); // first-launch greeting banner
   const [parentMsg, setParentMsg] = useState<string | null>(null); // a "message" command from a parent
   const [remoteLocked, setRemoteLocked] = useState(false); // a "lock" command from a parent (best-effort)
+  const remoteLockedRef = useRef(false); // mirror for non-render code (native blocker input)
   const [syncError, setSyncError] = useState(false); // last sync failed (offline) → status shown in red, not green
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const syncing = useRef(false); // re-entrancy guard so an overlapping sync can't double-ack
@@ -101,8 +142,15 @@ export default function ChildMode() {
       try {
         const rawPol = await storage.get("kidsPolicy");
         if (rawPol) {
-          const pol = JSON.parse(rawPol) as { paused?: boolean; screenTime?: { enabled?: boolean; dailyLimits?: Record<string, number>; bonusMinutesToday?: number; bedtimes?: { days: string[]; start: string; end: string }[] } };
+          const pol = JSON.parse(rawPol) as KidsPolicy;
           setPaused(!!pol.paused);
+          // Re-assert native blocking from the cached policy on a cold/offline start
+          // (the native list also persists, but this covers a fresh install-then-offline).
+          // The restored same-day usage baseline stands in for today's per-app/total usage.
+          applyNativeBlocking(pol, {
+            perAppSec: prevUsage.current,
+            totalSec: usageDate.current ? Object.values(prevUsage.current).reduce((a, b) => a + b, 0) : null,
+          });
           const st = pol.screenTime;
           const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
           const baseMin = st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) : 0;
@@ -192,6 +240,7 @@ export default function ChildMode() {
       // total are included, to keep the payload small.
       let usageToday: { appId: string; appName: string; date: string; seconds: number }[] = [];
       let nextBaseline: { date: string; perApp: Record<string, number> } | null = null;
+      let totalTodaySec: number | null = null; // fresh total when usage access is granted
       if (AppUsage.isAvailable) {
         const granted = await AppUsage.hasPermission();
         setNeedsUsagePerm(!granted);
@@ -214,6 +263,7 @@ export default function ChildMode() {
             }
           }
           setUsedTodaySec(totalToday);
+          totalTodaySec = totalToday;
           nextBaseline = { date: today, perApp };
         }
       }
@@ -246,6 +296,21 @@ export default function ChildMode() {
       // Cache the policy so a cold offline start shows real limits/pause (above).
       storage.set("kidsPolicy", JSON.stringify(res.policy)).catch(() => undefined);
       setPaused(res.policy.paused);
+      // Enforce natively (Android AccessibilityService): block/limit rules, plus
+      // pause-everything on parent pause, remote lock, bedtime or spent allowance.
+      applyNativeBlocking(res.policy, {
+        remoteLocked: remoteLockedRef.current,
+        perAppSec: nextBaseline?.perApp ?? prevUsage.current,
+        totalSec: totalTodaySec ?? usedTodaySec,
+      });
+      // Prompt to enable the service only when the policy can actually need it
+      // (a rule to enforce, a pause, or screen-time limits/bedtimes configured).
+      if (AppBlocker.isAvailable) {
+        const rules = (res.policy.appRules ?? []) as { action?: string }[];
+        const needsBlock = res.policy.paused || !!res.policy.screenTime?.enabled ||
+          rules.some((r) => r?.action === "block" || r?.action === "limit");
+        AppBlocker.isEnabled().then((on) => { if (mounted.current) setNeedsBlockerPerm(needsBlock && !on); }).catch(() => undefined);
+      }
       // today's screen-time allowance (daily limit for this weekday + bonus granted)
       const st = res.policy.screenTime;
       const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
@@ -294,8 +359,9 @@ export default function ChildMode() {
   }
 
   // Handle remote commands the parent issued from the dashboard/app, and queue an
-  // ack for each so it isn't left "delivered" forever. Mobile can't truly lock a
-  // phone, so lock/message are surfaced as banners (best-effort).
+  // ack for each so it isn't left "delivered" forever. With the native blocker
+  // enabled, lock/pause really block every non-essential app; otherwise they are
+  // surfaced as banners (best-effort).
   function processCommands(commands?: { id: string; type: string; payload?: Record<string, unknown> }[]) {
     for (const cmd of commands ?? []) {
       // Already applied (e.g. re-delivered by a race)? Don't re-run its side
@@ -316,10 +382,16 @@ export default function ChildMode() {
         case "lock":
         case "pause":
           setRemoteLocked(true);
+          remoteLockedRef.current = true;
+          AppBlocker.setPaused(true); // immediate — don't wait for the next sync
           break;
         case "unlock":
         case "resume":
           setRemoteLocked(false);
+          remoteLockedRef.current = false;
+          // Fall back to the last-known policy pause; the next sync (≤60 s)
+          // reconciles bedtime/limit-based pausing too.
+          AppBlocker.setPaused(paused);
           break;
         case "locate":
           break; // position is already sent on every sync
@@ -623,6 +695,12 @@ export default function ChildMode() {
         {needsUsagePerm && (
           <Pressable style={s.permBtn} onPress={() => AppUsage.openSettings()} accessibilityRole="button">
             <Text style={s.permText}>Autoriser l'accès à l'usage des apps</Text>
+          </Pressable>
+        )}
+
+        {needsBlockerPerm && (
+          <Pressable style={s.permBtn} onPress={() => AppBlocker.openSettings()} accessibilityRole="button" accessibilityLabel="Activer le blocage des applications">
+            <Text style={s.permText}>Activer le blocage des applications (Accessibilité)</Text>
           </Pressable>
         )}
 

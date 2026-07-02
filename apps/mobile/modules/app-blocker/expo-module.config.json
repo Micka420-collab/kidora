@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["app.kidora.appblocker.AppBlockerModule"]
+  },
+  "ios": {
+    "modules": ["AppBlockerModule"]
+  }
+}
