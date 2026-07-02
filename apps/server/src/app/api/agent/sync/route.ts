@@ -71,6 +71,7 @@ const syncSchema = z.object({
   webVisits: z
     .array(
       z.object({
+        id: z.string().min(1).max(64).optional(), // agent-supplied idempotency key
         domain: z.string(),
         url: z.string().optional(),
         title: z.string().optional(),
@@ -359,21 +360,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4. web visits
+  // 4. web visits — deduped by the agent-supplied id like activity events, so a
+  //    retried sync makes no duplicate rows and re-fires no "site bloqué" alerts.
   if (body.webVisits?.length) {
-    await prisma.webVisit.createMany({
-      data: body.webVisits.map((w) => ({
-        childId,
-        deviceId: device.id,
-        domain: w.domain,
-        url: w.url,
-        title: w.title,
-        category: w.category,
-        blocked: w.blocked ?? false,
-        ts: safeDate(w.ts),
-      })),
-    });
-    for (const w of body.webVisits) {
+    const withId = body.webVisits.filter((w) => w.id).map((w) => w.id as string);
+    const already = withId.length
+      ? new Set(
+          (await prisma.webVisit.findMany({ where: { id: { in: withId } }, select: { id: true } })).map((r) => r.id),
+        )
+      : new Set<string>();
+    const fresh = body.webVisits.filter((w) => !w.id || !already.has(w.id));
+
+    if (fresh.length) {
+      await prisma.webVisit.createMany({
+        data: fresh.map((w) => ({
+          ...(w.id ? { id: w.id } : {}),
+          childId,
+          deviceId: device.id,
+          domain: w.domain,
+          url: w.url,
+          title: w.title,
+          category: w.category,
+          blocked: w.blocked ?? false,
+          ts: safeDate(w.ts),
+        })),
+      });
+    }
+    for (const w of fresh) {
       if (w.blocked) {
         alerts.push({
           parentId,
