@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme, radius, space, layout, fontCap } from "./theme";
+import { useTheme, useReduceMotion, radius, space, layout, fontCap } from "./theme";
 
 type IoniconName = keyof typeof Ionicons.glyphMap;
 
@@ -133,9 +133,10 @@ export function Avatar({ emoji, size = 56, online }: { emoji?: string | null; si
 // ── Pulsing presence dot ───────────────────────────────────────────────
 export function PulseDot({ on, size = 12 }: { on: boolean; size?: number }) {
   const { c } = useTheme();
+  const reduceMotion = useReduceMotion();
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!on) return;
+    if (!on || reduceMotion) return; // reduce-motion: static dot, no pulsing ring
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 1100, easing: Easing.out(Easing.ease), useNativeDriver: true }),
@@ -144,11 +145,11 @@ export function PulseDot({ on, size = 12 }: { on: boolean; size?: number }) {
     );
     loop.start();
     return () => loop.stop();
-  }, [on, pulse]);
+  }, [on, reduceMotion, pulse]);
   const color = on ? c.success : c.textFaint;
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
-      {on && (
+      {on && !reduceMotion && (
         <Animated.View
           style={{
             position: "absolute", width: size, height: size, borderRadius: size / 2, backgroundColor: color,
@@ -305,8 +306,10 @@ export function ErrorState({
 // ── Skeleton ───────────────────────────────────────────────────────────
 export function Skeleton({ height = 16, width = "100%", style }: { height?: number; width?: number | `${number}%`; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
+  const reduceMotion = useReduceMotion();
   const o = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
+    if (reduceMotion) return; // reduce-motion: static placeholder, no shimmer
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(o, { toValue: 1, duration: 700, useNativeDriver: true }),
@@ -315,6 +318,6 @@ export function Skeleton({ height = 16, width = "100%", style }: { height?: numb
     );
     loop.start();
     return () => loop.stop();
-  }, [o]);
-  return <Animated.View style={[{ height, width, borderRadius: radius.sm, backgroundColor: c.surfaceAlt, opacity: o }, style]} />;
+  }, [o, reduceMotion]);
+  return <Animated.View style={[{ height, width, borderRadius: radius.sm, backgroundColor: c.surfaceAlt, opacity: reduceMotion ? 0.6 : o }, style]} />;
 }
