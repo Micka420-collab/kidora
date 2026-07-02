@@ -49,4 +49,20 @@ export function saveState(state) {
   }
 }
 
+/** Probe whether the agent can actually write its state directory (the offline
+ *  cache lives here). Under a hardened standard-user account the self-protect
+ *  ACLs can make it read-only — `kidora-agent doctor` surfaces that. Writes and
+ *  removes a throwaway file; never touches the real state. */
+export function canWriteStateDir() {
+  const probe = STATE_PATH + ".probe";
+  try {
+    writeFileSync(probe, "ok", "utf8");
+    unlinkSync(probe);
+    return true;
+  } catch {
+    try { if (existsSync(probe)) unlinkSync(probe); } catch { /* ignore */ }
+    return false;
+  }
+}
+
 export { STATE_PATH };

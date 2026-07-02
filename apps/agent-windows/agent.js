@@ -6,22 +6,59 @@ import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
-import { loadState, saveState } from "./lib/store.js";
+import { loadState, saveState, canWriteStateDir } from "./lib/store.js";
 import { TrustedClock } from "./lib/clock.js";
+import { runDoctor } from "./lib/doctor.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const pexec = promisify(execFile);
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
 import { scanInstalledApps } from "./lib/scan-apps.js";
 import { VideoCollector } from "./lib/videos.js";
-import { writeHeartbeat } from "./lib/heartbeat.js";
+import { writeHeartbeat, readHeartbeat } from "./lib/heartbeat.js";
 import { log } from "./lib/logger.js";
 
 const SAMPLE_INTERVAL = 5; // seconds between foreground samples
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes("--dry-run");
 
+/** Best-effort probe of a Windows scheduled task (for `doctor`). present:null
+ *  means we couldn't check (schtasks unavailable / non-Windows). */
+async function probeScheduledTask(name) {
+  try {
+    const { stdout } = await pexec("schtasks", ["/query", "/tn", name, "/fo", "LIST", "/v"], { windowsHide: true });
+    const running = /Status:\s*Running/i.test(stdout) || /État\s*:\s*En cours/i.test(stdout);
+    return { present: true, running };
+  } catch (e) {
+    if (e?.code === "ENOENT") return { present: null, running: false }; // schtasks not available
+    return { present: false, running: false }; // non-zero exit = task not found
+  }
+}
+
 async function main() {
   const cfg = resolveConfig(argv);
+
+  // `kidora-agent doctor` — self-diagnostic for installers/support. Runs the
+  // checks and exits without starting the monitoring loop.
+  if (argv.includes("doctor")) {
+    const { report, exitCode } = await runDoctor({
+      cfg,
+      heartbeat: readHeartbeat(),
+      isAdmin: await isAdmin().catch(() => false),
+      canWriteState: canWriteStateDir(),
+      agentTask: await probeScheduledTask("KidoraAgent"),
+      guardianTask: await probeScheduledTask("KidoraGuardian"),
+    });
+    console.log(report);
+    // Set the code and let the loop drain — a hard process.exit() here can trip a
+    // libuv assertion on Windows while the schtasks child handle is still closing.
+    process.exitCode = exitCode;
+    return;
+  }
+
   if (!cfg.enrollToken) {
     log.error("Aucun jeton. Lancez : node agent.js --token <ENROLL_TOKEN> --server <URL>");
     process.exit(1);

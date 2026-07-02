@@ -137,6 +137,21 @@ Options :
 Pour tout désinstaller (agent + gardien + ACL) :
 `powershell -File install-agent.ps1 -Uninstall`
 
+## Diagnostic (`doctor`)
+
+En cas de doute sur une installation, lancez l'auto-diagnostic :
+
+```powershell
+node agent.js doctor      # ou : npm run doctor
+```
+
+Il affiche une **liste de contrôle** (✓/⚠/✗) : version de Node, configuration
+(jeton/serveur/enrôlement), **serveur joignable** (`/api/health`), agent en cours
+d'exécution (fraîcheur du heartbeat), droits administrateur, **écriture du cache
+hors-ligne** (`state.json`), et présence/état des tâches planifiées `KidoraAgent`
+et `KidoraGuardian`. Le code de sortie est **non nul** si un problème bloquant est
+détecté — pratique pour un support ou un script post-installation.
+
 ## Configuration
 
 Au premier lancement, `--token`/`--server` sont enregistrés dans `config.json`.
