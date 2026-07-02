@@ -34,6 +34,28 @@ Kidora (`overlay.ps1`) au lieu de verrouiller la session Windows :
 > Le verrouillage complet (`LockWorkStation`) reste utilisé pour la commande
 > distante explicite `lock` envoyée par le parent.
 
+## Installation en un clic (parent, sans terminal)
+
+Le plus simple : **double-cliquez `Installer-Kidora.cmd`**. Il se relance en
+administrateur puis déroule un assistant guidé (`setup-windows.ps1`) qui fait tout
+le travail à la place de l'installateur :
+
+1. **vérifie / installe Node.js** automatiquement (via winget, sinon ouvre la page
+   de téléchargement) ;
+2. prépare l'agent ;
+3. demande (ou lit) le **jeton d'appairage** et l'**adresse du serveur** — accepte
+   un jeton collé tel quel **ou** un lien d'appairage complet
+   (`kidorachild://enroll?token=…&server=…`) ;
+4. installe l'agent **durci** (auto-protection) et le **démarre** immédiatement.
+
+Zéro question possible : déposez un fichier `kidora-config.txt` à côté de
+l'installeur (`SERVER=https://votre-serveur` / `TOKEN=<jeton>`) et l'assistant
+n'affiche plus aucune invite. Prévisualiser sans rien modifier :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File setup-windows.ps1 -DryRun
+```
+
 ## Installation par MSI (recommandé)
 
 Un **installeur MSI** signé empaquette l'agent et configure tout (enrôlement +
@@ -115,6 +137,37 @@ Options :
 Pour tout désinstaller (agent + gardien + ACL) :
 `powershell -File install-agent.ps1 -Uninstall`
 
+## Diagnostic (`doctor`)
+
+En cas de doute sur une installation, lancez l'auto-diagnostic :
+
+```powershell
+node agent.js doctor      # ou : npm run doctor
+```
+
+Il affiche une **liste de contrôle** (✓/⚠/✗) : version de Node, configuration
+(jeton/serveur/enrôlement), **serveur joignable** (`/api/health`), agent en cours
+d'exécution (fraîcheur du heartbeat), droits administrateur, **écriture du cache
+hors-ligne** (`state.json`), et présence/état des tâches planifiées `KidoraAgent`
+et `KidoraGuardian`. Le code de sortie est **non nul** si un problème bloquant est
+détecté — pratique pour un support ou un script post-installation.
+
+## Découverte du serveur sur le réseau (LAN)
+
+Si aucune adresse de serveur n'est fournie, l'installateur tente de **trouver le
+serveur Kidora sur le réseau local** (`node agent.js discover`) — pratique en
+auto-hébergement pour ne rien avoir à taper. Mécanisme : une balise **multicast
+UDP** (groupe admin-scoped `239.255.42.99:5354`, style mDNS). Côté serveur,
+lancez l'annonceur à côté du serveur :
+
+```bash
+node scripts/lan-advertise.mjs            # détecte l'IP LAN + le port
+node scripts/lan-advertise.mjs --url http://192.168.1.50:3000 --name "Maison"
+```
+
+Best-effort : le multicast peut être bloqué par un pare-feu ou indisponible
+selon l'interface — l'installateur retombe alors sur la saisie manuelle.
+
 ## Configuration
 
 Au premier lancement, `--token`/`--server` sont enregistrés dans `config.json`.
@@ -138,6 +191,61 @@ Pi-hole, en Node pur — `lib/dns-proxy.js`) et bascule le DNS du système sur
 Les domaines bloqués remontent au tableau de bord (`webVisits`). Si le port 53 est
 indisponible ou hors admin, l'agent **retombe** sur le filtrage par `hosts`.
 À l'arrêt (ou par le gardien après un crash), le DNS système est **restauré**.
+
+## Mise à jour automatique (signée)
+
+L'agent se met à jour tout seul, sans réinstallation par le parent :
+
+- au `sync`, le serveur annonce la dernière version (`agentLatest`) ;
+- si elle est plus récente, l'agent télécharge le **bundle signé**
+  (`GET /api/agent/bundle`), **vérifie la signature Ed25519** et le **hachage du
+  contenu** avec la clé publique épinglée (`lib/updater.js`), puis **prépare**
+  les fichiers dans `.update-staging/` — rien n'est appliqué à chaud ;
+- le **gardien SYSTEM** applique le remplacement au tick suivant : **sauvegarde**
+  de la version courante, copie des fichiers, redémarrage, et **rollback
+  automatique** si le nouvel agent ne redonne pas de heartbeat.
+
+Aucune mise à jour non signée n'est jamais appliquée. Désactivable :
+`"autoUpdate": false` dans `config.json`.
+
+## Hors connexion (résilience)
+
+L'agent est conçu pour **continuer à protéger même quand le serveur est
+injoignable** (réseau coupé, serveur en panne, PC redémarré sans Internet) :
+
+- **Démarrage hors-ligne** : si l'enrôlement échoue au lancement mais qu'une
+  politique a déjà été mise en cache, l'agent démarre en **mode hors-ligne** et
+  applique la **dernière politique connue** (blocages d'apps, filtrage, coucher,
+  limites) au lieu de s'arrêter. Il retente la connexion à chaque cycle et se
+  resynchronise dès que le serveur répond.
+- **Compteur de temps d'écran anti-triche** : l'usage du jour est **persisté sur
+  disque** (`state.json`, écriture atomique). **Redémarrer le PC ne remet plus le
+  compteur à zéro** — l'enfant ne peut plus regagner du temps en rebootant. Le
+  compteur repart à zéro **uniquement** au changement de jour local (minuit).
+- **Aucune télémétrie perdue** : les mesures d'usage et d'événements non encore
+  synchronisées sont conservées (en mémoire **et** sur disque) puis **rejouées**
+  après un échec réseau ou un crash — le temps d'écran n'est jamais sous-compté.
+- **Requêtes bornées** : les appels réseau ont un **délai maximal** (timeout) —
+  un serveur qui accepte la connexion sans répondre ne peut plus figer l'agent.
+- **Anti-triche horloge** (`lib/clock.js`) : l'application des règles (coucher,
+  limites, changement de jour) utilise une **horloge de confiance** ancrée sur
+  l'heure du serveur + le temps **monotone** — **modifier l'heure système ne
+  déplace ni le coucher ni la limite** et ne réinitialise pas le compteur du
+  jour ; l'heure de confiance ne peut jamais **reculer** (même après reboot). Un
+  décalage important entre l'horloge locale et le serveur **alerte le parent**.
+- **Politique signée (inviolable)** (`lib/policy-verify.js`) : le serveur signe
+  la politique effective avec une clé **Ed25519** ; l'agent **épingle la clé
+  publique** et **vérifie la signature** avant d'appliquer une politique — y
+  compris celle chargée du cache disque au démarrage hors-ligne. **Modifier
+  `state.json` pour assouplir les règles casse la signature** → l'agent bascule
+  sur un **verrouillage de sécurité** (tout en pause) au lieu de faire confiance
+  au cache altéré. Un horodatage signé (`iat`) bloque le **rejeu** d'une ancienne
+  politique plus permissive.
+
+Le fichier `state.json` est écrit dans le dossier de l'agent, verrouillé pour les
+comptes standard par les mêmes ACL que les autres fichiers de l'agent (au même
+titre que `heartbeat.json`) — l'enfant ne peut pas simplement le supprimer pour
+réinitialiser le compteur.
 
 ## Notes
 

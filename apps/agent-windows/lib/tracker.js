@@ -12,26 +12,73 @@ function localDate(d = new Date()) {
 }
 
 export class Tracker {
-  constructor() {
-    this.today = localDate();
+  /**
+   * @param {object} [snapshot] persisted state from disk (see `snapshot()`).
+   * @param {() => Date} [nowFn] source of "now" — pass the TRUSTED clock so the
+   *   day-rollover decision on restore can't be fooled by a rewound system clock
+   *   (a child setting the date back a day to reset the daily counter). Defaults
+   *   to the wall clock.
+   */
+  constructor(snapshot, nowFn) {
+    this._now = typeof nowFn === "function" ? nowFn : () => new Date();
+    this.today = localDate(this._now());
     this.pending = new Map(); // appId -> seconds since last drain
     this.todayByApp = new Map(); // appId -> seconds today (for limits)
     this.events = [];
     this.lastFgId = null;
     this.knownApps = new Set();
+    if (snapshot) this.restoreSnapshot(snapshot);
   }
 
-  _rollDate() {
-    const now = localDate();
-    if (now !== this.today) {
-      this.today = now;
+  /**
+   * Rehydrate from a persisted snapshot at startup. If the snapshot is from an
+   * EARLIER local day, the daily usage counter (which drives screen-time limits)
+   * is intentionally dropped so today starts fresh; if it's from TODAY, the
+   * counter is preserved — a reboot mid-day must NOT hand the child extra time.
+   * The un-synced spool (pending/events) is always kept so telemetry survives a
+   * crash.
+   */
+  restoreSnapshot(snap) {
+    if (!snap || typeof snap !== "object") return;
+    const sameDay = snap.today === this.today;
+    if (sameDay && snap.todayByApp) {
+      for (const [k, v] of Object.entries(snap.todayByApp)) {
+        if (Number.isFinite(v) && v > 0) this.todayByApp.set(k, v);
+      }
+    }
+    if (snap.pending) {
+      for (const [k, v] of Object.entries(snap.pending)) {
+        if (Number.isFinite(v) && v > 0) this.pending.set(k, v);
+      }
+    }
+    if (Array.isArray(snap.events)) this.events = snap.events.slice(0, 500);
+    if (Array.isArray(snap.knownApps)) this.knownApps = new Set(snap.knownApps);
+  }
+
+  /** Serializable view of state to persist to disk (survives reboot/crash). */
+  snapshot() {
+    return {
+      today: this.today,
+      todayByApp: Object.fromEntries(this.todayByApp),
+      pending: Object.fromEntries(this.pending),
+      events: this.events,
+      knownApps: [...this.knownApps],
+    };
+  }
+
+  _rollDate(now = this._now()) {
+    const day = localDate(now);
+    if (day !== this.today) {
+      this.today = day;
       this.todayByApp.clear();
     }
   }
 
-  /** Account `intervalSec` seconds to the current foreground app. */
-  tick(sample, intervalSec) {
-    this._rollDate();
+  /** Account `intervalSec` seconds to the current foreground app. `now` is the
+   *  TRUSTED time so the daily counter rolls over at the real local midnight, not
+   *  a midnight the child faked by moving the system clock. */
+  tick(sample, intervalSec, now = new Date()) {
+    this._rollDate(now);
     const name = sample?.fg?.name;
     if (!name) return;
     const key = name.toLowerCase();
@@ -75,6 +122,23 @@ export class Tracker {
 
   pushEvent(ev) {
     this.events.push(ev);
+  }
+
+  /**
+   * CUMULATIVE seconds-per-app for today (not deltas). Sent alongside the delta
+   * usage so an idempotency-aware server can SET (not increment) the daily total
+   * — a retried sync after a lost response then can't double-count screen time
+   * (which would hand the child extra time). Self-healing: always the current
+   * truth, so nothing is lost on a failed sync either.
+   */
+  cumulativeUsage() {
+    return [...this.todayByApp.entries()].map(([appId, seconds]) => ({
+      appId,
+      appName: appId.replace(/\.exe$/i, "").replace(/^\w/, (c) => c.toUpperCase()),
+      category: categorize(appId),
+      date: this.today,
+      seconds,
+    }));
   }
 
   /** Return telemetry payload and reset deltas. */

@@ -54,10 +54,14 @@ if [ ! -f .env ]; then
   say "Création du fichier .env…"
   SECRET="$(node -e 'console.log(require("crypto").randomBytes(48).toString("base64url"))')"
   ENC="$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')"
+  CRON="$(node -e 'console.log(require("crypto").randomBytes(24).toString("base64url"))')"
   cat > .env <<EOF
 DATABASE_URL="file:./dev.db"
 AUTH_SECRET="$SECRET"
 DATA_ENC_KEY="$ENC"
+# Enables the in-process scheduler (retention, offline-check, weekly reports) on
+# self-host — the routes are fail-closed without it.
+CRON_SECRET="$CRON"
 EOF
   ok "Secrets générés dans apps/server/.env"
 fi

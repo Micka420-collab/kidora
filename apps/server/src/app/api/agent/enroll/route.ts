@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
+import { signedPolicyFields } from "@/lib/policy-sign";
 
 const schema = z.object({
   enrollToken: z.string().min(1),
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
     childId: device.childId,
     childName: device.child.name,
     policy,
+    // Signed envelope + pinned public key so the agent can trust the policy it
+    // caches for offline enforcement (see lib/policy-sign).
+    ...signedPolicyFields(policy, device.childId),
     syncIntervalSeconds: 30,
   });
 }

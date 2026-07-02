@@ -175,22 +175,34 @@ export default function DevicesTab() {
           {justAdded.platform === "windows" && (
             <>
               <a
-                href="https://github.com/Micka420-collab/kidora/releases"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
+                href={`/api/children/${childId}/agent-package?deviceId=${justAdded.id}`}
+                className="btn btn-primary mt-4 inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                download
               >
-                {t.getAgent}
+                {t.winTurnkey}
               </a>
-              <p className="mt-3 text-sm text-muted">{t.winInstall}</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+              <p className="mt-2 text-sm text-muted">{t.winTurnkeyDesc}</p>
+
+              <details className="mt-4">
+                <summary className="cursor-pointer text-sm font-semibold text-muted hover:text-ink">{t.winAdvanced}</summary>
+                <a
+                  href="https://github.com/Micka420-collab/kidora/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
+                >
+                  {t.getAgent}
+                </a>
+                <p className="mt-3 text-sm text-muted">{t.winInstall}</p>
+                <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
 {`msiexec /i kidora-agent.msi /qn TOKEN=${justAdded.enrollToken} SERVER=${winServer} CHILDUSER="PC\\Enfant"`}
-              </pre>
-              <p className="mt-3 text-sm text-muted">{t.winSourceNote}</p>
-              <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
+                </pre>
+                <p className="mt-3 text-sm text-muted">{t.winSourceNote}</p>
+                <pre className="mt-1 overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100">
 {`cd kidora-agent
 node agent.js --token ${justAdded.enrollToken} --server ${winServer}`}
-              </pre>
+                </pre>
+              </details>
             </>
           )}
           <button className="mt-3 text-sm font-semibold text-brand-600" onClick={() => setJustAdded(null)}>{t.done}</button>
@@ -234,6 +246,15 @@ node agent.js --token ${justAdded.enrollToken} --server ${winServer}`}
               {!d.enrolled && (
                 <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
                   {t.waiting} <code>{d.enrollToken.slice(0, 12)}…</code>
+                  {d.platform === "windows" && (
+                    <a
+                      href={`/api/children/${childId}/agent-package?deviceId=${d.id}`}
+                      className="mt-2 block font-semibold text-brand-600 hover:underline"
+                      download
+                    >
+                      {t.winTurnkey}
+                    </a>
+                  )}
                 </div>
               )}
 

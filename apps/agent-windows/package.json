@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node agent.js",
     "enroll": "node agent.js --enroll",
+    "doctor": "node agent.js doctor",
     "test": "node --test"
   },
   "engines": {

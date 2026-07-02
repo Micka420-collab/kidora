@@ -55,6 +55,11 @@ passez à **PostgreSQL** (Neon, via le Vercel Marketplace).
 > Prisma pour le bon dialecte. Sur Vercel les variables d'env sont dispo au build
 > par défaut. Sinon, posez `DATABASE_PROVIDER=postgresql` (override explicite).
 
+> **Vérifier la configuration** : une fois déployé, ouvrez **`/status`** — une
+> liste de contrôle (base de données, secrets, push, e-mails, HTTPS…) qui indique
+> ce qui reste à configurer, sans afficher aucune valeur secrète. Version JSON :
+> `/api/status`.
+
 ### 3. Schéma Postgres — automatique
 
 Le `buildCommand` de `vercel.json` est `npm run vercel-build`
@@ -193,6 +198,13 @@ En dev (hors production) l'endpoint est accessible sans secret.
   `RETENTION_DAYS` (défaut 90). Prévisualiser : `?dryRun=1` (+ `?days=` pour tester).
 - **`/api/cron/offline-check`** (horaire) — alerte le parent quand un appareil
   ne répond plus depuis `OFFLINE_ALERT_HOURS` (défaut 12). `?dryRun=1` / `?hours=`.
+
+> **Auto-hébergement (hors Vercel)** : pas besoin de configurer un cron externe.
+> Au démarrage (`next start`), un **ordonnanceur intégré** (`instrumentation.ts`)
+> déclenche ces routes automatiquement — rétention (quotidienne), appareils
+> hors-ligne (horaire) et rapports hebdo — **dès qu'un `CRON_SECRET` est défini**
+> (généré par `install.sh`). Il ne s'active jamais sur Vercel (où Vercel Cron
+> s'en charge) ni sur l'Edge.
 
 ## Agent Windows en production
 

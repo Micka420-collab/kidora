@@ -1,5 +1,93 @@
 # Roadmap Kidora
 
+## 🛡️ Suite « clé en main & inviolable » (2026-07-02, run autonome)
+
+Branche `feat/offline-turnkey-suite`. Chaque feature testée + vérifiée, build de
+prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
+
+- [x] **Anti-triche horloge** (`agent/lib/clock.js`) : horloge de confiance ancrée
+  serveur + monotone → changer l'heure système ne contourne plus coucher/limites,
+  jamais de recul même après reboot ; alerte `clock_change` (non-mutable).
+- [x] **`kidora-agent doctor`** : auto-diagnostic (Node, config, serveur joignable,
+  heartbeat, admin, écriture cache, tâches planifiées) — sortie ≠ 0 si bloquant.
+- [x] **Politique signée Ed25519** (`policy-sign.ts` / `agent/lib/policy-verify.js`) :
+  le serveur signe la policy, l'agent vérifie avant d'appliquer, y compris le cache
+  offline ; cache altéré → **verrouillage de sécurité** ; anti-rejeu par `iat`.
+- [x] **Installateur ZIP pré-configuré** (`/api/children/:id/agent-package`) : le
+  dashboard génère un ZIP avec jeton+URL dans `kidora-config.txt` → le parent
+  décompresse, double-clique, **ne tape rien**. ZIP writer maison (`lib/zip.ts`),
+  validé openable par Windows Expand-Archive. Bundle agent embarqué au build.
+- [x] **Page `/status` + `/api/status`** : liste de contrôle d'installation (DB,
+  secrets, VAPID, SMTP, CRON, HTTPS) sans valeur secrète, pour l'auto-hébergeur.
+- [x] **Découverte LAN** (`agent/lib/discover.js` + `server/scripts/lan-advertise.mjs`) :
+  balise multicast UDP (mDNS-style) → l'installateur trouve le serveur sans saisie ;
+  vérifié en direct (annonce → découverte).
+- [x] **Auto-update signé** (`agent/lib/updater.js` + `/api/agent/bundle`) : l'agent
+  télécharge le bundle **signé**, vérifie signature + hachage, **prépare** ; le
+  gardien SYSTEM applique (sauvegarde + **rollback** si pas de heartbeat). Jamais
+  de mise à jour non signée. Vérifié bout-en-bout (sign → verify → stage).
+- [x] **Correctif packaging** : MSI + bundle serveur embarquent désormais **les 20
+  modules runtime** (clock, doctor, policy-verify, discover, updater, store…) —
+  un agent installé ne plante plus sur un import manquant.
+
+**Durcissement enchaîné (mêmes run, critiques de l'audit) :**
+- [x] **Idempotence du temps d'écran** : un retry après réponse perdue ne
+  double-compte plus. L'agent envoie l'usage **cumulatif** du jour et le serveur
+  fait un **SET monotone** (au lieu d'incrémenter) ; rétrocompatible dans les deux
+  sens. (+2 tests d'intégration, +1 agent).
+- [x] **Dashboard hors-ligne** : `OfflineBanner` (hook `useOnline` SSR-safe) +
+  `client.ts` avec timeout + retry sûr (GET seulement, jamais les mutations).
+- [x] **Ordonnanceur auto-hébergement** : `instrumentation.ts` déclenche les crons
+  (rétention, offline-check, rapports) hors Vercel dès qu'un `CRON_SECRET` est
+  défini (généré par `install.sh`) ; no-op sur Vercel/Edge. (+7 tests).
+- [x] **Sauvegardes DB automatiques** (`/api/cron/backup`) : snapshot SQLite atomique
+  (`VACUUM INTO`) + rotation (`BACKUP_KEEP`, def 7) ; no-op sur Postgres ; branché
+  sur l'ordonnanceur (quotidien). (+5 tests, `VACUUM INTO` validé via node:sqlite).
+- [x] **Redistribution des commandes** : une commande « delivered » non acquittée
+  (agent qui crashe / réponse perdue) au-delà d'un délai de grâce
+  (`COMMAND_REDELIVER_MINUTES`, def 10) repasse en « pending » → plus jamais perdue.
+  (+2 tests d'intégration).
+
+## 🌐 Hors-connexion & installation sans friction (2026-07-02)
+
+- [x] **Agent Windows résilient hors-ligne** : la politique effective est mise en
+  **cache sur disque** (`lib/store.js`, écriture atomique). Si l'enrôlement échoue
+  au démarrage, l'agent ne quitte plus (`process.exit(1)` supprimé) mais démarre
+  en **mode hors-ligne** et applique la **dernière politique connue**, en se
+  resynchronisant dès le retour du serveur.
+- [x] **Compteur de temps d'écran anti-triche** : `todayByApp` et la file de
+  télémétrie non synchronisée sont **persistés** (snapshot du `Tracker`) →
+  **redémarrer le PC ne remet plus le compteur à zéro** (il ne se réinitialise
+  qu'au changement de jour local) et **aucune mesure d'usage n'est perdue** sur
+  crash/coupure. Timeouts réseau (`AbortController`) sur enroll/sync/screenshot —
+  un serveur qui « pend » ne fige plus l'agent. **+7 tests** (store + snapshot).
+- [x] **Installeur Windows en un clic** (`Installer-Kidora.cmd` → `setup-windows.ps1`) :
+  double-clic → auto-élévation admin → **installe Node.js si absent** (winget),
+  prépare l'agent, récupère le jeton (collé, **deep-link** `kidorachild://enroll`,
+  ou fichier `kidora-config.txt` = zéro saisie), installe l'agent **durci** et le
+  **démarre**. Vérifié en `-DryRun`.
+- [x] **Correctif critique MSI** : le manifeste WiX (`installer/kidora-agent.wxs`)
+  **n'embarquait pas** `lib/scan-apps.js` ni `lib/videos.js`, tous deux importés
+  au démarrage par `agent.js` → un agent installé par MSI **plantait aussitôt**
+  (`ERR_MODULE_NOT_FOUND`) et ne démarrait jamais. Les 14 modules runtime (dont
+  le nouveau `store.js`) sont désormais packagés ; couverture vérifiée.
+
+**Reste prioritaire (identifié par l'audit du 2026-07-02, non fait) :**
+- [ ] **Idempotence de l'ingest agent** : un retry après réponse perdue duplique
+  events/visites/messages et **double-compte** `AppUsage.seconds` (`api/agent/sync`).
+  → clé d'idempotence par lot + traitement transactionnel + ack at-least-once.
+- [ ] **Écritures runtime vs ACL d'auto-protection** : sous un compte enfant
+  **standard**, les ACL en lecture seule empêchent l'agent d'écrire ses fichiers
+  d'état (heartbeat, `state.json`…). → déplacer les artefacts runtime vers
+  `%ProgramData%\Kidora` avec ACL ciblée (le cache offline en dépend).
+- [ ] **Restauration DNS par le gardien** : après un crash dur sans redémarrage,
+  le DNS système peut rester sur `127.0.0.1` (le README l'affirme mais
+  `guardian.ps1` ne le fait pas). → restaurer le DNS depuis le gardien.
+- [ ] **Scheduler auto-hébergement** : hors Vercel, les crons (rétention,
+  offline-check, rapports) ne tournent jamais (`install.sh` = `npm start` seul).
+- [ ] **Dashboard/mobile hors-ligne** : `sw.js` ne fait que le push (aucun cache),
+  `api.ts`/`client.ts` sans timeout/retry/queue → écran blanc si serveur injoignable.
+
 ## 🤖 IA configurable par le parent (OpenRouter) — 2026-07-01
 - [x] Le parent branche sa **propre clé OpenRouter** (chiffrée au repos) et **choisit le modèle** (DeepSeek, GPT-4o-mini, Gemini Flash, Claude Haiku…) via un **tableau comparatif de prix** ($/1M tokens) et de contexte, alimenté par le catalogue **live** d'OpenRouter (routes `GET/PUT /api/account/ai`, `GET /ai/models`, `POST /ai/test`).
 - [x] Le modèle choisi **affine la détection de risque** des messages/recherches (`combinedRisk` = heuristique + LLM, le plus sévère l'emporte) ; **borné** (budget par sync, timeout 6 s, JSON strict) et **repli automatique** sur l'heuristique en cas d'échec → jamais de régression.

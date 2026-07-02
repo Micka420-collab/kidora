@@ -18,6 +18,10 @@ build/
 *.db-journal
 *.sqlite
 
+# database backups (self-host)
+backups/
+apps/server/backups/
+
 # logs
 *.log
 npm-debug.log*
@@ -38,6 +42,14 @@ apps/agent-windows/config.json
 apps/agent-windows/heartbeat.json
 apps/agent-windows/KidoraAgent.xml
 apps/agent-windows/overlay-state.json
+apps/agent-windows/state.json
+apps/agent-windows/state.json.tmp
+apps/agent-windows/state.json.probe
+apps/agent-windows/guardian.log
+apps/agent-windows/.update-staging/
+apps/agent-windows/.update-backup/
+# offline install helper (may contain the enroll token)
+apps/agent-windows/kidora-config.txt
 
 # Web Push VAPID keys (dev)
 .vapid.json

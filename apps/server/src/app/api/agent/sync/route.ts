@@ -11,8 +11,11 @@ import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 import { safeDate, capAlerts } from "@/lib/ingest";
 import { clampTzOffset } from "@/lib/localdate";
+import { rateLimit } from "@/lib/ratelimit";
 import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
 import { decrypt } from "@/lib/crypto";
+import { signedPolicyFields } from "@/lib/policy-sign";
+import { AGENT_BUNDLE_VERSION } from "@/lib/agent-bundle.generated";
 
 // Sync can call the parent's LLM for risk scoring; give the function headroom so
 // a slow model can't kill the request mid-write (the LLM step is itself bounded
@@ -36,6 +39,21 @@ const syncSchema = z.object({
 
   events: z.array(eventSchema).max(500).optional(),
   usage: z
+    .array(
+      z.object({
+        appId: z.string(),
+        appName: z.string(),
+        category: z.string().optional(),
+        date: z.string(),
+        seconds: z.number().int().min(0).max(86400),
+      }),
+    )
+    .max(500)
+    .optional(),
+  // Cumulative daily totals (idempotent). When present, the server SETs the
+  // daily total monotonically instead of incrementing — a retried sync after a
+  // lost response can't double-count. Same row shape as `usage`.
+  usageToday: z
     .array(
       z.object({
         appId: z.string(),
@@ -117,6 +135,11 @@ const syncSchema = z.object({
 export async function POST(req: NextRequest) {
   const device = await getDeviceFromRequest(req);
   if (!device) return apiError("Appareil non authentifié", 401);
+
+  // Cap sync volume per device so a leaked enroll token can't flood the DB.
+  // Normal cadence is ~2/min; 40/min leaves ample headroom for retries.
+  const rl = rateLimit(`agent-sync:${device.id}`, 40, 60_000);
+  if (!rl.ok) return apiError("Trop de requêtes", 429);
 
   const parsed = syncSchema.safeParse(await readJson(req));
   if (!parsed.success) return apiError("Données invalides", 422);
@@ -210,11 +233,49 @@ export async function POST(req: NextRequest) {
           message: `Limite de temps atteinte : ${e.title ?? ""}`,
         });
       }
+      if (e.type === "clock_change") {
+        // Anti-tamper: the child moved the device clock to try to dodge bedtime
+        // or reset the daily limit. Not mutable (see alert-prefs).
+        alerts.push({
+          parentId,
+          childId,
+          type: "clock_change",
+          severity: "warning",
+          message: `⏱️ Heure système modifiée sur l'appareil de ${device.child.name}${e.detail ? ` (${e.detail})` : ""}`,
+        });
+      }
     }
   }
 
-  // 3. app usage (incremental seconds)
-  if (body.usage?.length) {
+  // 3. app usage. Prefer the IDEMPOTENT cumulative report (`usageToday`): SET the
+  //    daily total monotonically so a retried sync (lost response) can't
+  //    double-count screen time. Fall back to the legacy incremental `usage` for
+  //    older agents that don't send cumulative totals.
+  if (body.usageToday?.length) {
+    for (const u of body.usageToday) {
+      // Ensure the row exists (without lowering an existing higher total)…
+      await prisma.appUsage.upsert({
+        where: { deviceId_appId_date: { deviceId: device.id, appId: u.appId, date: u.date } },
+        create: {
+          childId,
+          deviceId: device.id,
+          appId: u.appId,
+          appName: u.appName,
+          category: u.category,
+          date: u.date,
+          seconds: u.seconds,
+        },
+        update: { appName: u.appName }, // seconds handled by the monotonic raise below
+      });
+      // …then raise the total only if the reported cumulative value is higher.
+      // Re-sending the same value is a no-op (idempotent); a stale/reordered
+      // lower value can't decrease the count.
+      await prisma.appUsage.updateMany({
+        where: { deviceId: device.id, appId: u.appId, date: u.date, seconds: { lt: u.seconds } },
+        data: { seconds: u.seconds },
+      });
+    }
+  } else if (body.usage?.length) {
     for (const u of body.usage) {
       await prisma.appUsage.upsert({
         where: { deviceId_appId_date: { deviceId: device.id, appId: u.appId, date: u.date } },
@@ -482,6 +543,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 7b. Redeliver commands that were delivered but never acknowledged (the agent
+  //     crashed or the response was lost) after a grace period, so a parent's
+  //     "lock"/"message" isn't silently dropped. Normal acks land within a sync
+  //     cycle, well under the grace window.
+  if (body.deliverCommands !== false) {
+    const graceMin = Number(process.env.COMMAND_REDELIVER_MINUTES);
+    const graceMs = (Number.isFinite(graceMin) ? graceMin : 10) * 60_000;
+    await prisma.command.updateMany({
+      where: { childId, status: "delivered", updatedAt: { lt: new Date(Date.now() - graceMs) } },
+      data: { status: "pending" },
+    });
+  }
+
   // 8. pending commands → deliver. A caller that can't act on commands (e.g. the
   //    background location task) passes deliverCommands:false so they're left
   //    "pending" for the next full sync instead of being marked delivered & lost.
@@ -509,8 +583,12 @@ export async function POST(req: NextRequest) {
   });
   return json({
     policy,
+    // Signed envelope so the agent can verify (and safely cache) this policy for
+    // tamper-proof offline enforcement (see lib/policy-sign).
+    ...signedPolicyFields(policy, childId),
     commands: pending.map((c) => ({ id: c.id, type: c.type, payload: JSON.parse(c.payload) })),
     pendingTimeRequest: pendingTimeRequest ? { minutes: pendingTimeRequest.minutes } : null,
     serverTime: new Date().toISOString(),
+    agentLatest: AGENT_BUNDLE_VERSION, // agent self-updates when this is newer
   });
 }

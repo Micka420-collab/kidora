@@ -21,19 +21,35 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
 async function req<T>(
   path: string,
   opts: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const server = await getServer();
-  const res = await fetch(`${server}${path}`, {
-    method: opts.method ?? "GET",
-    headers: {
-      ...(opts.body ? { "Content-Type": "application/json" } : {}),
-      ...opts.headers,
-    },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
+  // Hard timeout: without it, a hung/unreachable server (captive portal, dead
+  // host) leaves the request pending forever and the screen stuck on a spinner.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${server}${path}`, {
+      method: opts.method ?? "GET",
+      headers: {
+        ...(opts.body ? { "Content-Type": "application/json" } : {}),
+        ...opts.headers,
+      },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    // Normalize an abort/network failure into a catchable ApiError (status 0).
+    const msg = (e as Error)?.name === "AbortError" ? "Délai d'attente dépassé" : "Réseau indisponible";
+    throw new ApiError(msg, 0, { offline: true });
+  } finally {
+    clearTimeout(timer);
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError((data as { error?: string }).error ?? `Erreur ${res.status}`, res.status, data);
   return data as T;

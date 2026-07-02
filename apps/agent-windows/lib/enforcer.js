@@ -98,8 +98,10 @@ export class Enforcer {
     if (!this.dryRun) hideOverlay();
   }
 
-  /** Main enforcement decision for one sample. */
-  async apply(policy, sample, tracker) {
+  /** Main enforcement decision for one sample. `now` is the TRUSTED time (server
+   *  anchored + monotonic) so a tampered system clock can't move bedtime, the
+   *  weekday, or the daily-limit day. Defaults to the wall clock. */
+  async apply(policy, sample, tracker, now = new Date()) {
     if (!policy) return;
     const runningSet = new Set((sample.procs || []).map((p) => p.toLowerCase()));
 
@@ -107,16 +109,16 @@ export class Enforcer {
     let block = null;
     if (policy.paused) {
       block = { reason: "pause", title: "En pause ⏸", message: "Ton accès est en pause. Reviens un peu plus tard 🙂" };
-    } else if (isBedtimeNow(policy.screenTime?.bedtimes)) {
+    } else if (isBedtimeNow(policy.screenTime?.bedtimes, now)) {
       block = { reason: "bedtime", title: "Heure du coucher 🌙", message: "C'est l'heure de dormir. À demain !" };
     } else if (policy.screenTime?.enabled) {
-      const wd = WEEKDAYS[new Date().getDay()];
+      const wd = WEEKDAYS[now.getDay()];
       const limitMin = effectiveLimitMinutes(policy.screenTime.dailyLimits, wd, policy.screenTime.bonusMinutesToday);
       const total = tracker.totalTodaySeconds();
       if (limitMin > 0 && total >= limitMin * 60) {
         // Local date, so the "limit reached" notice re-arms at local midnight
         // (matching the tracker's local-day usage reset).
-        const n = new Date();
+        const n = now;
         const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
         if (this.limitNotifiedDate !== today) {
           this.limitNotifiedDate = today;

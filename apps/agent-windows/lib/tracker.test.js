@@ -59,3 +59,55 @@ test("todayByApp (for limits) is unaffected by drain/restore", () => {
   // draining telemetry deltas must not reset the daily limit counter
   assert.equal(t.todaySeconds("game.exe"), 50);
 });
+
+test("cumulativeUsage reports today's totals (idempotent, not deltas)", () => {
+  const t = new Tracker();
+  t.tick(fg("chrome", 1), 30);
+  t.drain(); // draining deltas must NOT change the cumulative total
+  t.tick(fg("chrome", 1), 30);
+  const cum = t.cumulativeUsage();
+  const chrome = cum.find((u) => u.appId === "chrome.exe");
+  assert.equal(chrome.seconds, 60); // 30 + 30 total today, regardless of drains
+  // Re-reading returns the SAME value (idempotent) — a server SET won't double it.
+  assert.equal(t.cumulativeUsage().find((u) => u.appId === "chrome.exe").seconds, 60);
+});
+
+test("snapshot → rehydrate preserves today's counter (reboot can't reset the limit)", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 300); // 5 min used today
+  const snap = t.snapshot();
+  // Simulate a reboot: a brand-new tracker restored from disk on the SAME day.
+  const t2 = new Tracker(snap);
+  assert.equal(t2.todaySeconds("game.exe"), 300); // counter survived the reboot
+});
+
+test("rehydrate from a PREVIOUS day starts today's counter fresh", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 300);
+  const snap = t.snapshot();
+  snap.today = "2000-01-01"; // pretend the snapshot is from a past day
+  const t2 = new Tracker(snap);
+  assert.equal(t2.todaySeconds("game.exe"), 0); // new day → limit resets, as intended
+});
+
+test("restore uses the TRUSTED clock, so a rewound system clock can't reset the counter", () => {
+  // Snapshot taken "today" (per the trusted clock).
+  const trusted = new Date(2026, 6, 2, 15, 0, 0);
+  const t = new Tracker(undefined, () => trusted);
+  t.tick(fg("game", 1), 300); // 5 min used today
+  const snap = t.snapshot();
+
+  // Reboot with the SYSTEM clock rewound to yesterday, but the TRUSTED clock
+  // (monotonic-floored) still reports the real day. The counter must survive.
+  const t2 = new Tracker(snap, () => trusted); // trusted still = 2026-07-02
+  assert.equal(t2.todaySeconds("game.exe"), 300); // preserved despite the wall-clock rewind
+});
+
+test("snapshot preserves the un-synced spool so a crash doesn't lose usage", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 40); // accrues pending usage + events, not yet synced
+  const t2 = new Tracker(t.snapshot());
+  const { usage } = t2.drain();
+  const game = usage.find((u) => u.appId === "game.exe");
+  assert.equal(game.seconds, 40); // recovered after the "crash"
+});
