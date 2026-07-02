@@ -65,6 +65,25 @@ export function verifyPolicyEnvelope(policySigned: string, policySig: string): b
   }
 }
 
+/** Deterministic hash of a {name: base64} file map — must match the agent's
+ *  lib/updater.js bundleHash (sorted keys, `name:base64\n`). */
+export function bundleHash(files: Record<string, string>): string {
+  const h = createHash("sha256");
+  for (const name of Object.keys(files).sort()) h.update(`${name}:${files[name]}\n`);
+  return h.digest("hex");
+}
+
+/**
+ * Sign an agent bundle for self-update. Returns the exact signed manifest string
+ * (`{"v":version,"h":hash}`) + signature; the agent verifies the signature and
+ * that the hash matches the files it downloaded (lib/updater.verifyBundle).
+ */
+export function signAgentBundle(files: Record<string, string>, version: string): { signed: string; sig: string } {
+  const signed = JSON.stringify({ v: version, h: bundleHash(files) });
+  const sig = sign(null, Buffer.from(signed, "utf8"), keys().priv).toString("base64");
+  return { signed, sig };
+}
+
 // Test seam: reset the cached keypair (e.g. after changing env in a test).
 export function _resetKeyCacheForTests(): void {
   cache = null;

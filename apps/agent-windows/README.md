@@ -192,6 +192,22 @@ Les domaines bloqués remontent au tableau de bord (`webVisits`). Si le port 53 
 indisponible ou hors admin, l'agent **retombe** sur le filtrage par `hosts`.
 À l'arrêt (ou par le gardien après un crash), le DNS système est **restauré**.
 
+## Mise à jour automatique (signée)
+
+L'agent se met à jour tout seul, sans réinstallation par le parent :
+
+- au `sync`, le serveur annonce la dernière version (`agentLatest`) ;
+- si elle est plus récente, l'agent télécharge le **bundle signé**
+  (`GET /api/agent/bundle`), **vérifie la signature Ed25519** et le **hachage du
+  contenu** avec la clé publique épinglée (`lib/updater.js`), puis **prépare**
+  les fichiers dans `.update-staging/` — rien n'est appliqué à chaud ;
+- le **gardien SYSTEM** applique le remplacement au tick suivant : **sauvegarde**
+  de la version courante, copie des fichiers, redémarrage, et **rollback
+  automatique** si le nouvel agent ne redonne pas de heartbeat.
+
+Aucune mise à jour non signée n'est jamais appliquée. Désactivable :
+`"autoUpdate": false` dans `config.json`.
+
 ## Hors connexion (résilience)
 
 L'agent est conçu pour **continuer à protéger même quand le serveur est

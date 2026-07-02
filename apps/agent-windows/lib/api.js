@@ -62,6 +62,15 @@ export class Api {
     if (!res.ok) throw new Error(`sync failed: ${res.status} ${await res.text()}`);
     return res.json();
   }
+
+  /** Download the signed agent bundle for self-update. */
+  async getBundle() {
+    const res = await fetchWithTimeout(`${this.server}/api/agent/bundle`, {
+      headers: { Authorization: `Bearer ${this.token}` },
+    }, 30000);
+    if (!res.ok) throw new Error(`bundle failed: ${res.status}`);
+    return res.json();
+  }
 }
 
 export { AGENT_VERSION, fetchWithTimeout };

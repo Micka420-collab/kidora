@@ -16,6 +16,7 @@ param(
 
 $ErrorActionPreference = "SilentlyContinue"
 $logPath = Join-Path $AgentDir "guardian.log"
+$hbPath = Join-Path $AgentDir "heartbeat.json"
 
 function Write-GLog([string]$msg) {
   $prefix = if ($DryRun) { "[DRYRUN] " } else { "" }
@@ -53,10 +54,66 @@ if ($task -and $task.State -eq "Disabled") {
   $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 }
 
+# --- 2.5 Apply a staged, signature-verified self-update (swap + rollback) ---
+# The agent (running as the child) downloads & verifies a newer version and stages
+# it here; the guardian (SYSTEM) has the rights to replace the ACL-protected files.
+$stagingDir = Join-Path $AgentDir ".update-staging"
+$readyFile = Join-Path $stagingDir ".update-ready"
+if (Test-Path $readyFile) {
+  $backupDir = Join-Path $AgentDir ".update-backup"
+  $target = "?"
+  try { $target = (Get-Content $readyFile -Raw | ConvertFrom-Json).version } catch {}
+  Invoke-Step "appliquer la mise a jour de l'agent -> $target" {
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+
+    # Backup current agent.js + lib for rollback.
+    if (Test-Path $backupDir) { Remove-Item -Recurse -Force $backupDir }
+    New-Item -ItemType Directory -Path $backupDir | Out-Null
+    Copy-Item (Join-Path $AgentDir "agent.js") $backupDir -Force
+    Copy-Item (Join-Path $AgentDir "lib") (Join-Path $backupDir "lib") -Recurse -Force
+
+    # Overlay every staged file (except the marker) onto the live dir.
+    Get-ChildItem -Path $stagingDir -Recurse -File | Where-Object { $_.Name -ne ".update-ready" } | ForEach-Object {
+      $rel = $_.FullName.Substring($stagingDir.Length).TrimStart('\', '/')
+      $dest = Join-Path $AgentDir $rel
+      $destDir = Split-Path $dest -Parent
+      if (-not (Test-Path $destDir)) { New-Item -ItemType Directory -Path $destDir -Force | Out-Null }
+      Copy-Item $_.FullName $dest -Force
+    }
+    Remove-Item -Recurse -Force $stagingDir
+
+    # Clear the heartbeat so the "alive?" check reflects the NEW agent only, then
+    # start it and wait for a fresh heartbeat; rollback if it never appears.
+    Remove-Item $hbPath -Force -ErrorAction SilentlyContinue
+    Start-ScheduledTask -TaskName $TaskName
+    $alive = $false
+    for ($i = 0; $i -lt 12; $i++) {
+      Start-Sleep -Seconds 2
+      if (Test-Path $hbPath) {
+        try {
+          $hb2 = Get-Content $hbPath -Raw | ConvertFrom-Json
+          if (([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() - [int64]$hb2.ts) -lt 60000) { $alive = $true; break }
+        } catch {}
+      }
+    }
+    if (-not $alive) {
+      Write-GLog "mise a jour $target : agent non vivant -> ROLLBACK"
+      Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+      Start-Sleep -Seconds 2
+      Copy-Item (Join-Path $backupDir "agent.js") (Join-Path $AgentDir "agent.js") -Force
+      Copy-Item (Join-Path $backupDir "lib\*") (Join-Path $AgentDir "lib") -Recurse -Force
+      Start-ScheduledTask -TaskName $TaskName
+    } else {
+      Write-GLog "mise a jour $target appliquee avec succes"
+    }
+  }
+  return # done for this tick; normal health checks resume next run
+}
+
 # --- 3. Health: running? heartbeat fresh? ---
 $running = $task -and $task.State -eq "Running"
 
-$hbPath = Join-Path $AgentDir "heartbeat.json"
 $stale = $true
 if (Test-Path $hbPath) {
   try {

@@ -11,10 +11,15 @@ import { TrustedClock } from "./lib/clock.js";
 import { runDoctor } from "./lib/doctor.js";
 import { importPublicKey, openSignedPolicy, LOCKDOWN_POLICY } from "./lib/policy-verify.js";
 import { discover } from "./lib/discover.js";
+import { isNewer, verifyBundle, stageUpdate } from "./lib/updater.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const pexec = promisify(execFile);
+const AGENT_DIR = dirname(fileURLToPath(import.meta.url));
+const STAGING_DIR = join(AGENT_DIR, ".update-staging");
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
@@ -242,6 +247,34 @@ async function main() {
   const pendingCmdResults = [];
   let lastSample = null;
 
+  // Self-update: when the server advertises a newer version, download the SIGNED
+  // bundle, verify it against the pinned key, and STAGE it. The SYSTEM guardian
+  // applies the swap on the next restart (running code never overwrites itself).
+  let stagedVersion = null;
+  let updating = false;
+  async function checkForUpdate(res) {
+    if (cfg.autoUpdate === false) return; // opt-out
+    if (!res?.agentLatest || !isNewer(res.agentLatest, AGENT_VERSION)) return;
+    if (updating || stagedVersion === res.agentLatest) return;
+    if (!pubKey) return; // never stage an unverifiable update
+    updating = true;
+    try {
+      const pkg = await api.getBundle();
+      const verified = verifyBundle(pkg, pubKey);
+      if (!verified || !isNewer(verified.version, AGENT_VERSION)) {
+        if (!verified) log.warn("Mise à jour refusée : signature/hachage invalide.");
+        return;
+      }
+      stageUpdate(verified.files, verified.version, STAGING_DIR);
+      stagedVersion = verified.version;
+      log.ok(`Mise à jour ${verified.version} vérifiée et préparée — appliquée au prochain redémarrage par le gardien.`);
+    } catch (e) {
+      log.warn(`Mise à jour agent indisponible : ${e.message}`);
+    } finally {
+      updating = false;
+    }
+  }
+
   // Clear any block overlay left over by a previously-crashed agent instance.
   hideOverlay();
 
@@ -334,6 +367,9 @@ async function main() {
       for (const cmd of res.commands || []) {
         await handleCommand(cmd, pendingCmdResults, enforcer, api);
       }
+
+      // Check for a newer agent version (non-blocking; stages on success).
+      checkForUpdate(res).catch(() => {});
     } catch (e) {
       if (!offline) {
         offline = true;

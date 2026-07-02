@@ -14,6 +14,7 @@ import { clampTzOffset } from "@/lib/localdate";
 import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
 import { decrypt } from "@/lib/crypto";
 import { signedPolicyFields } from "@/lib/policy-sign";
+import { AGENT_BUNDLE_VERSION } from "@/lib/agent-bundle.generated";
 
 // Sync can call the parent's LLM for risk scoring; give the function headroom so
 // a slow model can't kill the request mid-write (the LLM step is itself bounded
@@ -527,5 +528,6 @@ export async function POST(req: NextRequest) {
     commands: pending.map((c) => ({ id: c.id, type: c.type, payload: JSON.parse(c.payload) })),
     pendingTimeRequest: pendingTimeRequest ? { minutes: pendingTimeRequest.minutes } : null,
     serverTime: new Date().toISOString(),
+    agentLatest: AGENT_BUNDLE_VERSION, // agent self-updates when this is newer
   });
 }

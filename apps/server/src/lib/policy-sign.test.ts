@@ -4,6 +4,8 @@ import {
   signedPolicyFields,
   policyPublicKeyBase64,
   verifyPolicyEnvelope,
+  signAgentBundle,
+  bundleHash,
   _resetKeyCacheForTests,
 } from "./policy-sign";
 
@@ -49,5 +51,18 @@ describe("policy signing", () => {
     _resetKeyCacheForTests();
     const b = policyPublicKeyBase64();
     expect(a).toBe(b);
+  });
+
+  it("signAgentBundle: signature verifies and hash binds to file content", () => {
+    const files = { "agent.js": "QUJD", "lib/api.js": "REVG" };
+    const { signed, sig } = signAgentBundle(files, "1.2.3");
+    // The agent verifies the signature over `signed`…
+    const pub = createPublicKey({ key: Buffer.from(policyPublicKeyBase64(), "base64"), format: "der", type: "spki" });
+    expect(verify(null, Buffer.from(signed, "utf8"), pub, Buffer.from(sig, "base64"))).toBe(true);
+    // …and that the manifest hash matches a recompute of the same files.
+    const manifest = JSON.parse(signed);
+    expect(manifest.v).toBe("1.2.3");
+    expect(manifest.h).toBe(bundleHash(files));
+    expect(bundleHash(files)).toBe(bundleHash({ "lib/api.js": "REVG", "agent.js": "QUJD" })); // order-independent
   });
 });

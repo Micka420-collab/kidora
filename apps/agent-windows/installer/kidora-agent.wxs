@@ -61,6 +61,7 @@
       <Component><File Source="$(AgentSrc)\lib\scan-apps.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\store.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\tracker.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\updater.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\videos.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\win.js" /></Component>
     </ComponentGroup>
