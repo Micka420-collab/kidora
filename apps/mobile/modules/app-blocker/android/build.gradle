@@ -1,0 +1,14 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'app.kidora.appblocker'
+version = '1.0.0'
+
+android {
+  namespace = 'app.kidora.appblocker'
+  compileSdk = 35
+  defaultConfig {
+    minSdk = 24
+  }
+}
