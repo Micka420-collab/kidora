@@ -9,6 +9,7 @@ import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
 import { loadState, saveState, canWriteStateDir } from "./lib/store.js";
 import { TrustedClock } from "./lib/clock.js";
+import { createCommandLog } from "./lib/command-dedup.js";
 import { runDoctor } from "./lib/doctor.js";
 import { importPublicKey, openSignedPolicy, LOCKDOWN_POLICY } from "./lib/policy-verify.js";
 import { discover } from "./lib/discover.js";
@@ -117,6 +118,9 @@ async function main() {
   // rewound system clock can't reset the child's daily screen-time counter.
   const tracker = new Tracker(state.tracker, () => clock.now());
   const enforcer = new Enforcer({ dryRun: DRY_RUN });
+  // Exactly-once command execution — a redelivered command (ack lost, or offline
+  // past the server's grace window) is re-acked but never run twice. Persisted.
+  const cmdLog = createCommandLog(state.doneCommandIds);
 
   // Signed-policy state: the pinned server public key, the highest policy issue
   // time we've accepted (rollback floor), and the last signed envelope (so an
@@ -138,6 +142,7 @@ async function main() {
       policySig: signedPolicy?.policySig,
       policyFloor,
       policyPublicKey: cfg.policyPublicKey,
+      doneCommandIds: cmdLog.snapshot(),
     });
   }
 
@@ -399,9 +404,16 @@ async function main() {
         applyHosts(policy, admin);
       }
 
-      // execute commands
+      // execute commands (exactly-once: a redelivered command is re-acked but
+      // not run again, so no duplicate message popups / repeat screenshots)
       for (const cmd of res.commands || []) {
-        await handleCommand(cmd, pendingCmdResults, enforcer, api);
+        if (cmd.id && cmdLog.has(cmd.id)) {
+          pendingCmdResults.push({ id: cmd.id, status: "done" });
+          continue;
+        }
+        const result = await handleCommand(cmd, enforcer, api);
+        pendingCmdResults.push(result);
+        if (result.status === "done") cmdLog.remember(cmd.id);
       }
 
       // Check for a newer agent version (non-blocking; stages on success).
@@ -513,7 +525,11 @@ function applyHosts(policy, admin) {
   else log.warn(`Filtrage web indisponible (${res.reason}).`);
 }
 
-async function handleCommand(cmd, results, enforcer, api) {
+// Execute one command and RETURN its ack ({ id, status, result? }). Returning
+// (rather than pushing) lets the caller record only SUCCEEDED commands for
+// exactly-once dedup — a failed command had no lasting side effect, so retrying
+// it on redelivery is safe.
+async function handleCommand(cmd, enforcer, api) {
   log.info(`Commande reçue : ${cmd.type}`);
   const { notify, lockWorkstation, captureScreen } = await import("./lib/os.js");
   try {
@@ -521,36 +537,30 @@ async function handleCommand(cmd, results, enforcer, api) {
       case "lock":
       case "pause":
         if (!enforcer.dryRun) await lockWorkstation();
-        results.push({ id: cmd.id, status: "done" });
-        break;
+        return { id: cmd.id, status: "done" };
       case "message":
         if (!enforcer.dryRun) notify("Message de vos parents", cmd.payload?.text || "Bonjour !");
-        results.push({ id: cmd.id, status: "done" });
-        break;
+        return { id: cmd.id, status: "done" };
       case "resume":
       case "unlock":
-        results.push({ id: cmd.id, status: "done" });
-        break;
+        return { id: cmd.id, status: "done" };
       case "screenshot": {
         const b64 = await captureScreen();
         if (!b64) {
-          results.push({ id: cmd.id, status: "failed", result: "capture impossible" });
-          break;
+          return { id: cmd.id, status: "failed", result: "capture impossible" };
         }
         await api.uploadScreenshot(`data:image/jpeg;base64,${b64}`, cmd.id);
         log.ok("Capture d'écran envoyée.");
         // status is set to done server-side via commandId; ack too
-        results.push({ id: cmd.id, status: "done" });
-        break;
+        return { id: cmd.id, status: "done" };
       }
       case "locate":
-        results.push({ id: cmd.id, status: "failed", result: "Localisation non disponible sur Windows." });
-        break;
+        return { id: cmd.id, status: "failed", result: "Localisation non disponible sur Windows." };
       default:
-        results.push({ id: cmd.id, status: "failed", result: "type non supporté" });
+        return { id: cmd.id, status: "failed", result: "type non supporté" };
     }
   } catch (e) {
-    results.push({ id: cmd.id, status: "failed", result: e.message });
+    return { id: cmd.id, status: "failed", result: e.message };
   }
 }
 
