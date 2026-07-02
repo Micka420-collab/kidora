@@ -6,6 +6,7 @@ import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
 import { Enforcer } from "./lib/enforcer.js";
+import { loadState, saveState } from "./lib/store.js";
 import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
@@ -39,11 +40,25 @@ async function main() {
   if (!admin) log.warn("Non administrateur — le filtrage web (hosts) et certains blocages seront limités.");
 
   const api = new Api(cfg.server, cfg.enrollToken);
-  const tracker = new Tracker();
+
+  // Restore durable state (last policy + today's usage + un-synced spool) so a
+  // reboot or an offline start keeps enforcing and can't reset the child's
+  // screen-time counter.
+  const state = loadState();
+  const tracker = new Tracker(state.tracker);
   const enforcer = new Enforcer({ dryRun: DRY_RUN });
 
-  // 1. Enroll
-  let policy = null;
+  /** Persist the current policy + tracker snapshot atomically. Best-effort. */
+  function persistState() {
+    saveState({ policy, tracker: tracker.snapshot() });
+  }
+
+  // 1. Enroll — but degrade gracefully to OFFLINE mode when the server can't be
+  //    reached. A control app that refuses to run without the network is worse
+  //    than useless: the child just unplugs the router. With a cached policy we
+  //    keep enforcing the last known rules and retry enroll on the sync loop.
+  let policy = state.policy || null;
+  let offline = false;
   let syncInterval = cfg.syncInterval;
   try {
     const res = await api.enroll({ hostname: hostname(), model: "Windows", agentVersion: AGENT_VERSION });
@@ -52,10 +67,16 @@ async function main() {
     cfg.deviceId = res.deviceId;
     cfg.childId = res.childId;
     saveConfig(cfg);
+    persistState();
     log.ok(`Enrôlé pour « ${res.childName} » (device ${res.deviceId})`);
   } catch (e) {
-    log.error("Échec de l'enrôlement :", e.message);
-    process.exit(1);
+    if (policy && cfg.deviceId) {
+      offline = true;
+      log.warn(`Serveur injoignable (${e.message}). Mode hors-ligne : application de la dernière politique connue.`);
+    } else {
+      log.error("Échec de l'enrôlement et aucune politique en cache :", e.message);
+      process.exit(1);
+    }
   }
 
   // Full PC app scan (once, at startup, read-only) → sent on the first sync so
@@ -122,8 +143,13 @@ async function main() {
   });
 
   // Liveness heartbeat (read by the SYSTEM guardian to detect a hung agent).
+  // Piggyback a state save so the daily usage counter is on disk within ~30s
+  // even between syncs — a reboot then loses seconds, never the whole day.
   writeHeartbeat();
-  const heartbeatTimer = setInterval(writeHeartbeat, 30_000);
+  const heartbeatTimer = setInterval(() => {
+    writeHeartbeat();
+    persistState();
+  }, 30_000);
 
   // 3. Sync loop (telemetry up, policy + commands down)
   async function syncOnce() {
@@ -149,6 +175,11 @@ async function main() {
       pendingInstalledApps = []; // sent once; the tracker catches anything new after
       policy = res.policy;
       filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
+      if (offline) {
+        offline = false;
+        log.ok("Reconnecté au serveur — politique à jour.");
+      }
+      persistState(); // cache the fresh policy + drained tracker for offline restart
       const total = Math.round(tracker.totalTodaySeconds() / 60);
       log.event(
         `sync ✓  usage:${usage.length} events:${events.length + enforceEvents.length} bloqués(dns):${webVisits.length}  écran:${total}min  ${policy.paused ? "[PAUSE]" : ""}`,
@@ -166,7 +197,12 @@ async function main() {
         await handleCommand(cmd, pendingCmdResults, enforcer, api);
       }
     } catch (e) {
-      log.error("sync:", e.message);
+      if (!offline) {
+        offline = true;
+        log.warn(`Serveur injoignable (${e.message}). Mode hors-ligne : la surveillance et les blocages continuent.`);
+      } else {
+        log.error("sync:", e.message);
+      }
       // Transient failure → the server didn't commit, so re-queue everything we
       // drained instead of dropping it. Usage matters most: losing it would
       // under-count screen time and hand the child extra time.
@@ -175,6 +211,7 @@ async function main() {
       for (const v of webVisits) filter.blocked.set(v.domain, v.category ? `category:${v.category}` : "blocked");
       videos.restore(watchedVideos);
       if (cmdResults.length) pendingCmdResults.unshift(...cmdResults);
+      persistState(); // keep the re-queued spool + counter on disk across a crash
     }
   }
 
@@ -190,6 +227,7 @@ async function main() {
     shuttingDown = true;
     log.info("Arrêt…");
     clearInterval(heartbeatTimer);
+    persistState(); // flush today's counter + un-synced spool before exiting
     hideOverlay();
     if (filter.dns) {
       try { await restoreSystemDns(); } catch {}

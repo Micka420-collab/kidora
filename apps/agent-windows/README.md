@@ -34,6 +34,28 @@ Kidora (`overlay.ps1`) au lieu de verrouiller la session Windows :
 > Le verrouillage complet (`LockWorkStation`) reste utilisé pour la commande
 > distante explicite `lock` envoyée par le parent.
 
+## Installation en un clic (parent, sans terminal)
+
+Le plus simple : **double-cliquez `Installer-Kidora.cmd`**. Il se relance en
+administrateur puis déroule un assistant guidé (`setup-windows.ps1`) qui fait tout
+le travail à la place de l'installateur :
+
+1. **vérifie / installe Node.js** automatiquement (via winget, sinon ouvre la page
+   de téléchargement) ;
+2. prépare l'agent ;
+3. demande (ou lit) le **jeton d'appairage** et l'**adresse du serveur** — accepte
+   un jeton collé tel quel **ou** un lien d'appairage complet
+   (`kidorachild://enroll?token=…&server=…`) ;
+4. installe l'agent **durci** (auto-protection) et le **démarre** immédiatement.
+
+Zéro question possible : déposez un fichier `kidora-config.txt` à côté de
+l'installeur (`SERVER=https://votre-serveur` / `TOKEN=<jeton>`) et l'assistant
+n'affiche plus aucune invite. Prévisualiser sans rien modifier :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File setup-windows.ps1 -DryRun
+```
+
 ## Installation par MSI (recommandé)
 
 Un **installeur MSI** signé empaquette l'agent et configure tout (enrôlement +
@@ -138,6 +160,31 @@ Pi-hole, en Node pur — `lib/dns-proxy.js`) et bascule le DNS du système sur
 Les domaines bloqués remontent au tableau de bord (`webVisits`). Si le port 53 est
 indisponible ou hors admin, l'agent **retombe** sur le filtrage par `hosts`.
 À l'arrêt (ou par le gardien après un crash), le DNS système est **restauré**.
+
+## Hors connexion (résilience)
+
+L'agent est conçu pour **continuer à protéger même quand le serveur est
+injoignable** (réseau coupé, serveur en panne, PC redémarré sans Internet) :
+
+- **Démarrage hors-ligne** : si l'enrôlement échoue au lancement mais qu'une
+  politique a déjà été mise en cache, l'agent démarre en **mode hors-ligne** et
+  applique la **dernière politique connue** (blocages d'apps, filtrage, coucher,
+  limites) au lieu de s'arrêter. Il retente la connexion à chaque cycle et se
+  resynchronise dès que le serveur répond.
+- **Compteur de temps d'écran anti-triche** : l'usage du jour est **persisté sur
+  disque** (`state.json`, écriture atomique). **Redémarrer le PC ne remet plus le
+  compteur à zéro** — l'enfant ne peut plus regagner du temps en rebootant. Le
+  compteur repart à zéro **uniquement** au changement de jour local (minuit).
+- **Aucune télémétrie perdue** : les mesures d'usage et d'événements non encore
+  synchronisées sont conservées (en mémoire **et** sur disque) puis **rejouées**
+  après un échec réseau ou un crash — le temps d'écran n'est jamais sous-compté.
+- **Requêtes bornées** : les appels réseau ont un **délai maximal** (timeout) —
+  un serveur qui accepte la connexion sans répondre ne peut plus figer l'agent.
+
+Le fichier `state.json` est écrit dans le dossier de l'agent, verrouillé pour les
+comptes standard par les mêmes ACL que les autres fichiers de l'agent (au même
+titre que `heartbeat.json`) — l'enfant ne peut pas simplement le supprimer pour
+réinitialiser le compteur.
 
 ## Notes
 

@@ -38,6 +38,11 @@ apps/agent-windows/config.json
 apps/agent-windows/heartbeat.json
 apps/agent-windows/KidoraAgent.xml
 apps/agent-windows/overlay-state.json
+apps/agent-windows/state.json
+apps/agent-windows/state.json.tmp
+apps/agent-windows/guardian.log
+# offline install helper (may contain the enroll token)
+apps/agent-windows/kidora-config.txt
 
 # Web Push VAPID keys (dev)
 .vapid.json

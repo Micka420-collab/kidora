@@ -12,13 +12,51 @@ function localDate(d = new Date()) {
 }
 
 export class Tracker {
-  constructor() {
+  /** @param {object} [snapshot] persisted state from disk (see `snapshot()`). */
+  constructor(snapshot) {
     this.today = localDate();
     this.pending = new Map(); // appId -> seconds since last drain
     this.todayByApp = new Map(); // appId -> seconds today (for limits)
     this.events = [];
     this.lastFgId = null;
     this.knownApps = new Set();
+    if (snapshot) this.restoreSnapshot(snapshot);
+  }
+
+  /**
+   * Rehydrate from a persisted snapshot at startup. If the snapshot is from an
+   * EARLIER local day, the daily usage counter (which drives screen-time limits)
+   * is intentionally dropped so today starts fresh; if it's from TODAY, the
+   * counter is preserved — a reboot mid-day must NOT hand the child extra time.
+   * The un-synced spool (pending/events) is always kept so telemetry survives a
+   * crash.
+   */
+  restoreSnapshot(snap) {
+    if (!snap || typeof snap !== "object") return;
+    const sameDay = snap.today === this.today;
+    if (sameDay && snap.todayByApp) {
+      for (const [k, v] of Object.entries(snap.todayByApp)) {
+        if (Number.isFinite(v) && v > 0) this.todayByApp.set(k, v);
+      }
+    }
+    if (snap.pending) {
+      for (const [k, v] of Object.entries(snap.pending)) {
+        if (Number.isFinite(v) && v > 0) this.pending.set(k, v);
+      }
+    }
+    if (Array.isArray(snap.events)) this.events = snap.events.slice(0, 500);
+    if (Array.isArray(snap.knownApps)) this.knownApps = new Set(snap.knownApps);
+  }
+
+  /** Serializable view of state to persist to disk (survives reboot/crash). */
+  snapshot() {
+    return {
+      today: this.today,
+      todayByApp: Object.fromEntries(this.todayByApp),
+      pending: Object.fromEntries(this.pending),
+      events: this.events,
+      knownApps: [...this.knownApps],
+    };
   }
 
   _rollDate() {

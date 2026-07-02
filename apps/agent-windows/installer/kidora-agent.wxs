@@ -54,7 +54,10 @@
       <Component><File Source="$(AgentSrc)\lib\enforcer.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\heartbeat.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\logger.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\scan-apps.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\store.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\tracker.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\videos.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\win.js" /></Component>
     </ComponentGroup>
 

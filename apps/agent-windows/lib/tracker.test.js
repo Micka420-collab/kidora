@@ -59,3 +59,30 @@ test("todayByApp (for limits) is unaffected by drain/restore", () => {
   // draining telemetry deltas must not reset the daily limit counter
   assert.equal(t.todaySeconds("game.exe"), 50);
 });
+
+test("snapshot → rehydrate preserves today's counter (reboot can't reset the limit)", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 300); // 5 min used today
+  const snap = t.snapshot();
+  // Simulate a reboot: a brand-new tracker restored from disk on the SAME day.
+  const t2 = new Tracker(snap);
+  assert.equal(t2.todaySeconds("game.exe"), 300); // counter survived the reboot
+});
+
+test("rehydrate from a PREVIOUS day starts today's counter fresh", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 300);
+  const snap = t.snapshot();
+  snap.today = "2000-01-01"; // pretend the snapshot is from a past day
+  const t2 = new Tracker(snap);
+  assert.equal(t2.todaySeconds("game.exe"), 0); // new day → limit resets, as intended
+});
+
+test("snapshot preserves the un-synced spool so a crash doesn't lose usage", () => {
+  const t = new Tracker();
+  t.tick(fg("game", 1), 40); // accrues pending usage + events, not yet synced
+  const t2 = new Tracker(t.snapshot());
+  const { usage } = t2.drain();
+  const game = usage.find((u) => u.appId === "game.exe");
+  assert.equal(game.seconds, 40); // recovered after the "crash"
+});
