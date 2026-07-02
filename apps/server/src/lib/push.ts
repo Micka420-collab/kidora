@@ -73,23 +73,47 @@ export async function sendPushToChildGuardians(childId: string, payload: PushPay
   return sent;
 }
 
-/** Send a push to all of a parent's subscriptions; prune dead ones. */
-export async function sendPushToParent(parentId: string, payload: PushPayload): Promise<number> {
+/**
+ * What to do about a web-push send error, by HTTP status:
+ *  - 404/410 → the subscription is gone; delete it, don't retry.
+ *  - 429 / 5xx / network error (no status) → transient; retry.
+ *  - any other 4xx (400/401/413…) → permanent client error; give up.
+ * Pure so it's unit-testable.
+ */
+export function pushErrorAction(code: number | undefined): "expired" | "retry" | "fail" {
+  if (code === 404 || code === 410) return "expired";
+  if (code === undefined) return "retry"; // network/DNS error — worth another try
+  if (code === 429 || (code >= 500 && code < 600)) return "retry";
+  return "fail";
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Send a push to all of a parent's subscriptions, retrying transient failures a
+ *  few times (so a network blip doesn't drop a critical SOS/risk alert) and
+ *  pruning expired subscriptions. */
+export async function sendPushToParent(parentId: string, payload: PushPayload, attempts = 3): Promise<number> {
   if (!loadVapid()) return 0; // push not configured (e.g. missing VAPID env in prod)
   const subs = await prisma.pushSub.findMany({ where: { parentId } });
   let sent = 0;
   await Promise.all(
     subs.map(async (s) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-          JSON.stringify(payload),
-        );
-        sent++;
-      } catch (e: unknown) {
-        const code = (e as { statusCode?: number }).statusCode;
-        if (code === 404 || code === 410) {
-          await prisma.pushSub.delete({ where: { id: s.id } }).catch(() => {});
+      for (let i = 0; i < attempts; i++) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+            JSON.stringify(payload),
+          );
+          sent++;
+          return;
+        } catch (e: unknown) {
+          const action = pushErrorAction((e as { statusCode?: number }).statusCode);
+          if (action === "expired") {
+            await prisma.pushSub.delete({ where: { id: s.id } }).catch(() => {});
+            return;
+          }
+          if (action === "fail" || i === attempts - 1) return;
+          await sleep(200 * (i + 1)); // 200ms, 400ms backoff before the next try
         }
       }
     }),
