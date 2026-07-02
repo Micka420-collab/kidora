@@ -30,6 +30,17 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   modules runtime** (clock, doctor, policy-verify, discover, updater, store…) —
   un agent installé ne plante plus sur un import manquant.
 
+**Durcissement enchaîné (mêmes run, critiques de l'audit) :**
+- [x] **Idempotence du temps d'écran** : un retry après réponse perdue ne
+  double-compte plus. L'agent envoie l'usage **cumulatif** du jour et le serveur
+  fait un **SET monotone** (au lieu d'incrémenter) ; rétrocompatible dans les deux
+  sens. (+2 tests d'intégration, +1 agent).
+- [x] **Dashboard hors-ligne** : `OfflineBanner` (hook `useOnline` SSR-safe) +
+  `client.ts` avec timeout + retry sûr (GET seulement, jamais les mutations).
+- [x] **Ordonnanceur auto-hébergement** : `instrumentation.ts` déclenche les crons
+  (rétention, offline-check, rapports) hors Vercel dès qu'un `CRON_SECRET` est
+  défini (généré par `install.sh`) ; no-op sur Vercel/Edge. (+7 tests).
+
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
 - [x] **Agent Windows résilient hors-ligne** : la politique effective est mise en
