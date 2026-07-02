@@ -12,9 +12,16 @@ function localDate(d = new Date()) {
 }
 
 export class Tracker {
-  /** @param {object} [snapshot] persisted state from disk (see `snapshot()`). */
-  constructor(snapshot) {
-    this.today = localDate();
+  /**
+   * @param {object} [snapshot] persisted state from disk (see `snapshot()`).
+   * @param {() => Date} [nowFn] source of "now" — pass the TRUSTED clock so the
+   *   day-rollover decision on restore can't be fooled by a rewound system clock
+   *   (a child setting the date back a day to reset the daily counter). Defaults
+   *   to the wall clock.
+   */
+  constructor(snapshot, nowFn) {
+    this._now = typeof nowFn === "function" ? nowFn : () => new Date();
+    this.today = localDate(this._now());
     this.pending = new Map(); // appId -> seconds since last drain
     this.todayByApp = new Map(); // appId -> seconds today (for limits)
     this.events = [];
@@ -59,7 +66,7 @@ export class Tracker {
     };
   }
 
-  _rollDate(now = new Date()) {
+  _rollDate(now = this._now()) {
     const day = localDate(now);
     if (day !== this.today) {
       this.today = day;

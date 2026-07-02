@@ -1,5 +1,20 @@
 // Talks to the Kidora server agent API.
-const AGENT_VERSION = "1.0.0";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+// Single source of truth for the agent version: package.json. (If this were a
+// separate hardcoded constant that drifted from the version the server bundles,
+// a self-updated agent would keep reporting the old version and re-stage the
+// same update every sync — an update loop.)
+const AGENT_VERSION = (() => {
+  try {
+    const pkg = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+    return JSON.parse(readFileSync(pkg, "utf8")).version || "1.0.0";
+  } catch {
+    return "1.0.0";
+  }
+})();
 const REQUEST_TIMEOUT_MS = 15000; // a hung/unreachable server must not freeze the loop
 
 /** fetch() with a hard timeout — without it, a dropped connection or a captive

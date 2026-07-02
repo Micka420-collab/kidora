@@ -90,6 +90,19 @@ test("rehydrate from a PREVIOUS day starts today's counter fresh", () => {
   assert.equal(t2.todaySeconds("game.exe"), 0); // new day → limit resets, as intended
 });
 
+test("restore uses the TRUSTED clock, so a rewound system clock can't reset the counter", () => {
+  // Snapshot taken "today" (per the trusted clock).
+  const trusted = new Date(2026, 6, 2, 15, 0, 0);
+  const t = new Tracker(undefined, () => trusted);
+  t.tick(fg("game", 1), 300); // 5 min used today
+  const snap = t.snapshot();
+
+  // Reboot with the SYSTEM clock rewound to yesterday, but the TRUSTED clock
+  // (monotonic-floored) still reports the real day. The counter must survive.
+  const t2 = new Tracker(snap, () => trusted); // trusted still = 2026-07-02
+  assert.equal(t2.todaySeconds("game.exe"), 300); // preserved despite the wall-clock rewind
+});
+
 test("snapshot preserves the un-synced spool so a crash doesn't lose usage", () => {
   const t = new Tracker();
   t.tick(fg("game", 1), 40); // accrues pending usage + events, not yet synced

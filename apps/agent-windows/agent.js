@@ -111,11 +111,13 @@ async function main() {
   // reboot or an offline start keeps enforcing and can't reset the child's
   // screen-time counter.
   const state = loadState();
-  const tracker = new Tracker(state.tracker);
-  const enforcer = new Enforcer({ dryRun: DRY_RUN });
   // Trusted clock — enforcement (bedtime/limits/day rollover) uses this instead
   // of the raw system clock so the child can't win time by changing the date.
   const clock = new TrustedClock(state.clock);
+  // The tracker's day-rollover (incl. on restore) reads the TRUSTED time, so a
+  // rewound system clock can't reset the child's daily screen-time counter.
+  const tracker = new Tracker(state.tracker, () => clock.now());
+  const enforcer = new Enforcer({ dryRun: DRY_RUN });
 
   // Signed-policy state: the pinned server public key, the highest policy issue
   // time we've accepted (rollback floor), and the last signed envelope (so an
