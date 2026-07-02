@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "prebuild": "npm run db:generate",
+    "prebuild": "npm run bundle:agent && npm run db:generate",
     "postinstall": "npm run db:generate",
+    "bundle:agent": "node scripts/bundle-agent.mjs",
     "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "eslint",

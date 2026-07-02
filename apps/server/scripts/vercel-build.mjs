@@ -31,6 +31,12 @@ function readEnv(key) {
 }
 
 const run = (cmd) => execSync(cmd, { stdio: "inherit" });
+
+// Refresh the embedded Windows agent bundle (for the pre-configured installer
+// ZIP) — vercel-build calls `next build` directly, so the `prebuild` hook that
+// normally does this does not fire here.
+run("npm run bundle:agent");
+
 const databaseUrl = readEnv("DATABASE_URL").trim();
 
 if (databaseUrl) {
