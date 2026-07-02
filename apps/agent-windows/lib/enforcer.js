@@ -1,6 +1,6 @@
 // Applies a Kidora policy to the live machine state each sensor tick.
 import { randomUUID } from "node:crypto";
-import { killProcess, showOverlay, hideOverlay, notify } from "./win.js";
+import { killProcess, showOverlay, hideOverlay, notify } from "./os.js";
 import { SYSTEM_PROCS } from "./categorize.js";
 import { log } from "./logger.js";
 

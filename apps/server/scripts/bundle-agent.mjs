@@ -29,6 +29,7 @@ const ROOT_FILES = [
   "overlay.ps1",
   "install-agent.ps1",
   "setup-windows.ps1",
+  "install-linux.sh",
   "Installer-Kidora.cmd",
 ];
 

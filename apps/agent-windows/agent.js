@@ -19,7 +19,7 @@ import { stagingDir } from "./lib/paths.js";
 
 const pexec = promisify(execFile);
 const STAGING_DIR = stagingDir(); // %ProgramData%\Kidora\.update-staging (writable)
-import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl } from "./lib/win.js";
+import { startSensor, getBattery, isAdmin, updateHostsFile, hideOverlay, setSystemDns, restoreSystemDns, getForegroundBrowserUrl, canRedirectDns } from "./lib/os.js";
 import { startDnsProxy } from "./lib/dns-proxy.js";
 import { normalizeDomain, domainsForCategories } from "./lib/domains.js";
 import { scanInstalledApps } from "./lib/scan-apps.js";
@@ -238,7 +238,9 @@ async function main() {
   let lastHostsKey = hostsKey(policy);
   if (DRY_RUN) {
     log.info("[dry-run] filtrage web non appliqué.");
-  } else if (admin) {
+  } else if (admin && canRedirectDns()) {
+    // Category-level filtering via the local DNS proxy (Windows). On Linux we
+    // fall through to hosts-based filtering (canRedirectDns() is false there).
     filter.dns = await startDnsProxy({
       getWeb: () => filter.web,
       onEvent: (e) => {
@@ -503,7 +505,7 @@ function applyHosts(policy, admin) {
 
 async function handleCommand(cmd, results, enforcer, api) {
   log.info(`Commande reçue : ${cmd.type}`);
-  const { notify, lockWorkstation, captureScreen } = await import("./lib/win.js");
+  const { notify, lockWorkstation, captureScreen } = await import("./lib/os.js");
   try {
     switch (cmd.type) {
       case "lock":

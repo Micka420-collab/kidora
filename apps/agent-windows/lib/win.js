@@ -231,6 +231,11 @@ export function updateHostsFile(domains) {
   }
 }
 
+// Windows can redirect system DNS to the local proxy (category-level filtering).
+export function canRedirectDns() {
+  return true;
+}
+
 /** Point every active physical adapter at the local DNS proxy. Needs admin. */
 export async function setSystemDns(server = "127.0.0.1") {
   await runPS(

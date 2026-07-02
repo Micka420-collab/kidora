@@ -219,7 +219,14 @@ Tout se pilote désormais depuis l'app **Kidora Parents** (Expo/RN), à parité 
 - [x] Installeur **Linux/Ubuntu** en une commande (`install.sh`)
 - [x] **Release GitHub v1.0.0** (archives source téléchargeables) + section Téléchargement & Configuration requise dans le README
 - [~] Publier les **APK Android** (Kidora Parents / Kidora Kids) dans les Releases via build EAS — *pipeline prêt* : icônes par rôle générées, profils `parent-apk`/`child-apk` (eas.json), scripts `npm run build:apks` / `release:apks`, workflow `release-apk.yml` (tag `mobile-v*`) ; reste à fournir le **compte Expo/EAS** (`eas init` + secrets `EXPO_TOKEN`/`EAS_PROJECT_ID_*`) pour lancer le build cloud
-- [ ] Agent **Linux** (surveillance natif) — équivalent de l'agent Windows
+- [x] Agent **Linux** — le cœur de l'agent est rendu **agnostique de l'OS**
+  (`lib/os.js` dispatche vers `lib/win.js` ou le nouveau `lib/linux.js`) ; Linux
+  fait la détection d'app (`ps`/`xdotool`), le blocage (`pkill`), l'écran de
+  blocage (`zenity`/`yad`), les notifs (`notify-send`), le verrouillage
+  (`loginctl`), la batterie (`/sys`), les captures (`scrot`), le filtrage web via
+  `/etc/hosts`, et s'installe en **service systemd utilisateur** (`install-linux.sh`).
+  Agent Windows inchangé (83 tests verts). *Intégration Linux non testée sur un
+  vrai bureau Linux ici — dégradation propre si un outil manque.*
 
 ## 🔜 Prochaines étapes
 

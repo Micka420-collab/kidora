@@ -56,7 +56,9 @@
       <Component><File Source="$(AgentSrc)\lib\domains.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\enforcer.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\heartbeat.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\linux.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\logger.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\os.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\paths.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\policy-verify.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\scan-apps.js" /></Component>

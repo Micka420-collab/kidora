@@ -38,8 +38,15 @@ export function dataDir() {
   if (cached) return cached;
   const candidates = [];
   if (process.env.KIDORA_DATA_DIR) candidates.push(process.env.KIDORA_DATA_DIR);
-  const pd = process.env.ProgramData || process.env.PROGRAMDATA;
-  if (pd) candidates.push(join(pd, "Kidora"));
+  if (process.platform === "win32") {
+    const pd = process.env.ProgramData || process.env.PROGRAMDATA;
+    if (pd) candidates.push(join(pd, "Kidora"));
+  } else {
+    // Linux/macOS: a system data dir for a root service, else the user's XDG dir.
+    candidates.push("/var/lib/kidora");
+    const xdg = process.env.XDG_DATA_HOME || (process.env.HOME ? join(process.env.HOME, ".local", "share") : null);
+    if (xdg) candidates.push(join(xdg, "kidora"));
+  }
   for (const dir of candidates) {
     if (probeWritable(dir)) {
       cached = dir;

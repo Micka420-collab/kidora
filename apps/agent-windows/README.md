@@ -1,10 +1,32 @@
-# Kidora Agent — Windows
+# Kidora Agent — Windows & Linux
 
-Agent de contrôle parental pour Windows. Surveille l'usage des applications et du
-web, applique les règles définies par les parents (blocage d'apps, filtrage web,
-limites de temps d'écran, heure du coucher), et synchronise avec le serveur Kidora.
+Agent de contrôle parental. Surveille l'usage des applications et du web, applique
+les règles définies par les parents (blocage d'apps, filtrage web, limites de
+temps d'écran, heure du coucher), et synchronise avec le serveur Kidora.
 
-**Aucune dépendance npm** — Node.js (≥ 18) + PowerShell uniquement.
+**Aucune dépendance npm** — Node.js (≥ 18) uniquement. Le cœur est **agnostique de
+l'OS** ; l'intégration système est choisie au démarrage (`lib/os.js` →
+`lib/win.js` sur Windows, `lib/linux.js` sur Linux).
+
+## Linux
+
+```bash
+cd kidora-agent
+./install-linux.sh --token <JETON> --server https://votre-serveur
+#   désinstaller :  ./install-linux.sh --uninstall
+#   simulation   :  ./install-linux.sh --dry-run --token x
+```
+
+Installe un **service systemd utilisateur** (`kidora-agent`) qui tourne dans la
+session de l'enfant — accès au bureau pour la détection d'app (via `xdotool` en
+X11), l'écran de blocage (`zenity`/`yad`) et les notifications (`notify-send`).
+**Blocage d'apps** (`pkill`), **temps d'écran / coucher / pause**, **verrouillage**
+(`loginctl`), **batterie** (`/sys`), **captures** (`scrot`/`gnome-screenshot`) et
+**télémétrie** fonctionnent sans privilèges. Le **filtrage web** passe par
+`/etc/hosts` (le proxy DNS par catégorie reste Windows-only en v1) et nécessite
+les **droits root**. Données runtime dans `/var/lib/kidora` (root) ou
+`~/.local/share/kidora`. Outils recommandés : `xdotool`, `zenity`, `notify-send`,
+`scrot` (dégradation propre s'ils manquent).
 
 ## Fonctionnalités
 
