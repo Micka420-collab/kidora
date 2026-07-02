@@ -68,6 +68,27 @@ export const parent = {
     await storage.set("role", "parent");
     return res;
   },
+  async register(name: string, email: string, password: string, server?: string) {
+    if (server) await storage.set("server", server.replace(/\/$/, ""));
+    const res = await req<{ id: string; name: string; token: string }>("/api/auth/register", {
+      method: "POST",
+      body: { name, email, password },
+    });
+    await storage.set("parentToken", res.token);
+    await storage.set("parentName", res.name);
+    await storage.set("role", "parent");
+    return res;
+  },
+  async createChild(name: string, avatar?: string) {
+    return req<{ child: Child }>("/api/children", { method: "POST", body: { name, ...(avatar ? { avatar } : {}) }, headers: await this.authHeader() });
+  },
+  async createDevice(childId: string, name: string, platform: string) {
+    return req<{ device: Device & { enrollToken: string } }>(`/api/children/${childId}/devices`, {
+      method: "POST",
+      body: { name, platform },
+      headers: await this.authHeader(),
+    });
+  },
   async authHeader(): Promise<Record<string, string>> {
     const token = await storage.get("parentToken");
     return token ? { Cookie: `kidora_session=${token}` } : {};

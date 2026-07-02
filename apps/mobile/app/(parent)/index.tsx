@@ -190,9 +190,11 @@ function ChildList({ kids, alerts, week, timeReq, reload, refreshing, setRefresh
         </Pressable>
       )}
       <WeekCard week={week} />
-      <SectionHeader title="Enfants" />
+      <SectionHeader title="Enfants" actionLabel="+ Ajouter" onAction={() => router.push("/add-child")} />
       {kids.length === 0 ? (
-        <Empty icon="people" title="Aucun enfant" subtitle="Ajoutez un enfant et un appareil depuis le tableau de bord web." />
+        <Pressable onPress={() => router.push("/add-child")} accessibilityRole="button">
+          <Empty icon="people" title="Aucun enfant" subtitle="Touchez ici pour ajouter un enfant et un appareil — sans passer par le web." />
+        </Pressable>
       ) : (
         <View style={{ gap: space.md }}>
           {kids.map((k) => <ChildCard key={k.id} child={k} />)}

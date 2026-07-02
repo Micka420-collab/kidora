@@ -17,11 +17,14 @@ export default function Login() {
   const [server, setServer] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
   const [showPw, setShowPw] = useState(false);
   const [token, setToken] = useState("");
   const [needs2fa, setNeeds2fa] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const signup = mode === "signup";
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
 
@@ -39,6 +42,9 @@ export default function Login() {
       if (isChild) {
         await childAgent.enroll(token.trim(), srv, { model: "Mobile", agentVersion: "1.0.0" });
         router.replace("/child-mode");
+      } else if (signup) {
+        await parent.register(name.trim(), email.trim(), password, srv);
+        router.replace("/(parent)");
       } else {
         await parent.login(email.trim(), password, srv, needs2fa ? code.trim() : undefined);
         router.replace("/(parent)");
@@ -83,6 +89,11 @@ export default function Login() {
               </Field>
             ) : (
               <>
+                {signup && (
+                  <Field icon="person-outline">
+                    <TextInput style={inputStyle} placeholder="Votre nom" placeholderTextColor={c.textFaint} value={name} onChangeText={setName} accessibilityLabel="Votre nom" />
+                  </Field>
+                )}
                 <Field icon="mail-outline">
                   <TextInput style={inputStyle} placeholder="Email" placeholderTextColor={c.textFaint} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="Email" />
                 </Field>
@@ -108,10 +119,18 @@ export default function Login() {
               </>
             )}
 
-            <Btn title={isChild ? "Connecter l'appareil" : needs2fa ? "Vérifier" : "Se connecter"} icon="arrow-forward" loading={busy} onPress={submit} full />
+            <Btn title={isChild ? "Connecter l'appareil" : signup ? "Créer mon compte" : needs2fa ? "Vérifier" : "Se connecter"} icon="arrow-forward" loading={busy} onPress={submit} full />
+
+            {!isChild && !needs2fa && (
+              <Pressable onPress={() => setMode(signup ? "login" : "signup")} hitSlop={8} accessibilityRole="button">
+                <Text style={{ color: c.primary, fontSize: 14, textAlign: "center", fontWeight: "600" }}>
+                  {signup ? "J'ai déjà un compte — Se connecter" : "Nouveau ? Créer un compte"}
+                </Text>
+              </Pressable>
+            )}
 
             <Text style={{ color: c.textFaint, fontSize: 13, textAlign: "center", marginTop: 4 }}>
-              {isChild ? "Le jeton est dans l'app parent : enfant → Appareils." : "Démo : demo@kidora.app / kidora1234"}
+              {isChild ? "Le jeton est dans l'app parent : enfant → Appareils." : signup ? "Renseignez l'adresse de votre serveur Kidora ci-dessus." : "Démo : demo@kidora.app / kidora1234"}
             </Text>
           </Animated.View>
         </ScrollView>
