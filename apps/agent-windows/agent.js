@@ -158,7 +158,12 @@ async function main() {
         policySigned: res.policySigned,
         policySig: res.policySig,
         publicKey: pubKey,
-        childId: cfg.childId,
+        // The signed envelope's `cid` must match THIS response's child. Prefer the
+        // authoritative childId from the same response (enroll always carries it);
+        // fall back to the cached id for sync responses that omit it. Never verify
+        // a fresh policy against a stale cached childId — that would reject a valid
+        // policy and drop the agent into fail-safe lockdown.
+        childId: res.childId || cfg.childId,
         minIssuedAt: policyFloor,
       });
       if (trusted) {
@@ -202,10 +207,15 @@ async function main() {
   let syncInterval = cfg.syncInterval;
   try {
     const res = await api.enroll({ hostname: hostname(), model: "Windows", agentVersion: AGENT_VERSION });
-    acceptSignedPolicy(res);
-    syncInterval = res.syncIntervalSeconds || syncInterval;
+    // Adopt the server's authoritative identity BEFORE verifying the signed
+    // policy: openSignedPolicy checks the signed `cid` against cfg.childId, so a
+    // stale/undefined cached childId (device reassigned to another child, or a
+    // migrated config) would otherwise reject a perfectly valid policy and drop
+    // the agent into fail-safe lockdown with no enforcement.
     cfg.deviceId = res.deviceId;
     cfg.childId = res.childId;
+    acceptSignedPolicy(res);
+    syncInterval = res.syncIntervalSeconds || syncInterval;
     saveConfig(cfg);
     persistState();
     log.ok(`Enrôlé pour « ${res.childName} » (device ${res.deviceId})`);

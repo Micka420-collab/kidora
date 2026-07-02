@@ -15,9 +15,12 @@ RUN apt-get update \
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install dependencies first (better layer caching).
+# Install dependencies first (better layer caching). --ignore-scripts is required:
+# the package's postinstall runs `db:generate`, which needs scripts/ + prisma/ —
+# not copied until the `COPY . .` below. `prisma generate` still runs, at the
+# right time, via the `prebuild` hook when `npm run build` executes.
 COPY package.json package-lock.json* ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
 # Copy the rest and build. The provider is fixed to postgres for the container
 # (the compose file provisions Postgres); `prisma generate` runs in prebuild.
