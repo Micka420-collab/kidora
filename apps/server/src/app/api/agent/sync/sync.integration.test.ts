@@ -79,6 +79,34 @@ describe("/agent/sync (integration)", () => {
     expect(after.status).toBe("delivered");
   });
 
+  it("redelivers a stale 'delivered' command that was never acknowledged", async () => {
+    const prev = process.env.COMMAND_REDELIVER_MINUTES;
+    process.env.COMMAND_REDELIVER_MINUTES = "0"; // any delivered command is stale → requeue
+    try {
+      // A command already marked delivered (agent got it, then crashed before acking).
+      const cmd = await prisma.command.create({
+        data: { childId, type: "lock", payload: "{}", status: "delivered" },
+      });
+      const res = await POST(syncReq({ online: true }));
+      const data = (await res.json()) as { commands: { id: string }[] };
+      // It is delivered AGAIN instead of being lost forever.
+      expect(data.commands.some((c) => c.id === cmd.id)).toBe(true);
+    } finally {
+      if (prev === undefined) delete process.env.COMMAND_REDELIVER_MINUTES;
+      else process.env.COMMAND_REDELIVER_MINUTES = prev;
+    }
+  });
+
+  it("does NOT redeliver a freshly delivered command within the grace window", async () => {
+    // Default grace (10 min): a just-delivered command must NOT be redelivered.
+    const cmd = await prisma.command.create({
+      data: { childId, type: "lock", payload: "{}", status: "delivered" },
+    });
+    const res = await POST(syncReq({ online: true }));
+    const data = (await res.json()) as { commands: { id: string }[] };
+    expect(data.commands.some((c) => c.id === cmd.id)).toBe(false); // still in flight, not re-sent
+  });
+
   it("does NOT consume commands when deliverCommands is false (background sync)", async () => {
     const cmd = await prisma.command.create({
       data: { childId, type: "message", payload: JSON.stringify({ text: "hi" }), status: "pending" },

@@ -537,6 +537,19 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // 7b. Redeliver commands that were delivered but never acknowledged (the agent
+  //     crashed or the response was lost) after a grace period, so a parent's
+  //     "lock"/"message" isn't silently dropped. Normal acks land within a sync
+  //     cycle, well under the grace window.
+  if (body.deliverCommands !== false) {
+    const graceMin = Number(process.env.COMMAND_REDELIVER_MINUTES);
+    const graceMs = (Number.isFinite(graceMin) ? graceMin : 10) * 60_000;
+    await prisma.command.updateMany({
+      where: { childId, status: "delivered", updatedAt: { lt: new Date(Date.now() - graceMs) } },
+      data: { status: "pending" },
+    });
+  }
+
   // 8. pending commands → deliver. A caller that can't act on commands (e.g. the
   //    background location task) passes deliverCommands:false so they're left
   //    "pending" for the next full sync instead of being marked delivered & lost.
