@@ -1,4 +1,5 @@
-import { useColorScheme } from "react-native";
+import { useColorScheme, AccessibilityInfo } from "react-native";
+import { useEffect, useState } from "react";
 
 // ── Palette ──────────────────────────────────────────────────────────────
 const brand = {
@@ -65,6 +66,23 @@ export const layout = { contentMax: 640 };
 // chips/tiles where unbounded growth would overflow or truncate. Body/headings
 // scale freely (no cap) so large-text users are fully served.
 export const fontCap = { chip: 1.3, tile: 1.4 } as const;
+
+/**
+ * Tracks the OS "reduce motion" setting (vestibular-safety) so animated UI can
+ * fall back to a static state. Live-updates when the user toggles it.
+ */
+export function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((v) => { if (mounted) setReduce(v); })
+      .catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduce);
+    return () => { mounted = false; sub.remove(); };
+  }, []);
+  return reduce;
+}
 
 export function useTheme() {
   const scheme = useColorScheme();
