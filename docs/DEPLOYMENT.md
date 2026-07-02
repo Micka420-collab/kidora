@@ -99,11 +99,20 @@ idempotent) puis l'app est compilée. **Aucune étape manuelle** — il suffit q
 > définie mais que le push échoue (identifiants/réseau), le build échoue
 > volontairement — c'est une vraie erreur à corriger.
 
-Compte démo (optionnel, une fois) :
+Premier compte : une installation réelle **ne crée aucun identifiant par défaut**
+(pas de compte de démonstration connu en production). Ouvrez l'application et
+créez votre compte sur **`/register`**.
+
+Données de démonstration (évaluation seulement, jamais sur une base réelle) :
 
 ```bash
-cd apps/server && DATABASE_URL="postgresql://…" npm run seed
+# Le script EFFACE les données puis insère un compte de démo. Il refuse de
+# s'exécuter en production ou sur une base non vide sans opt-in explicite.
+cd apps/server && SEED_DEMO=1 SEED_FORCE=1 npm run seed
 ```
+
+> Le seed cible SQLite (données d'exemple) ; en production, créez plutôt votre
+> compte via `/register`.
 
 > Les migrations du dépôt sont en dialecte SQLite ; en prod on utilise `db push`
 > (pas d'historique de migration). Pour un baseline de migrations Postgres dédié :

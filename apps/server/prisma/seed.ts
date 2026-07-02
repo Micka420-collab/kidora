@@ -23,7 +23,38 @@ function pick<T>(arr: T[]): T {
 async function main() {
   console.log("🌱 Seeding Kidora demo data…");
 
-  // wipe (dev only)
+  const isProd = process.env.NODE_ENV === "production";
+  const optedIn = process.env.SEED_DEMO === "1";
+  const force = process.env.SEED_FORCE === "1";
+
+  // Guard 1 — never plant a demo account (and WIPE data) into a production DB by
+  // accident. Real deployments create the first parent via /register; demo data
+  // is for evaluation only and must be opted into explicitly.
+  if (isProd && !optedIn) {
+    console.error(
+      "✗ Refus : NODE_ENV=production. Ce script insère un compte de démonstration et EFFACE toutes les données.\n" +
+      "  Créez votre compte sur /register. Pour forcer un jeu de démo (évaluation) : SEED_DEMO=1.",
+    );
+    process.exit(1);
+  }
+
+  // Guard 2 — never destroy an existing dataset (a real family's data) on a re-run.
+  const existing = await prisma.parent.count();
+  if (existing > 0 && !force) {
+    console.error(
+      `✗ Refus : la base contient déjà ${existing} compte(s) — ce script EFFACE tout avant de semer.\n` +
+      "  Pour réinitialiser volontairement en données de démo : SEED_FORCE=1.",
+    );
+    process.exit(1);
+  }
+
+  // Demo password: stable in dev for convenience, but NEVER a globally-known
+  // credential on a production server — generate a random one there (printed once)
+  // unless the operator supplies DEMO_PASSWORD.
+  const demoPassword =
+    process.env.DEMO_PASSWORD || (isProd ? randomBytes(9).toString("base64url") : "kidora1234");
+
+  // wipe (dev / explicit reset only — guarded above)
   await prisma.$transaction([
     prisma.alert.deleteMany(),
     prisma.command.deleteMany(),
@@ -45,11 +76,11 @@ async function main() {
     data: {
       name: "Famille Démo",
       email: "demo@kidora.app",
-      passwordHash: await bcrypt.hash("kidora1234", 10),
+      passwordHash: await bcrypt.hash(demoPassword, 10),
       emailVerified: true, // demo account shouldn't show the "verify email" banner
     },
   });
-  console.log("👤 Parent: demo@kidora.app / kidora1234");
+  console.log(`👤 Parent: demo@kidora.app / ${demoPassword}`);
 
   // ── Child 1: Emma (9) — Android tablet ──
   const emma = await prisma.child.create({
