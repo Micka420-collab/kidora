@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, apiError, readJson, getDeviceFromRequest } from "@/lib/http";
 import { encrypt } from "@/lib/crypto";
+import { rateLimit } from "@/lib/ratelimit";
 
 const schema = z.object({
   commandId: z.string().optional(),
@@ -14,6 +15,11 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   const device = await getDeviceFromRequest(req);
   if (!device) return apiError("Appareil non authentifié", 401);
+
+  // Screenshots are large; cap uploads per device (a leaked token can't fill
+  // storage). Legitimate captures are on-demand and infrequent.
+  const rl = rateLimit(`agent-shot:${device.id}`, 12, 60_000);
+  if (!rl.ok) return apiError("Trop de requêtes", 429);
 
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success) return apiError("Image invalide", 422);

@@ -9,6 +9,7 @@ import { NextRequest } from "next/server";
 // pending commands must be delivered + marked. Auth is a Bearer enrollToken.
 const TEST_DB = "file:./test-sync.db";
 const TOKEN = "int-device-token";
+const RL_TOKEN = "int-rl-token";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 let prisma: any;
@@ -37,6 +38,11 @@ beforeAll(async () => {
   childId = child.id;
   await prisma.device.create({
     data: { childId: child.id, name: "PC", platform: "windows", enrollToken: TOKEN, lastSeen: new Date() },
+  });
+  // Separate device for the rate-limit test → its own in-memory bucket, so
+  // hammering it can't exhaust the shared device's budget used by other tests.
+  await prisma.device.create({
+    data: { childId: child.id, name: "RL", platform: "windows", enrollToken: RL_TOKEN, lastSeen: new Date() },
   });
 }, 60_000);
 
@@ -105,6 +111,19 @@ describe("/agent/sync (integration)", () => {
     const res = await POST(syncReq({ online: true }));
     const data = (await res.json()) as { commands: { id: string }[] };
     expect(data.commands.some((c) => c.id === cmd.id)).toBe(false); // still in flight, not re-sent
+  });
+
+  it("rate-limits a device flooding /agent/sync (leaked-token protection)", async () => {
+    const req = () =>
+      new NextRequest("http://localhost/api/agent/sync", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${RL_TOKEN}` },
+        body: JSON.stringify({ online: true }),
+      });
+    // The limit is 40/min per device. Send 40 (all OK) then one more (429).
+    let last = 200;
+    for (let i = 0; i < 41; i++) last = (await POST(req())).status;
+    expect(last).toBe(429);
   });
 
   it("does NOT consume commands when deliverCommands is false (background sync)", async () => {

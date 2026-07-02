@@ -11,6 +11,7 @@ import { geofenceTransition } from "@/lib/geo";
 import { parseMutedTypes, isAlertMuted } from "@/lib/alert-prefs";
 import { safeDate, capAlerts } from "@/lib/ingest";
 import { clampTzOffset } from "@/lib/localdate";
+import { rateLimit } from "@/lib/ratelimit";
 import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
 import { decrypt } from "@/lib/crypto";
 import { signedPolicyFields } from "@/lib/policy-sign";
@@ -134,6 +135,11 @@ const syncSchema = z.object({
 export async function POST(req: NextRequest) {
   const device = await getDeviceFromRequest(req);
   if (!device) return apiError("Appareil non authentifié", 401);
+
+  // Cap sync volume per device so a leaked enroll token can't flood the DB.
+  // Normal cadence is ~2/min; 40/min leaves ample headroom for retries.
+  const rl = rateLimit(`agent-sync:${device.id}`, 40, 60_000);
+  if (!rl.ok) return apiError("Trop de requêtes", 429);
 
   const parsed = syncSchema.safeParse(await readJson(req));
   if (!parsed.success) return apiError("Données invalides", 422);
