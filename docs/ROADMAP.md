@@ -47,6 +47,15 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   (agent qui crashe / réponse perdue) au-delà d'un délai de grâce
   (`COMMAND_REDELIVER_MINUTES`, def 10) repasse en « pending » → plus jamais perdue.
   (+2 tests d'intégration).
+- [x] **Données runtime dans `%ProgramData%\Kidora`** (`lib/paths.js`) : les fichiers
+  inscriptibles (config/heartbeat/état/staging) vont dans un dossier accessible au
+  **compte enfant standard**, alors que les scripts restent verrouillés — sans quoi
+  le cache offline/état/update ne fonctionnait pas sous les ACL d'auto-protection.
+  Repli sûr + migration à la mise à jour ; gardien/installeur alignés. (+4 tests).
+- [x] **Dédup exact-once des événements** : l'agent estampille chaque événement d'un
+  `id` stable (conservé au re-queue) ; le serveur filtre les événements déjà stockés
+  → un retry ne crée plus de lignes ni d'alertes en double (sans migration de schéma).
+  (+2 tests).
 
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
