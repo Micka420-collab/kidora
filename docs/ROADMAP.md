@@ -1,5 +1,35 @@
 # Roadmap Kidora
 
+## 🛡️ Suite « clé en main & inviolable » (2026-07-02, run autonome)
+
+Branche `feat/offline-turnkey-suite`. Chaque feature testée + vérifiée, build de
+prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
+
+- [x] **Anti-triche horloge** (`agent/lib/clock.js`) : horloge de confiance ancrée
+  serveur + monotone → changer l'heure système ne contourne plus coucher/limites,
+  jamais de recul même après reboot ; alerte `clock_change` (non-mutable).
+- [x] **`kidora-agent doctor`** : auto-diagnostic (Node, config, serveur joignable,
+  heartbeat, admin, écriture cache, tâches planifiées) — sortie ≠ 0 si bloquant.
+- [x] **Politique signée Ed25519** (`policy-sign.ts` / `agent/lib/policy-verify.js`) :
+  le serveur signe la policy, l'agent vérifie avant d'appliquer, y compris le cache
+  offline ; cache altéré → **verrouillage de sécurité** ; anti-rejeu par `iat`.
+- [x] **Installateur ZIP pré-configuré** (`/api/children/:id/agent-package`) : le
+  dashboard génère un ZIP avec jeton+URL dans `kidora-config.txt` → le parent
+  décompresse, double-clique, **ne tape rien**. ZIP writer maison (`lib/zip.ts`),
+  validé openable par Windows Expand-Archive. Bundle agent embarqué au build.
+- [x] **Page `/status` + `/api/status`** : liste de contrôle d'installation (DB,
+  secrets, VAPID, SMTP, CRON, HTTPS) sans valeur secrète, pour l'auto-hébergeur.
+- [x] **Découverte LAN** (`agent/lib/discover.js` + `server/scripts/lan-advertise.mjs`) :
+  balise multicast UDP (mDNS-style) → l'installateur trouve le serveur sans saisie ;
+  vérifié en direct (annonce → découverte).
+- [x] **Auto-update signé** (`agent/lib/updater.js` + `/api/agent/bundle`) : l'agent
+  télécharge le bundle **signé**, vérifie signature + hachage, **prépare** ; le
+  gardien SYSTEM applique (sauvegarde + **rollback** si pas de heartbeat). Jamais
+  de mise à jour non signée. Vérifié bout-en-bout (sign → verify → stage).
+- [x] **Correctif packaging** : MSI + bundle serveur embarquent désormais **les 20
+  modules runtime** (clock, doctor, policy-verify, discover, updater, store…) —
+  un agent installé ne plante plus sur un import manquant.
+
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
 - [x] **Agent Windows résilient hors-ligne** : la politique effective est mise en
