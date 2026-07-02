@@ -1,4 +1,5 @@
 // Applies a Kidora policy to the live machine state each sensor tick.
+import { randomUUID } from "node:crypto";
 import { killProcess, showOverlay, hideOverlay, notify } from "./win.js";
 import { SYSTEM_PROCS } from "./categorize.js";
 import { log } from "./logger.js";
@@ -54,7 +55,9 @@ export class Enforcer {
   }
 
   drainEvents() {
-    const e = this.events;
+    // Stamp a stable id (kept across a failed-sync re-queue) so the server can
+    // dedup a retried batch exactly-once.
+    const e = this.events.map((x) => ({ ...x, id: x.id || randomUUID() }));
     this.events = [];
     return e;
   }

@@ -156,6 +156,18 @@ describe("/agent/sync (integration)", () => {
     expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
   });
 
+  it("dedups activity events by id on a retried sync (no duplicate rows or alerts)", async () => {
+    const ev = { id: "evt-dedup-1", type: "new_app", title: "Roblox", detail: "roblox.exe" };
+    await POST(syncReq({ events: [ev] }));
+    await POST(syncReq({ events: [ev] })); // retry of the same batch (lost response)
+
+    const stored = await prisma.activityEvent.findMany({ where: { childId, id: "evt-dedup-1" } });
+    expect(stored.length).toBe(1); // event stored exactly once
+    const alerts = await prisma.alert.findMany({ where: { childId, type: "new_app" } });
+    const roblox = alerts.filter((a: any) => a.message.includes("Roblox"));
+    expect(roblox.length).toBe(1); // its alert fired exactly once
+  });
+
   it("cumulative usageToday is idempotent and monotonic (a retry can't double-count screen time)", async () => {
     const date = "2026-07-02";
     const send = (seconds: number) =>

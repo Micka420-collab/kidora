@@ -1,4 +1,5 @@
 // Accumulates foreground app usage and produces telemetry deltas.
+import { randomUUID } from "node:crypto";
 import { categorize, SYSTEM_PROCS } from "./categorize.js";
 
 // LOCAL calendar date "YYYY-MM-DD" (not UTC) — so the daily-usage day rolls over
@@ -150,9 +151,10 @@ export class Tracker {
       date: this.today,
       seconds,
     }));
-    // Keep an event's original timestamp if it already has one (i.e. it was
-    // drained before and is being re-drained after a failed sync).
-    const events = this.events.map((e) => ({ ...e, ts: e.ts || new Date().toISOString() }));
+    // Keep an event's original timestamp AND id if it already has them (i.e. it
+    // was drained before and is being re-drained after a failed sync) — the
+    // stable id lets the server dedup a retried batch (exact-once).
+    const events = this.events.map((e) => ({ ...e, id: e.id || randomUUID(), ts: e.ts || new Date().toISOString() }));
     this.pending.clear();
     this.events = [];
     return { usage, events };

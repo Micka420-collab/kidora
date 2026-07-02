@@ -45,6 +45,17 @@ test("restore preserves the original event timestamp on re-drain", () => {
   assert.equal(second.events[0].ts, ts0); // same ts, not a fresh one
 });
 
+test("drain assigns a stable event id preserved across a failed-sync re-drain", () => {
+  const t = new Tracker();
+  t.tick(fg("chrome", 1), 5); // app_open + new_app events
+  const first = t.drain();
+  const id0 = first.events[0].id;
+  assert.ok(id0); // every event gets an id
+  t.restore(first); // sync "failed" → re-queue the same batch
+  const second = t.drain();
+  assert.equal(second.events[0].id, id0); // same id → the server dedups the retry
+});
+
 test("restore tolerates empty/undefined input", () => {
   const t = new Tracker();
   t.restore();
