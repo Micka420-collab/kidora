@@ -199,6 +199,13 @@ En dev (hors production) l'endpoint est accessible sans secret.
 - **`/api/cron/offline-check`** (horaire) — alerte le parent quand un appareil
   ne répond plus depuis `OFFLINE_ALERT_HOURS` (défaut 12). `?dryRun=1` / `?hours=`.
 
+> **Auto-hébergement (hors Vercel)** : pas besoin de configurer un cron externe.
+> Au démarrage (`next start`), un **ordonnanceur intégré** (`instrumentation.ts`)
+> déclenche ces routes automatiquement — rétention (quotidienne), appareils
+> hors-ligne (horaire) et rapports hebdo — **dès qu'un `CRON_SECRET` est défini**
+> (généré par `install.sh`). Il ne s'active jamais sur Vercel (où Vercel Cron
+> s'en charge) ni sur l'Edge.
+
 ## Agent Windows en production
 
 Pointez l'agent sur l'URL déployée :
