@@ -36,6 +36,15 @@ function Invoke-Step([string]$desc, [scriptblock]$action) {
   & $action
 }
 
+# True when any physical adapter's DNS is still pinned at 127.0.0.1 — the agent's
+# local filtering proxy. The agent sets this and clears it on graceful exit; a
+# hard kill/crash leaves it dangling at a now-dead resolver (no name resolution).
+function Test-KidoraDnsRedirect {
+  $addrs = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue
+  foreach ($a in $addrs) { if ($a.ServerAddresses -contains "127.0.0.1") { return $true } }
+  return $false
+}
+
 # --- 1. Ensure the agent task exists (restore from exported XML if deleted) ---
 $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if (-not $task) {
@@ -147,6 +156,19 @@ if (Test-Path $hbPath) {
       $stale = $ageMs -gt ($StaleMinutes * 60 * 1000)
     }
   } catch {}
+}
+
+# --- 3a. Rescue the child's internet after a hard crash ---
+# If the agent is down or frozen, its DNS proxy (127.0.0.1) is dead too, but a
+# non-graceful exit left system DNS pointed at it → NO name resolution at all
+# (child can't browse AND the agent can't even resync). Restore automatic DNS;
+# the agent re-applies the redirect when the health check below brings it back.
+if (((-not $running) -or $stale) -and (Test-KidoraDnsRedirect)) {
+  Invoke-Step "restaurer le DNS système (redirection Kidora orpheline, agent hors service)" {
+    Get-NetAdapter -Physical | Where-Object { $_.Status -eq 'Up' } |
+      Set-DnsClientServerAddress -ResetServerAddresses -ErrorAction SilentlyContinue
+    ipconfig /flushdns | Out-Null
+  }
 }
 
 if (-not $running) {
