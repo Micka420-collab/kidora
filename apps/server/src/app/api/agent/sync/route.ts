@@ -362,6 +362,9 @@ export async function POST(req: NextRequest) {
 
   // 4. web visits — deduped by the agent-supplied id like activity events, so a
   //    retried sync makes no duplicate rows and re-fires no "site bloqué" alerts.
+  //    freshVisits is function-scoped (like freshEvents) so the keyword/risk scan
+  //    in 6c also runs only over the deduped set — a retry re-scans nothing.
+  let freshVisits = body.webVisits ?? [];
   if (body.webVisits?.length) {
     const withId = body.webVisits.filter((w) => w.id).map((w) => w.id as string);
     const already = withId.length
@@ -370,6 +373,7 @@ export async function POST(req: NextRequest) {
         )
       : new Set<string>();
     const fresh = body.webVisits.filter((w) => !w.id || !already.has(w.id));
+    freshVisits = fresh;
 
     if (fresh.length) {
       await prisma.webVisit.createMany({
@@ -530,7 +534,7 @@ export async function POST(req: NextRequest) {
     for (const e of freshEvents) {
       if (e.type === "search" || e.type === "web_visit") texts.push(`${e.title ?? ""} ${e.detail ?? ""}`);
     }
-    for (const w of body.webVisits ?? []) texts.push(`${w.title ?? ""} ${w.url ?? ""} ${w.domain}`);
+    for (const w of freshVisits) texts.push(`${w.title ?? ""} ${w.url ?? ""} ${w.domain}`);
 
     const flagged = new Set<string>();
     // Keyword scan (fast, synchronous).

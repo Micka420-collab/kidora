@@ -184,10 +184,13 @@ export default function ChildMode() {
         location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy ?? undefined };
       } catch { /* location may be unavailable momentarily */ }
 
-      let usage: { appId: string; appName: string; date: string; seconds: number }[] = [];
-      // Computed but NOT committed until the sync succeeds — otherwise a failed
-      // (offline) sync would advance the baseline while dropping the deltas, so
-      // that interval's screen time would be lost forever (server under-counts).
+      // Report CUMULATIVE daily totals (usageToday), not deltas: the server SETs
+      // the total monotonically, so a sync whose response is lost — the server
+      // committed the write but the client never advanced its baseline — is a
+      // no-op on retry instead of double-counting screen time (the increment
+      // `usage` path is not idempotent). Only apps that grew since the last sent
+      // total are included, to keep the payload small.
+      let usageToday: { appId: string; appName: string; date: string; seconds: number }[] = [];
       let nextBaseline: { date: string; perApp: Record<string, number> } | null = null;
       if (AppUsage.isAvailable) {
         const granted = await AppUsage.hasPermission();
@@ -202,9 +205,13 @@ export default function ChildMode() {
           for (const e of entries) {
             totalToday += e.totalSeconds;
             const prev = prevUsage.current[e.packageName] ?? 0;
-            const delta = Math.max(0, e.totalSeconds - prev);
             perApp[e.packageName] = e.totalSeconds;
-            if (delta > 0) usage.push({ appId: e.packageName, appName: e.appName, date: today, seconds: delta });
+            // Send the cumulative total for any app that advanced. Re-sending the
+            // same total is idempotent server-side; the baseline is only committed
+            // on success (below), so a dropped response re-sends the same total.
+            if (e.totalSeconds > prev) {
+              usageToday.push({ appId: e.packageName, appName: e.appName, date: today, seconds: e.totalSeconds });
+            }
           }
           setUsedTodaySec(totalToday);
           nextBaseline = { date: today, perApp };
@@ -219,7 +226,7 @@ export default function ChildMode() {
         online: true,
         tzOffset: -new Date().getTimezoneOffset(), // minutes to add to UTC → local
         location,
-        usage,
+        usageToday,
         events: [{ type: "location", title: "Position mise à jour" }, ...sosQueue.toEvents(queuedSos)],
         ...(toAck.length ? { commandResults: toAck } : {}),
       });

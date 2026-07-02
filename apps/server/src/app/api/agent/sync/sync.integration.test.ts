@@ -188,6 +188,18 @@ describe("/agent/sync (integration)", () => {
     expect(blocked.filter((a: any) => a.message.includes("casino.example")).length).toBe(1);
   });
 
+  it("web-visit keyword/risk scan fires once on a retried sync (not just the row + blocked alert)", async () => {
+    // A web visit whose title hits a CRITICAL keyword (survives the parent's mute).
+    // Before the fix, section 6c re-scanned body.webVisits (un-deduped), so a retry
+    // re-created the SAME keyword alert; now it scans only the deduped fresh set.
+    const before = await prisma.alert.count({ where: { childId, type: "keyword" } });
+    const w = { id: "wv-kw-1", domain: "forum.example", title: "comment mourir", category: "other" };
+    await POST(syncReq({ webVisits: [w] }));
+    await POST(syncReq({ webVisits: [w] })); // retry of the same batch (lost response)
+    const after = await prisma.alert.count({ where: { childId, type: "keyword" } });
+    expect(after - before).toBe(1); // the keyword alert fired exactly once across the retry
+  });
+
   it("cumulative usageToday is idempotent and monotonic (a retry can't double-count screen time)", async () => {
     const date = "2026-07-02";
     const send = (seconds: number) =>
