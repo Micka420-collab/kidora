@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+*.db
+*.db-journal
+*.sqlite
+.env
+.env.local
+.vapid.json
+backups
+tsconfig.tsbuildinfo
