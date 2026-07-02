@@ -58,6 +58,13 @@ export type Palette = typeof light;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 40 };
 export const radius = { sm: 10, md: 14, lg: 20, xl: 28, pill: 999 };
 export const brandGradient = ["#818cf8", "#6366f1", "#4338ca"] as const;
+// Cap the readable content column so screens don't stretch to edge-to-edge line
+// lengths on tablets / large / landscape devices (they center instead).
+export const layout = { contentMax: 640 };
+// Font-scale ceilings: let text grow for accessibility, but bound it on compact
+// chips/tiles where unbounded growth would overflow or truncate. Body/headings
+// scale freely (no cap) so large-text users are fully served.
+export const fontCap = { chip: 1.3, tile: 1.4 } as const;
 
 export function useTheme() {
   const scheme = useColorScheme();

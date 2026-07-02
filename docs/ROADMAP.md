@@ -99,20 +99,21 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   le nouveau `store.js`) sont désormais packagés ; couverture vérifiée.
 
 **Reste prioritaire (identifié par l'audit du 2026-07-02, non fait) :**
-- [ ] **Idempotence de l'ingest agent** : un retry après réponse perdue duplique
-  events/visites/messages et **double-compte** `AppUsage.seconds` (`api/agent/sync`).
-  → clé d'idempotence par lot + traitement transactionnel + ack at-least-once.
-- [ ] **Écritures runtime vs ACL d'auto-protection** : sous un compte enfant
-  **standard**, les ACL en lecture seule empêchent l'agent d'écrire ses fichiers
-  d'état (heartbeat, `state.json`…). → déplacer les artefacts runtime vers
-  `%ProgramData%\Kidora` avec ACL ciblée (le cache offline en dépend).
+- [x] **Idempotence de l'ingest agent** : events + visites web dédupliqués par id
+  fourni par l'agent (filtre serveur), `AppUsage` en SET cumulatif monotone (plus
+  de double-compte sur retry). Backward-compat des deux côtés. (`api/agent/sync`)
+- [x] **Écritures runtime vs ACL d'auto-protection** : les artefacts runtime
+  (heartbeat, `state.json`, cache offline) vivent dans `%ProgramData%\Kidora`,
+  créé avec droit *Modify* pour l'enfant (`install-agent.ps1`) ; scripts en RX.
 - [x] **Restauration DNS par le gardien** : après un crash dur, `guardian.ps1`
   restaure le DNS automatique quand une redirection Kidora (`127.0.0.1`) est
   orpheline (agent hors service) — l'enfant garde une résolution DNS. (PR #299)
-- [ ] **Scheduler auto-hébergement** : hors Vercel, les crons (rétention,
-  offline-check, rapports) ne tournent jamais (`install.sh` = `npm start` seul).
-- [ ] **Dashboard/mobile hors-ligne** : `sw.js` ne fait que le push (aucun cache),
-  `api.ts`/`client.ts` sans timeout/retry/queue → écran blanc si serveur injoignable.
+- [x] **Scheduler auto-hébergement** : `instrumentation.ts` lance un ordonnanceur
+  en processus (rétention, offline-check, rapports) hors Vercel quand `CRON_SECRET`
+  est défini (no-op sur Vercel/Edge) ; `install.sh` le génère.
+- [x] **Dashboard/mobile hors-ligne** : SW `network-first` avec cache (jamais
+  `/api`) + `offline.html` ; `client.ts`/`api.ts` avec timeout + retry sûr (GET) ;
+  bannière hors-ligne. Écran blanc évité quand le serveur est injoignable.
 
 ## 🤖 IA configurable par le parent (OpenRouter) — 2026-07-01
 - [x] Le parent branche sa **propre clé OpenRouter** (chiffrée au repos) et **choisit le modèle** (DeepSeek, GPT-4o-mini, Gemini Flash, Claude Haiku…) via un **tableau comparatif de prix** ($/1M tokens) et de contexte, alimenté par le catalogue **live** d'OpenRouter (routes `GET/PUT /api/account/ai`, `GET /ai/models`, `POST /ai/test`).
@@ -130,7 +131,7 @@ Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 c
 
 **Reste à décider/faire** (suivi, non bloquant) :
 - [x] **Fuseau horaire bout-en-bout** (fait, PRs #242/#249/#250) : `Child.tzOffsetMinutes` rapporté par les agents (`-getTimezoneOffset()`), stocké au sync ; le serveur bucketise le jour de temps d'écran, les bonus et « aujourd'hui » en heure locale (`lib/localdate`) ; les agents datent l'usage en local. La limite roule à **minuit local**.
-- [ ] **Idempotence du sync + ack des commandes** : un retry après réponse perdue peut re-compter l'usage ; les commandes non-idempotentes (message) ne doivent être appliquées qu'une fois → clé d'idempotence agent + ack at-least-once.
+- [x] **Idempotence du sync + ack des commandes** : usage en SET cumulatif monotone (plus de double-compte) ; commandes **exactly-once** côté agent (log borné d'ids exécutés, persisté ; une commande redélivrée est ré-ackée mais pas rejouée) au-dessus de la redélivraison at-least-once du serveur. (PR #302)
 - [ ] **Anti-bruteforce robuste en prod** : le limiteur/verrou est en mémoire (par-instance sur serverless) et l'IP vient du XFF (spoofable) → store partagé (Redis/KV) + IP de confiance.
 - [x] **Vérification d'email** : token à expiration 24h (déjà en place) + **ré-vérification au changement d'adresse** — changer d'email ré-ouvre la vérification (le nouveau mailbox doit être confirmé) quand le SMTP est configuré. (PR de cette session)
 
