@@ -9,6 +9,7 @@ const KEYS = {
   role: "kidora.role",
   kidsWelcomed: "kidora.kidsWelcomed",
   kidsUsageBaseline: "kidora.kidsUsageBaseline",
+  kidsPolicy: "kidora.kidsPolicy", // last-known policy → correct display on a cold offline start
   sosQueue: "kidora.sosQueue", // SOS triggered offline, pending flush on reconnect
 } as const;
 

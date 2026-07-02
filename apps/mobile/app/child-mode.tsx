@@ -96,6 +96,20 @@ export default function ChildMode() {
           }
         }
       } catch { /* start fresh */ }
+      // Restore the last-known policy so a cold OFFLINE start shows real limits /
+      // pause / bedtime instead of a blank screen (refreshed on the first sync).
+      try {
+        const rawPol = await storage.get("kidsPolicy");
+        if (rawPol) {
+          const pol = JSON.parse(rawPol) as { paused?: boolean; screenTime?: { enabled?: boolean; dailyLimits?: Record<string, number>; bonusMinutesToday?: number; bedtimes?: { days: string[]; start: string; end: string }[] } };
+          setPaused(!!pol.paused);
+          const st = pol.screenTime;
+          const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
+          const baseMin = st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) : 0;
+          setLimitMin(baseMin > 0 ? baseMin + (st?.bonusMinutesToday ?? 0) : 0);
+          if (st?.bedtimes) setBedtime(isBedtimeNow(st.bedtimes));
+        }
+      } catch { /* no cached policy */ }
       start();
     })();
     return () => {
@@ -222,6 +236,8 @@ export default function ChildMode() {
       pendingResults.current = pendingResults.current.filter((r) => !toAck.includes(r));
       // Apply remote commands the parent issued (lock / message / locate…).
       processCommands(res.commands);
+      // Cache the policy so a cold offline start shows real limits/pause (above).
+      storage.set("kidsPolicy", JSON.stringify(res.policy)).catch(() => undefined);
       setPaused(res.policy.paused);
       // today's screen-time allowance (daily limit for this weekday + bonus granted)
       const st = res.policy.screenTime;
