@@ -47,13 +47,17 @@
     <ComponentGroup Id="AgentLib" Directory="LIBFOLDER">
       <Component><File Source="$(AgentSrc)\lib\api.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\categorize.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\clock.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\config.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\discover.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\dns.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\dns-proxy.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\doctor.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\domains.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\enforcer.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\heartbeat.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\logger.js" /></Component>
+      <Component><File Source="$(AgentSrc)\lib\policy-verify.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\scan-apps.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\store.js" /></Component>
       <Component><File Source="$(AgentSrc)\lib\tracker.js" /></Component>

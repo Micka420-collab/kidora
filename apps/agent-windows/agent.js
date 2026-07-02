@@ -10,6 +10,7 @@ import { loadState, saveState, canWriteStateDir } from "./lib/store.js";
 import { TrustedClock } from "./lib/clock.js";
 import { runDoctor } from "./lib/doctor.js";
 import { importPublicKey, openSignedPolicy, LOCKDOWN_POLICY } from "./lib/policy-verify.js";
+import { discover } from "./lib/discover.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -41,6 +42,15 @@ async function probeScheduledTask(name) {
 
 async function main() {
   const cfg = resolveConfig(argv);
+
+  // `kidora-agent discover` — find Kidora servers on the LAN (used by the
+  // installer to avoid typing the server URL). Prints one URL per line.
+  if (argv.includes("discover")) {
+    const found = await discover({ timeoutMs: 3000 });
+    for (const s of found) console.log(s.url);
+    process.exitCode = found.length ? 0 : 2; // 2 = nothing found
+    return;
+  }
 
   // `kidora-agent doctor` — self-diagnostic for installers/support. Runs the
   // checks and exits without starting the monitoring loop.

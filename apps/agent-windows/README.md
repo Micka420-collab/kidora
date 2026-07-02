@@ -152,6 +152,22 @@ hors-ligne** (`state.json`), et présence/état des tâches planifiées `KidoraA
 et `KidoraGuardian`. Le code de sortie est **non nul** si un problème bloquant est
 détecté — pratique pour un support ou un script post-installation.
 
+## Découverte du serveur sur le réseau (LAN)
+
+Si aucune adresse de serveur n'est fournie, l'installateur tente de **trouver le
+serveur Kidora sur le réseau local** (`node agent.js discover`) — pratique en
+auto-hébergement pour ne rien avoir à taper. Mécanisme : une balise **multicast
+UDP** (groupe admin-scoped `239.255.42.99:5354`, style mDNS). Côté serveur,
+lancez l'annonceur à côté du serveur :
+
+```bash
+node scripts/lan-advertise.mjs            # détecte l'IP LAN + le port
+node scripts/lan-advertise.mjs --url http://192.168.1.50:3000 --name "Maison"
+```
+
+Best-effort : le multicast peut être bloqué par un pare-feu ou indisponible
+selon l'interface — l'installateur retombe alors sur la saisie manuelle.
+
 ## Configuration
 
 Au premier lancement, `--token`/`--server` sont enregistrés dans `config.json`.

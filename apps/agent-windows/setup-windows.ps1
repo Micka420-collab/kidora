@@ -93,9 +93,21 @@ if ((-not $Token -or -not $Server) -and (Test-Path $cfgFile)) {
 }
 
 if (-not $Server) {
-  Write-Host "  Adresse du serveur Kidora (ex. https://kidora.mondomaine.fr)" -ForegroundColor White
-  $Server = Read-Host "  Serveur [http://localhost:3000]"
-  if ([string]::IsNullOrWhiteSpace($Server)) { $Server = "http://localhost:3000" }
+  # Try to find the server on the local network first (avoids typing anything).
+  Write-Host "  Recherche du serveur Kidora sur le reseau local..." -ForegroundColor Gray
+  $found = @()
+  try {
+    $agentJs = Join-Path $Root "agent.js"
+    $found = @(& node $agentJs discover 2>$null | Where-Object { $_ -match '^https?://' })
+  } catch {}
+  if ($found.Count -ge 1) {
+    Write-Ok "Serveur detecte sur le reseau : $($found[0])"
+    $Server = $found[0]
+  } else {
+    Write-Host "  Adresse du serveur Kidora (ex. https://kidora.mondomaine.fr)" -ForegroundColor White
+    $Server = Read-Host "  Serveur [http://localhost:3000]"
+    if ([string]::IsNullOrWhiteSpace($Server)) { $Server = "http://localhost:3000" }
+  }
 }
 $Server = $Server.Trim().TrimEnd('/')
 
