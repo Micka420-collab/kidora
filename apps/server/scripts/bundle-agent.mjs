@@ -10,6 +10,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const agentDir = join(here, "..", "..", "agent-windows");
 const outFile = join(here, "..", "src", "lib", "agent-bundle.generated.ts");
 
+// The agent source may be absent (e.g. a server-only Docker build whose context
+// is just apps/server). In that case keep the committed bundle instead of
+// failing the build — it's checked in and refreshed on every full build.
+if (!existsSync(agentDir)) {
+  console.warn(`bundle-agent: agent source not found at ${agentDir} — keeping the committed bundle.`);
+  process.exit(0);
+}
+
 // Source files a parent needs to run the agent (no runtime artifacts, no tests,
 // no node_modules — the agent has zero npm deps).
 const ROOT_FILES = [

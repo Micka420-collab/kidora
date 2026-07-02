@@ -10,6 +10,29 @@ npm run seed
 npm run dev   # http://localhost:3000
 ```
 
+## Auto-hébergement avec Docker (serveur + PostgreSQL)
+
+Le plus simple pour héberger soi-même : un `docker-compose.yml` (racine du dépôt)
+lance le serveur **et** une base PostgreSQL, avec l'ordonnanceur de crons intégré.
+
+```bash
+cp .env.docker.example .env      # puis renseignez au moins AUTH_SECRET
+#   AUTH_SECRET       : openssl rand -base64 48   (obligatoire)
+#   DATA_ENC_KEY      : openssl rand -base64 32   (recommandé)
+#   POLICY_SIGNING_SEED / CRON_SECRET : recommandés
+docker compose up -d             # build + démarre ; http://localhost:3000
+```
+
+Le conteneur applique le schéma (`prisma db push`, ré-essayé jusqu'à ce que la
+base réponde) puis démarre. Données Postgres persistées dans le volume
+`kidora-db`. La rétention, la détection d'appareils hors-ligne et les rapports
+hebdo tournent automatiquement (grâce au `CRON_SECRET`).
+
+> ⚠️ **Non encore construit en CI** : l'image suit le schéma standard Next.js +
+> Prisma (openssl installé pour le moteur de requête). Signalez tout souci de
+> build. Derrière un reverse proxy TLS pour l'accès distant (HTTPS requis hors
+> `localhost` pour la PWA et le push).
+
 ## Production sur Vercel + Postgres
 
 ### Déploiement en un clic

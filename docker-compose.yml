@@ -1,0 +1,46 @@
+# Kidora — self-host with Docker (server + PostgreSQL) in one command.
+#
+#   1. cp .env.docker.example .env   (then fill in AUTH_SECRET etc.)
+#   2. docker compose up -d
+#   3. open http://localhost:3000
+#
+# NOTE: not yet built in CI — see docs/DEPLOYMENT.md.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kidora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kidora}
+      POSTGRES_DB: kidora
+    volumes:
+      - kidora-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kidora"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  server:
+    build: ./apps/server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://kidora:${POSTGRES_PASSWORD:-kidora}@db:5432/kidora
+      DATABASE_PROVIDER: postgresql
+      NODE_ENV: production
+      # REQUIRED — a long random string (openssl rand -base64 48). No default on purpose.
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env (openssl rand -base64 48)}
+      # Recommended: encryption at rest + policy signing + cron auth.
+      DATA_ENC_KEY: ${DATA_ENC_KEY:-}
+      POLICY_SIGNING_SEED: ${POLICY_SIGNING_SEED:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      # Optional: public origin (for links, PWA, push), SMTP, VAPID.
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  kidora-db:
