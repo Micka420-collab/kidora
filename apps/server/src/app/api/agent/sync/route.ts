@@ -23,6 +23,9 @@ import { AGENT_BUNDLE_VERSION } from "@/lib/agent-bundle.generated";
 export const maxDuration = 30;
 
 const eventSchema = z.object({
+  // Agent-supplied stable id → used as the row primary key so a retried sync
+  // (lost response) doesn't create duplicate events or re-fire their alerts.
+  id: z.string().min(1).max(64).optional(),
   type: z.string(),
   title: z.string().optional(),
   detail: z.string().optional(),
@@ -191,21 +194,36 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. activity events
+  // 2. activity events. Dedup by the agent-supplied id: a retried sync (lost
+  //    response) re-sends the same events, so we drop the ones already stored and
+  //    process only the FRESH ones — no duplicate rows AND no duplicate alerts.
+  //    (DB-agnostic: an existence query + filter, no skipDuplicates.)
+  let freshEvents = body.events ?? [];
   if (body.events?.length) {
-    await prisma.activityEvent.createMany({
-      data: body.events.map((e) => ({
-        childId,
-        deviceId: device.id,
-        type: e.type,
-        title: e.title,
-        detail: e.detail,
-        category: e.category,
-        blocked: e.blocked ?? false,
-        ts: safeDate(e.ts),
-      })),
-    });
-    for (const e of body.events) {
+    const withId = body.events.filter((e) => e.id).map((e) => e.id as string);
+    const already = withId.length
+      ? new Set(
+          (await prisma.activityEvent.findMany({ where: { id: { in: withId } }, select: { id: true } })).map((r) => r.id),
+        )
+      : new Set<string>();
+    freshEvents = body.events.filter((e) => !e.id || !already.has(e.id));
+
+    if (freshEvents.length) {
+      await prisma.activityEvent.createMany({
+        data: freshEvents.map((e) => ({
+          ...(e.id ? { id: e.id } : {}),
+          childId,
+          deviceId: device.id,
+          type: e.type,
+          title: e.title,
+          detail: e.detail,
+          category: e.category,
+          blocked: e.blocked ?? false,
+          ts: safeDate(e.ts),
+        })),
+      });
+    }
+    for (const e of freshEvents) {
       if (e.blocked) {
         alerts.push({
           parentId,
@@ -474,7 +492,9 @@ export async function POST(req: NextRequest) {
     const watched = await prisma.watchedKeyword.findMany({ where: { childId } });
     const customTerms = watched.map((w) => w.term);
     const texts: string[] = [];
-    for (const e of body.events ?? []) {
+    // Use the FRESH events (deduped above) so a retried sync doesn't re-scan the
+    // same searches and re-raise keyword/risk alerts.
+    for (const e of freshEvents) {
       if (e.type === "search" || e.type === "web_visit") texts.push(`${e.title ?? ""} ${e.detail ?? ""}`);
     }
     for (const w of body.webVisits ?? []) texts.push(`${w.title ?? ""} ${w.url ?? ""} ${w.domain}`);
