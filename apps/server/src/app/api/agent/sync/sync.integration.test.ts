@@ -178,6 +178,16 @@ describe("/agent/sync (integration)", () => {
     expect(roblox.length).toBe(1); // its alert fired exactly once
   });
 
+  it("dedups web visits by id on a retried sync (no duplicate rows or alerts)", async () => {
+    const w = { id: "wv-dedup-1", domain: "casino.example", category: "gambling", blocked: true };
+    await POST(syncReq({ webVisits: [w] }));
+    await POST(syncReq({ webVisits: [w] })); // retry of the same batch
+    const rows = await prisma.webVisit.findMany({ where: { childId, id: "wv-dedup-1" } });
+    expect(rows.length).toBe(1);
+    const blocked = await prisma.alert.findMany({ where: { childId, type: "blocked_attempt" } });
+    expect(blocked.filter((a: any) => a.message.includes("casino.example")).length).toBe(1);
+  });
+
   it("cumulative usageToday is idempotent and monotonic (a retry can't double-count screen time)", async () => {
     const date = "2026-07-02";
     const send = (seconds: number) =>

@@ -2,6 +2,7 @@
 // Kidora — Windows parental-control agent.
 // Usage: node agent.js --token <enrollToken> --server <url> [--dry-run]
 import { hostname } from "node:os";
+import { randomUUID } from "node:crypto";
 import { resolveConfig, saveConfig } from "./lib/config.js";
 import { Api, AGENT_VERSION } from "./lib/api.js";
 import { Tracker } from "./lib/tracker.js";
@@ -240,7 +241,14 @@ async function main() {
   } else if (admin) {
     filter.dns = await startDnsProxy({
       getWeb: () => filter.web,
-      onEvent: (e) => { if (e.type === "dns_block") filter.blocked.set(e.host, e.reason); },
+      onEvent: (e) => {
+        // Stamp a stable id per blocked host (kept across a failed-sync re-queue)
+        // so the server dedups a retried batch exactly-once.
+        if (e.type === "dns_block") {
+          const ex = filter.blocked.get(e.host);
+          filter.blocked.set(e.host, { reason: e.reason, id: ex?.id || randomUUID() });
+        }
+      },
     });
     if (filter.dns) {
       await setSystemDns("127.0.0.1");
@@ -398,7 +406,7 @@ async function main() {
       // under-count screen time and hand the child extra time.
       tracker.restore({ usage, events });
       enforcer.restoreEvents(enforceEvents);
-      for (const v of webVisits) filter.blocked.set(v.domain, v.category ? `category:${v.category}` : "blocked");
+      for (const v of webVisits) filter.blocked.set(v.domain, { reason: v.category ? `category:${v.category}` : "blocked", id: v.id });
       videos.restore(watchedVideos);
       if (cmdResults.length) pendingCmdResults.unshift(...cmdResults);
       persistState(); // keep the re-queued spool + counter on disk across a crash
@@ -457,9 +465,11 @@ function buildWeb(policy, essentialHosts = []) {
 /** Turn collected DNS blocks into webVisit rows (deduped, capped). */
 function drainBlockedHosts(map) {
   const rows = [];
-  for (const [domain, reason] of map) {
+  for (const [domain, v] of map) {
     if (rows.length >= 100) break;
+    const reason = v?.reason;
     rows.push({
+      id: v?.id,
       domain,
       category: reason && reason.startsWith("category:") ? reason.slice("category:".length) : undefined,
       blocked: true,
