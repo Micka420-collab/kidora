@@ -201,6 +201,14 @@ injoignable** (réseau coupé, serveur en panne, PC redémarré sans Internet) :
   déplace ni le coucher ni la limite** et ne réinitialise pas le compteur du
   jour ; l'heure de confiance ne peut jamais **reculer** (même après reboot). Un
   décalage important entre l'horloge locale et le serveur **alerte le parent**.
+- **Politique signée (inviolable)** (`lib/policy-verify.js`) : le serveur signe
+  la politique effective avec une clé **Ed25519** ; l'agent **épingle la clé
+  publique** et **vérifie la signature** avant d'appliquer une politique — y
+  compris celle chargée du cache disque au démarrage hors-ligne. **Modifier
+  `state.json` pour assouplir les règles casse la signature** → l'agent bascule
+  sur un **verrouillage de sécurité** (tout en pause) au lieu de faire confiance
+  au cache altéré. Un horodatage signé (`iat`) bloque le **rejeu** d'une ancienne
+  politique plus permissive.
 
 Le fichier `state.json` est écrit dans le dossier de l'agent, verrouillé pour les
 comptes standard par les mêmes ACL que les autres fichiers de l'agent (au même

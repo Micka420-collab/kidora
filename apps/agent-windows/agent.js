@@ -9,6 +9,7 @@ import { Enforcer } from "./lib/enforcer.js";
 import { loadState, saveState, canWriteStateDir } from "./lib/store.js";
 import { TrustedClock } from "./lib/clock.js";
 import { runDoctor } from "./lib/doctor.js";
+import { importPublicKey, openSignedPolicy, LOCKDOWN_POLICY } from "./lib/policy-verify.js";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -89,21 +90,91 @@ async function main() {
   // of the raw system clock so the child can't win time by changing the date.
   const clock = new TrustedClock(state.clock);
 
-  /** Persist the current policy + tracker + clock snapshot atomically. Best-effort. */
+  // Signed-policy state: the pinned server public key, the highest policy issue
+  // time we've accepted (rollback floor), and the last signed envelope (so an
+  // offline restart can re-verify what it loads from disk).
+  if (!cfg.policyPublicKey && state.policyPublicKey) cfg.policyPublicKey = state.policyPublicKey;
+  let pubKey = cfg.policyPublicKey ? importPublicKey(cfg.policyPublicKey) : null;
+  let policyFloor = Number.isFinite(state.policyFloor) ? state.policyFloor : 0;
+  let signedPolicy = state.policySigned && state.policySig
+    ? { policySigned: state.policySigned, policySig: state.policySig }
+    : null;
+
+  /** Persist policy (+ its signature), tracker, clock atomically. Best-effort. */
   function persistState() {
-    saveState({ policy, tracker: tracker.snapshot(), clock: clock.snapshot() });
+    saveState({
+      policy, // legacy fallback for servers that don't sign
+      tracker: tracker.snapshot(),
+      clock: clock.snapshot(),
+      policySigned: signedPolicy?.policySigned,
+      policySig: signedPolicy?.policySig,
+      policyFloor,
+      policyPublicKey: cfg.policyPublicKey,
+    });
+  }
+
+  /**
+   * Accept a policy from an enroll/sync response. When the server signs policies
+   * (pinned public key present), the signature is VERIFIED before the policy is
+   * trusted — a forged/edited policy is refused. Falls back to the plain policy
+   * for legacy servers that don't sign. Returns true if `policy` was updated.
+   */
+  function acceptSignedPolicy(res) {
+    if (res.policyPublicKey && res.policyPublicKey !== cfg.policyPublicKey) {
+      cfg.policyPublicKey = res.policyPublicKey; // pin (first enroll) / rotate
+      saveConfig(cfg);
+      pubKey = importPublicKey(res.policyPublicKey);
+    }
+    if (pubKey && res.policySigned && res.policySig) {
+      const trusted = openSignedPolicy({
+        policySigned: res.policySigned,
+        policySig: res.policySig,
+        publicKey: pubKey,
+        childId: cfg.childId,
+        minIssuedAt: policyFloor,
+      });
+      if (trusted) {
+        policy = trusted.policy;
+        policyFloor = Math.max(policyFloor, trusted.issuedAt);
+        signedPolicy = { policySigned: res.policySigned, policySig: res.policySig };
+        return true;
+      }
+      log.warn("Signature de politique invalide — réponse ignorée (politique conservée).");
+      return false;
+    }
+    policy = res.policy; // legacy (unsigned) server
+    signedPolicy = null;
+    return true;
+  }
+
+  // Compute the CACHED policy to start from (used if we boot offline). If it was
+  // signed, re-verify it against the pinned key: a tampered cache is refused and
+  // replaced by a fail-safe LOCKDOWN (everything paused) so editing state.json
+  // makes the device MORE restricted, never less.
+  let policy = null;
+  let policyTampered = false;
+  if (pubKey && signedPolicy) {
+    const trusted = openSignedPolicy({ ...signedPolicy, publicKey: pubKey, childId: cfg.childId, minIssuedAt: policyFloor });
+    if (trusted) {
+      policy = trusted.policy;
+      policyFloor = Math.max(policyFloor, trusted.issuedAt);
+    } else {
+      policy = { ...LOCKDOWN_POLICY };
+      policyTampered = true;
+    }
+  } else {
+    policy = state.policy || null; // legacy unsigned cache
   }
 
   // 1. Enroll — but degrade gracefully to OFFLINE mode when the server can't be
   //    reached. A control app that refuses to run without the network is worse
   //    than useless: the child just unplugs the router. With a cached policy we
   //    keep enforcing the last known rules and retry enroll on the sync loop.
-  let policy = state.policy || null;
   let offline = false;
   let syncInterval = cfg.syncInterval;
   try {
     const res = await api.enroll({ hostname: hostname(), model: "Windows", agentVersion: AGENT_VERSION });
-    policy = res.policy;
+    acceptSignedPolicy(res);
     syncInterval = res.syncIntervalSeconds || syncInterval;
     cfg.deviceId = res.deviceId;
     cfg.childId = res.childId;
@@ -113,6 +184,7 @@ async function main() {
   } catch (e) {
     if (policy && cfg.deviceId) {
       offline = true;
+      if (policyTampered) log.warn("Cache de politique altéré (signature invalide) — VERROUILLAGE de sécurité appliqué.");
       log.warn(`Serveur injoignable (${e.message}). Mode hors-ligne : application de la dernière politique connue.`);
     } else {
       log.error("Échec de l'enrôlement et aucune politique en cache :", e.message);
@@ -215,7 +287,7 @@ async function main() {
         ...(pendingInstalledApps.length ? { installedApps: pendingInstalledApps } : {}),
       });
       pendingInstalledApps = []; // sent once; the tracker catches anything new after
-      policy = res.policy;
+      acceptSignedPolicy(res); // verify signature before trusting (offline cache stays tamper-proof)
       filter.web = buildWeb(policy, essentialHosts); // DNS proxy reads this live
       // Anchor the trusted clock on the server's authoritative time and flag a
       // tampered system clock (child moving the date to dodge bedtime/limits).
