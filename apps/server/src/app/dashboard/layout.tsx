@@ -7,6 +7,7 @@ import { getLocale, getDict } from "@/lib/i18n";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { VerifyEmailBanner } from "@/components/verify-email-banner";
 import { OfflineBanner } from "@/components/offline-banner";
+import { ServiceWorkerRegister } from "@/components/sw-register";
 import { I18nProvider } from "@/components/i18n-provider";
 import { ToastProvider } from "@/components/toast";
 
@@ -44,6 +45,7 @@ export default async function DashboardLayout({
           kids={kids}
           unread={unread}
         >
+          <ServiceWorkerRegister />
           <OfflineBanner />
           {!parent.emailVerified && <VerifyEmailBanner />}
           {children}

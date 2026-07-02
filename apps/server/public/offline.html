@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Hors ligne · Kidora</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: grid; place-items: center; padding: 24px;
+      background: linear-gradient(160deg, #0b3b2e 0%, #0f172a 100%);
+      color: #e6edf3;
+    }
+    .card {
+      max-width: 420px; width: 100%; text-align: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 40px 28px;
+      backdrop-filter: blur(6px);
+    }
+    .badge {
+      width: 76px; height: 76px; margin: 0 auto 20px; border-radius: 22px;
+      display: grid; place-items: center; font-size: 38px;
+      background: linear-gradient(140deg, #10b981, #0ea5e9);
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    p { color: #9fb0c0; font-size: 15px; line-height: 1.5; margin: 0 0 24px; }
+    button {
+      appearance: none; border: 0; cursor: pointer;
+      background: linear-gradient(140deg, #10b981, #0ea5e9); color: #04121a;
+      font-weight: 700; font-size: 15px; padding: 13px 22px; border-radius: 12px;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+    button:active { transform: scale(.97); }
+    .hint { margin-top: 18px; font-size: 13px; color: #6b7d8f; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge" aria-hidden="true">🛡️</div>
+    <h1>Vous êtes hors ligne</h1>
+    <p>Impossible de joindre le serveur Kidora pour le moment. Vérifiez votre connexion — la page se rechargera dès qu'elle sera rétablie.</p>
+    <button type="button" onclick="location.reload()">Réessayer</button>
+    <div class="hint">La surveillance sur les appareils continue de fonctionner hors ligne.</div>
+  </main>
+  <script>
+    // Auto-retry when connectivity returns.
+    window.addEventListener("online", function () { location.reload(); });
+  </script>
+</body>
+</html>
