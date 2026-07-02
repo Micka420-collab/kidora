@@ -106,9 +106,9 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   **standard**, les ACL en lecture seule empêchent l'agent d'écrire ses fichiers
   d'état (heartbeat, `state.json`…). → déplacer les artefacts runtime vers
   `%ProgramData%\Kidora` avec ACL ciblée (le cache offline en dépend).
-- [ ] **Restauration DNS par le gardien** : après un crash dur sans redémarrage,
-  le DNS système peut rester sur `127.0.0.1` (le README l'affirme mais
-  `guardian.ps1` ne le fait pas). → restaurer le DNS depuis le gardien.
+- [x] **Restauration DNS par le gardien** : après un crash dur, `guardian.ps1`
+  restaure le DNS automatique quand une redirection Kidora (`127.0.0.1`) est
+  orpheline (agent hors service) — l'enfant garde une résolution DNS. (PR #299)
 - [ ] **Scheduler auto-hébergement** : hors Vercel, les crons (rétention,
   offline-check, rapports) ne tournent jamais (`install.sh` = `npm start` seul).
 - [ ] **Dashboard/mobile hors-ligne** : `sw.js` ne fait que le push (aucun cache),
@@ -132,7 +132,7 @@ Quatre audits ciblés (serveur, agent, client React, auth/sécurité) → **19 c
 - [x] **Fuseau horaire bout-en-bout** (fait, PRs #242/#249/#250) : `Child.tzOffsetMinutes` rapporté par les agents (`-getTimezoneOffset()`), stocké au sync ; le serveur bucketise le jour de temps d'écran, les bonus et « aujourd'hui » en heure locale (`lib/localdate`) ; les agents datent l'usage en local. La limite roule à **minuit local**.
 - [ ] **Idempotence du sync + ack des commandes** : un retry après réponse perdue peut re-compter l'usage ; les commandes non-idempotentes (message) ne doivent être appliquées qu'une fois → clé d'idempotence agent + ack at-least-once.
 - [ ] **Anti-bruteforce robuste en prod** : le limiteur/verrou est en mémoire (par-instance sur serverless) et l'IP vient du XFF (spoofable) → store partagé (Redis/KV) + IP de confiance.
-- [ ] **Mineurs** : expiry du token de vérification d'email ; ré-vérification d'email au changement d'adresse.
+- [x] **Vérification d'email** : token à expiration 24h (déjà en place) + **ré-vérification au changement d'adresse** — changer d'email ré-ouvre la vérification (le nouveau mailbox doit être confirmé) quand le SMTP est configuré. (PR de cette session)
 
 ## ✅ Fait (v1.0 — fondations fonctionnelles)
 
