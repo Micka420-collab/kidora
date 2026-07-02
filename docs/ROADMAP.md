@@ -40,6 +40,13 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
 - [x] **Ordonnanceur auto-hébergement** : `instrumentation.ts` déclenche les crons
   (rétention, offline-check, rapports) hors Vercel dès qu'un `CRON_SECRET` est
   défini (généré par `install.sh`) ; no-op sur Vercel/Edge. (+7 tests).
+- [x] **Sauvegardes DB automatiques** (`/api/cron/backup`) : snapshot SQLite atomique
+  (`VACUUM INTO`) + rotation (`BACKUP_KEEP`, def 7) ; no-op sur Postgres ; branché
+  sur l'ordonnanceur (quotidien). (+5 tests, `VACUUM INTO` validé via node:sqlite).
+- [x] **Redistribution des commandes** : une commande « delivered » non acquittée
+  (agent qui crashe / réponse perdue) au-delà d'un délai de grâce
+  (`COMMAND_REDELIVER_MINUTES`, def 10) repasse en « pending » → plus jamais perdue.
+  (+2 tests d'intégration).
 
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
