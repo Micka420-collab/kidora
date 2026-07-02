@@ -56,6 +56,13 @@ prod vert. Agent : 67 tests ; serveur : 336 tests lib + typecheck/eslint.
   `id` stable (conservé au re-queue) ; le serveur filtre les événements déjà stockés
   → un retry ne crée plus de lignes ni d'alertes en double (sans migration de schéma).
   (+2 tests).
+- [x] **Push résilient** : les échecs transitoires (429/5xx/réseau) sont **retentés**
+  (3× backoff) au lieu d'être ignorés → une alerte critique (SOS) n'est plus perdue
+  sur un simple blip réseau ; abonnements expirés (404/410) purgés. (+3 tests).
+- [x] **File SOS hors-ligne (mobile)** : un SOS déclenché sans réseau est **persisté**
+  puis **rejoué** au prochain sync réussi (événement `panic` → alerte critique côté
+  serveur, dédupliqué par id) ; l'enfant voit « SOS enregistré, envoyé dès que
+  possible ». Plus aucun SOS perdu. (+1 test d'intégration).
 
 ## 🌐 Hors-connexion & installation sans friction (2026-07-02)
 
