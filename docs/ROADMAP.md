@@ -269,7 +269,7 @@ Tout se pilote désormais depuis l'app **Kidora Parents** (Expo/RN), à parité 
 ### Mobile (dev build natif EAS)
 - [x] **Directive UX Android** : **mode sombre** système (`useTheme`/`useColorScheme`, palettes claire+sombre) ; **accessibilité** — `accessibilityRole`/`accessibilityLabel` sur toute l'UI (kit `Btn`/`SectionHeader`/`Stat`/`Pill` + écrans), éléments décoratifs masqués aux lecteurs d'écran, cibles ≥48dp (`Btn` 50, inputs 48, `hitSlop`), **mise à l'échelle des polices** (corps/titres libres, plafond sur les puces compactes), **`reduce-motion`** honoré dans le kit (`useReduceMotion`, `PulseDot`/`Skeleton` statiques) ; **layouts responsives** (colonne de contenu centrée, `layout.contentMax` — tablette/paysage) ; **`minSdk` 23** (quasi tous les appareils) ; états vides/chargement soignés (`Empty`/`Skeleton`/`ErrorState`) ; onboarding guidé (inscription + ajout enfant/appareil). (PRs #303/#304)
 - [~] Android : module natif `UsageStatsManager` (usage apps) écrit + branché au sync (deltas) — *à compiler via EAS, non vérifiable en Expo Go*
-- [ ] Android : `AccessibilityService` (blocage), `VpnService` (filtrage web)
+- [~] Android : **`AccessibilityService` (blocage) livré** — module natif `app-blocker` (service + overlay de blocage, piloté par la politique) (PR #306) ; `VpnService` (filtrage web) reste à faire
 - [~] iOS : module scaffold (renvoie « non supporté ») + doc FamilyControls/DeviceActivity/ManagedSettings (entitlement Apple requis)
 - [~] Localisation en arrière-plan (`expo-task-manager` + `expo-location`) — tâche écrite & branchée (start/stop dans le mode enfant) ; *à vérifier sur appareil*
 - [ ] Géofences natives + alertes locales
