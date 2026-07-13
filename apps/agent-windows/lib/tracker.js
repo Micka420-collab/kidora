@@ -77,8 +77,9 @@ export class Tracker {
 
   /** Account `intervalSec` seconds to the current foreground app. `now` is the
    *  TRUSTED time so the daily counter rolls over at the real local midnight, not
-   *  a midnight the child faked by moving the system clock. */
-  tick(sample, intervalSec, now = new Date()) {
+   *  a midnight the child faked by moving the system clock. Defaults to the
+   *  tracker's own trusted clock (`nowFn`), not the wall clock. */
+  tick(sample, intervalSec, now = this._now()) {
     this._rollDate(now);
     const name = sample?.fg?.name;
     if (!name) return;
