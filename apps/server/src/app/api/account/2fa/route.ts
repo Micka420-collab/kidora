@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Throttle code attempts: verify/disable check a 6-digit TOTP (window 1 ⇒
     // only 3/10^6 codes valid), so without a limit a hijacked session could
     // brute-force a code to disable 2FA. 10 attempts / 5 min per account.
-    const rl = rateLimit(`2fa:${parent.id}`, 10, 5 * 60_000);
+    const rl = await rateLimit(`2fa:${parent.id}`, 10, 5 * 60_000);
     if (!rl.ok) {
       return Response.json(
         { error: "Trop de tentatives. Réessayez plus tard." },

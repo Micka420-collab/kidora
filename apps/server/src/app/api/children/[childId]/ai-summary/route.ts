@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     }
 
     // On-demand + spends the parent's quota → throttle.
-    const rl = rateLimit(`aisummary:${parent.id}`, 20, 60 * 60_000);
+    const rl = await rateLimit(`aisummary:${parent.id}`, 20, 60 * 60_000);
     if (!rl.ok) {
       return Response.json({ error: "Trop de résumés générés. Réessayez plus tard." }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
     }

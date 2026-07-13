@@ -14,7 +14,7 @@ const schema = z.object({
 
 // POST /api/auth/reset { token, newPassword } — complete a password reset.
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(`reset:${clientIp(req)}`, 10, 60 * 60_000);
+  const rl = await rateLimit(`reset:${clientIp(req)}`, 10, 60 * 60_000);
   if (!rl.ok) {
     return Response.json(
       { error: "Trop de tentatives. Réessayez plus tard." },
