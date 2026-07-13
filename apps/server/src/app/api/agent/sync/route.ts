@@ -638,6 +638,15 @@ export async function POST(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     select: { minutes: true },
   });
+  // The child's geofences, so a device with native geofencing (Android/iOS) can
+  // register OS boundaries and report a crossing the instant it happens instead
+  // of waiting for the next poll. The server still computes transitions from the
+  // resulting pings (section 5), so this is a timeliness/battery win, not a
+  // second source of truth.
+  const geofences = await prisma.geofence.findMany({
+    where: { childId },
+    select: { id: true, name: true, lat: true, lng: true, radius: true },
+  });
   return json({
     policy,
     // Signed envelope so the agent can verify (and safely cache) this policy for
@@ -645,6 +654,7 @@ export async function POST(req: NextRequest) {
     ...signedPolicyFields(policy, childId),
     commands: pending.map((c) => ({ id: c.id, type: c.type, payload: JSON.parse(c.payload) })),
     pendingTimeRequest: pendingTimeRequest ? { minutes: pendingTimeRequest.minutes } : null,
+    geofences,
     serverTime: new Date().toISOString(),
     agentLatest: AGENT_BUNDLE_VERSION, // agent self-updates when this is newer
   });

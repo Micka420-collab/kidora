@@ -48,6 +48,8 @@ const config: ExpoConfig = {
           "FOREGROUND_SERVICE_LOCATION",
           "PACKAGE_USAGE_STATS",
           "RECEIVE_BOOT_COMPLETED",
+          // Local notifications for safe-zone enter/exit on the child device.
+          "POST_NOTIFICATIONS",
           // SMS monitoring (sent/received) — requires a native module + manual
           // grant; restricted by Google Play (parental-control use case).
           "READ_SMS",
@@ -64,7 +66,10 @@ const config: ExpoConfig = {
     // fails :expo-modules-core:compileReleaseKotlin on EAS.
     ["expo-build-properties", { android: { minSdkVersion: 23, compileSdkVersion: 35, targetSdkVersion: 35, kotlinVersion: "1.9.25" } }],
     ...(isChild
-      ? [["expo-location", { locationAlwaysAndWhenInUsePermission: "Kidora partage la position de l'enfant avec ses parents." }] as [string, Record<string, unknown>]]
+      ? [
+          ["expo-location", { locationAlwaysAndWhenInUsePermission: "Kidora partage la position de l'enfant avec ses parents." }] as [string, Record<string, unknown>],
+          "expo-notifications" as unknown as string,
+        ]
       : []),
   ],
   extra: {

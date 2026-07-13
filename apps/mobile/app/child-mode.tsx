@@ -11,6 +11,7 @@ import * as sosQueue from "@/sos-queue";
 import * as AppUsage from "../modules/app-usage";
 import * as AppBlocker from "../modules/app-blocker";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
+import { syncGeofences, stopGeofencing } from "@/geofence-task";
 
 type KidsPolicy = {
   paused?: boolean;
@@ -295,6 +296,9 @@ export default function ChildMode() {
       processCommands(res.commands);
       // Cache the policy so a cold offline start shows real limits/pause (above).
       storage.set("kidsPolicy", JSON.stringify(res.policy)).catch(() => undefined);
+      // Register the child's safe zones as OS geofences (prompt enter/exit +
+      // local notification); no-op when unavailable (Expo Go / no bg permission).
+      syncGeofences(res.geofences).catch(() => undefined);
       setPaused(res.policy.paused);
       // Enforce natively (Android AccessibilityService): block/limit rules, plus
       // pause-everything on parent pause, remote lock, bedtime or spent allowance.
@@ -490,6 +494,7 @@ export default function ChildMode() {
         onPress: async () => {
           if (timer.current) clearInterval(timer.current);
           await stopBackgroundLocation().catch(() => undefined);
+          await stopGeofencing().catch(() => undefined);
           await storage.clearAll();
           router.replace("/login");
         },

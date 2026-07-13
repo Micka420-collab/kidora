@@ -272,7 +272,7 @@ Tout se pilote désormais depuis l'app **Kidora Parents** (Expo/RN), à parité 
 - [ ] Android : `AccessibilityService` (blocage), `VpnService` (filtrage web)
 - [~] iOS : module scaffold (renvoie « non supporté ») + doc FamilyControls/DeviceActivity/ManagedSettings (entitlement Apple requis)
 - [~] Localisation en arrière-plan (`expo-task-manager` + `expo-location`) — tâche écrite & branchée (start/stop dans le mode enfant) ; *à vérifier sur appareil*
-- [ ] Géofences natives + alertes locales
+- [~] **Géofences natives + alertes locales** : le sync renvoie les zones de l'enfant (géométrie seule) ; l'appareil enregistre des **géofences OS** (`Location.startGeofencingAsync` + tâche `expo-task-manager`) qui réveillent l'app au franchissement — à l'entrée/sortie il **pousse un ping immédiat** (le serveur calcule la transition avec son hystérésis existant → alerte parent prompte, pas de double source) **et affiche une notification locale** (`expo-notifications`) à l'enfant ; refresh à chaque sync, arrêt à la dissociation. Test d'intégration serveur (le sync renvoie bien les géofences) ; *à vérifier sur appareil (géofencing/notifs non fiables en Expo Go)*
 
 ### Qualité / industrialisation
 - [x] Tests unitaires Vitest (catégorisation, mots-clés, **détection de risque**, **TOTP**, **force/breach mot de passe**, **anti-brute-force**, fenêtres horaires coucher/routines, **agrégation des rapports**, **export CSV**, **formatage durées/temps relatif**, **géofencing (haversine + transitions)**, **HIBP k-anonymity (fetch mocké, fail-open)**, **tri des appareils**, **auth cron**, chiffrement) — **186 tests verts** ; *Playwright dashboard à venir*

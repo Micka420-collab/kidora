@@ -156,6 +156,22 @@ describe("/agent/sync (integration)", () => {
     expect(geo).toHaveLength(2); // the band jitter produced NO extra alerts
   });
 
+  it("returns the child's geofences so a device can register OS boundaries", async () => {
+    const fence = await prisma.geofence.create({
+      data: { childId, name: "Maison", lat: 45.5, lng: 4.2, radius: 150, notifyOnEnter: true, notifyOnExit: true },
+    });
+    const res = await POST(syncReq({ online: true }));
+    const data = (await res.json()) as {
+      geofences: { id: string; name: string; lat: number; lng: number; radius: number }[];
+    };
+    const got = data.geofences.find((g) => g.id === fence.id);
+    expect(got).toBeTruthy();
+    expect(got).toMatchObject({ name: "Maison", lat: 45.5, lng: 4.2, radius: 150 });
+    // notifyOnEnter/Exit are the parent's server-side concern; the device only
+    // needs the geometry, so they are intentionally NOT sent.
+    expect(got).not.toHaveProperty("notifyOnEnter");
+  });
+
   it("a panic event raises ONE critical SOS alert even when re-flushed (offline queue)", async () => {
     const ev = { id: "sos-evt-1", type: "panic", title: "SOS", detail: JSON.stringify({ lat: 48.85, lng: 2.35 }) };
     await POST(syncReq({ events: [ev] }));
