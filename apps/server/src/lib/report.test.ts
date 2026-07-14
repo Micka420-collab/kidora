@@ -1,5 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { aggregateReport, dateStr } from "./report";
+import { aggregateReport, dateStr, resolveReportTz } from "./report";
+
+describe("resolveReportTz", () => {
+  it("uses the tz query param when present and valid", () => {
+    expect(resolveReportTz("120", -480)).toBe(120);
+    expect(resolveReportTz("-300", 0)).toBe(-300);
+    expect(resolveReportTz("0", -480)).toBe(0); // an explicit UTC request is honoured
+  });
+
+  it("falls back to the child offset when tz is ABSENT (the mobile-app bug)", () => {
+    // Number(null) is 0 (finite), so a null param must NOT be treated as "UTC".
+    expect(resolveReportTz(null, -480)).toBe(-480);
+    expect(resolveReportTz(null, 120)).toBe(120);
+  });
+
+  it("falls back to the child offset when tz is unparseable junk", () => {
+    expect(resolveReportTz("abc", -480)).toBe(-480);
+  });
+
+  it("clamps both sources to ±14h and treats a missing child offset as UTC", () => {
+    expect(resolveReportTz("99999", 0)).toBe(840);
+    expect(resolveReportTz(null, -99999)).toBe(-840);
+    expect(resolveReportTz(null, null)).toBe(0);
+    expect(resolveReportTz(null, undefined)).toBe(0);
+  });
+});
 
 const dates = ["2026-06-28", "2026-06-29", "2026-06-30"];
 

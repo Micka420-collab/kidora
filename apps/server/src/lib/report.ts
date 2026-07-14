@@ -1,5 +1,19 @@
 import { prisma } from "./prisma";
-import { localDateStringDaysAgo } from "./localdate";
+import { localDateStringDaysAgo, clampTzOffset } from "./localdate";
+
+/**
+ * Resolve the timezone offset (minutes to add to UTC) for a report. Prefer the
+ * caller's `tz` query param; when it is ABSENT or unparseable, fall back to the
+ * child device's last-reported offset — NOT UTC. Screen-time is bucketed by the
+ * family's local day (that's how the agents write AppUsage.date), so defaulting a
+ * tz-less request (e.g. from the mobile app) to UTC makes "today" the wrong day
+ * for any non-UTC family. Note `Number(null)` is 0 (finite), so the param must be
+ * null-checked explicitly rather than run straight through Number().
+ */
+export function resolveReportTz(tzParam: string | null, childTzOffset: number | null | undefined): number {
+  const n = tzParam === null ? NaN : Number(tzParam);
+  return Number.isFinite(n) ? clampTzOffset(n) : clampTzOffset(childTzOffset);
+}
 
 export type ChildReport = {
   days: number;
