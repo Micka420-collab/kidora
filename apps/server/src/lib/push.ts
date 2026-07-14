@@ -57,6 +57,32 @@ export function getVapidPublicKey(): string | null {
   return loadVapid()?.publicKey ?? null;
 }
 
+// A browser's push endpoint is ALWAYS hosted by its vendor's push service, so we
+// only ever POST to one of these. Without this check `endpoint` is attacker-
+// controlled (any authenticated parent), and sendPushToParent would POST to it —
+// a blind SSRF into internal infra (cloud metadata, localhost, private ports).
+// Loopback/link-local/private IPs simply don't match the allowlist.
+const PUSH_HOST_SUFFIXES = [
+  "fcm.googleapis.com", // Chrome / Edge (FCM)
+  "android.googleapis.com", // legacy GCM
+  "push.services.mozilla.com", // Firefox
+  "notify.windows.com", // Edge (WNS)
+  "push.apple.com", // Safari / Apple
+];
+
+/** True only for an HTTPS URL hosted by a known web-push service (allowlist). */
+export function isAllowedPushEndpoint(endpoint: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:") return false;
+  const host = u.hostname.toLowerCase();
+  return PUSH_HOST_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`));
+}
+
 export type PushPayload = { title: string; body: string; url?: string };
 
 /** Send a push to every guardian of a child (owner + co-guardians), so a
@@ -98,6 +124,12 @@ export async function sendPushToParent(parentId: string, payload: PushPayload, a
   let sent = 0;
   await Promise.all(
     subs.map(async (s) => {
+      // Defence in depth: never POST to an endpoint that isn't a real push
+      // service, even if an older/hostile row slipped past subscribe validation.
+      if (!isAllowedPushEndpoint(s.endpoint)) {
+        await prisma.pushSub.delete({ where: { id: s.id } }).catch(() => {});
+        return;
+      }
       for (let i = 0; i < attempts; i++) {
         try {
           await webpush.sendNotification(
