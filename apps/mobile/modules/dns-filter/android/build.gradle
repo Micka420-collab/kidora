@@ -1,0 +1,25 @@
+apply plugin: 'com.android.library'
+
+group = 'app.kidora.dnsfilter'
+version = '1.0.0'
+
+// SDK 52 local-module pattern (same as the app-blocker / app-usage modules): the
+// 'expo-module-gradle-plugin' plugin id only ships with SDK 53+ — on 52 the
+// shared Gradle logic comes from expo-modules-core's ExpoModulesCorePlugin.gradle
+// (applies kotlin-android, adds the core dependency, inherits the app SDK levels).
+def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+
+android {
+  namespace = 'app.kidora.dnsfilter'
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="kidora_dns_filter_channel">Filtrage web Kidora</string>
+  <string name="kidora_dns_filter_active">Filtrage web actif</string>
+  <string name="kidora_dns_filter_desc">Kidora filtre les sites selon les règles des parents.</string>
+</resources>

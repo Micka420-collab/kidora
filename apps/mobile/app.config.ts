@@ -46,6 +46,8 @@ const config: ExpoConfig = {
           "ACCESS_BACKGROUND_LOCATION",
           "FOREGROUND_SERVICE",
           "FOREGROUND_SERVICE_LOCATION",
+          // DNS-filtering VpnService (web filter) runs as a "specialUse" FGS.
+          "FOREGROUND_SERVICE_SPECIAL_USE",
           "PACKAGE_USAGE_STATS",
           "RECEIVE_BOOT_COMPLETED",
           // Local notifications for safe-zone enter/exit on the child device.
