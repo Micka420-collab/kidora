@@ -78,6 +78,24 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
       continue;
     }
 
+    // Atomically CLAIM this parent's send window BEFORE the LLM calls and the
+    // email: two overlapping runs (cron retry + manual trigger) both passed the
+    // cheap read-skip above with the same snapshot, and without a conditional
+    // write they would each email — and re-charge the parent's LLM key. Only
+    // one updateMany can win.
+    const claimStamp = new Date();
+    const claim = await prisma.parent.updateMany({
+      where: {
+        id: parent.id,
+        OR: [{ lastWeeklyReportAt: null }, { lastWeeklyReportAt: { lte: new Date(resendCutoffMs) } }],
+      },
+      data: { lastWeeklyReportAt: claimStamp },
+    });
+    if (claim.count === 0) {
+      summary.skippedAlreadySent++; // another run claimed this parent
+      continue;
+    }
+
     try {
       // Enhance the email with a warm per-child AI summary when the parent has
       // AI enabled — uses their own OpenRouter key, aggregate stats only, and
@@ -92,14 +110,29 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
       }
       const { subject, html, text } = renderWeeklyEmail(parent.name, items, days);
       await sendMail({ to: parent.email, subject, html, text });
-      // Record the send BEFORE counting it, so a crash right after can't leave a
-      // parent eligible for a duplicate on the retry.
-      await prisma.parent.update({ where: { id: parent.id }, data: { lastWeeklyReportAt: new Date() } });
       summary.sent++;
-    } catch {
+    } catch (e) {
       summary.errors++;
+      // Log it — the cron caller only looks at the HTTP status, so a swallowed
+      // error here would make a dead SMTP config look green forever.
+      console.error(JSON.stringify({
+        level: "error",
+        msg: "weekly_report_send_failed",
+        parentId: parent.id,
+        error: e instanceof Error ? e.message : String(e),
+        ts: new Date().toISOString(),
+      }));
+      // Release the claim (only if it's still ours) so a transient failure is
+      // retried on the next run instead of being silenced for a whole week.
+      await prisma.parent.updateMany({
+        where: { id: parent.id, lastWeeklyReportAt: claimStamp },
+        data: { lastWeeklyReportAt: parent.lastWeeklyReportAt },
+      }).catch(() => {});
     }
   }
 
+  if (summary.errors > 0) {
+    console.error(JSON.stringify({ level: "error", msg: "weekly_report_run_errors", errors: summary.errors, sent: summary.sent, ts: new Date().toISOString() }));
+  }
   return summary;
 }
