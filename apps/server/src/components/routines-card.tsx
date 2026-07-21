@@ -72,9 +72,13 @@ export function RoutinesCard({ childId }: { childId: string }) {
   }
   async function toggle(r: Routine) {
     try {
+      // Legacy rows could store days:[] (engine reads it as EVERY day, and the
+      // API now refuses it) — make that explicit as all 7 days on re-save.
+      const days = parseArr(r.days);
       await api.post(`/api/children/${childId}/routines`, {
         id: r.id, name: r.name, enabled: !r.enabled,
-        days: parseArr(r.days), start: r.start, end: r.end, blockedAppIds: parseArr(r.blockedAppIds),
+        days: days.length > 0 ? days : WEEKDAYS.map((d) => d.key),
+        start: r.start, end: r.end, blockedAppIds: parseArr(r.blockedAppIds),
       });
     } finally {
       load();
@@ -120,6 +124,9 @@ export function RoutinesCard({ childId }: { childId: string }) {
               <button type="button" key={d.key} onClick={() => toggleDay(d.key)} className={`h-8 w-10 rounded-md text-xs font-semibold ${form.days.includes(d.key) ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-500"}`}>{d.label}</button>
             ))}
           </div>
+          {form.days.length === 0 && (
+            <p className="rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">{t.noDaysRoutine}</p>
+          )}
           <div>
             <div className="label">{t.blockedApps}</div>
             {apps.length === 0 ? (
@@ -133,7 +140,7 @@ export function RoutinesCard({ childId }: { childId: string }) {
             )}
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-primary py-1.5 text-sm">{t.createRoutine}</button>
+            <button className="btn btn-primary py-1.5 text-sm" disabled={form.days.length === 0}>{t.createRoutine}</button>
             <button type="button" className="btn btn-ghost py-1.5 text-sm" onClick={() => setAdding(false)}>{t.cancel}</button>
           </div>
         </form>
