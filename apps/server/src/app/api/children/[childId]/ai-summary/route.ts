@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { rateLimit } from "@/lib/ratelimit";
-import { decrypt } from "@/lib/crypto";
+import { tryDecrypt } from "@/lib/crypto";
 import { summarizeWeekWithLLM } from "@/lib/openrouter";
 import { buildChildReport } from "@/lib/report";
 import { buildAiSummaryInput } from "@/lib/ai-summary-input";
@@ -35,7 +35,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     const report = await buildChildReport(childId, 7, child.tzOffsetMinutes);
     const data = buildAiSummaryInput(child.name, report, 7);
 
-    const summary = await summarizeWeekWithLLM(decrypt(cfg.aiApiKey), cfg.aiModel, data);
+    // Fail-closed: a key that no longer decrypts (DATA_ENC_KEY rotated) must
+    // surface as an actionable error, not go to OpenRouter as ciphertext.
+    const apiKey = tryDecrypt(cfg.aiApiKey);
+    if (!apiKey) return apiError("Clé OpenRouter illisible (clé de chiffrement changée ?). Re-saisissez votre clé dans les Réglages.", 503);
+
+    const summary = await summarizeWeekWithLLM(apiKey, cfg.aiModel, data);
     if (!summary) return apiError("Le modèle n'a pas pu générer le résumé. Réessayez.", 502);
     return json({ summary });
   });

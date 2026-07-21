@@ -55,3 +55,16 @@ export function decrypt(payload: string): string {
 export function isEncrypted(payload: string): boolean {
   return typeof payload === "string" && payload.startsWith(PREFIX);
 }
+
+/**
+ * Fail-closed variant for SECRETS: null when an `enc:v1:` payload cannot be
+ * decrypted (rotated/missing DATA_ENC_KEY, tampered blob) instead of returning
+ * the ciphertext like decrypt() does. Without this, a rotated key silently sent
+ * the raw `enc:v1:…` blob to OpenRouter as an Authorization header and every
+ * risk-scoring call fell back to heuristics with zero signal to the parent.
+ * Plaintext (legacy, un-prefixed) input still passes through unchanged.
+ */
+export function tryDecrypt(payload: string): string | null {
+  const out = decrypt(payload);
+  return isEncrypted(out) ? null : out;
+}
