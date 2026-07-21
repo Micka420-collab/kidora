@@ -4,6 +4,8 @@ import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { apiError } from "@/lib/http";
 import { makeZip, type ZipEntry } from "@/lib/zip";
 import { AGENT_BUNDLE } from "@/lib/agent-bundle.generated";
+import { randomToken } from "@/lib/password";
+import { isEnrollTokenExpired, newEnrollTokenExpiry } from "@/lib/enroll-token";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -31,11 +33,22 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const deviceId = new URL(req.url).searchParams.get("deviceId");
     if (!deviceId) return apiError("Paramètre deviceId requis", 422);
 
-    const device = await prisma.device.findFirst({
+    let device = await prisma.device.findFirst({
       where: { id: deviceId, childId },
-      select: { id: true, enrollToken: true },
+      select: { id: true, enrollToken: true, enrolled: true, enrollTokenExpiresAt: true },
     });
     if (!device) return apiError("Appareil introuvable", 404);
+
+    // Expired unused token: this authenticated parent action re-arms enrollment
+    // with a FRESH token (not a revived one — an old leaked ZIP must stay dead).
+    // The ZIP built below embeds the new token, so the download always works.
+    if (isEnrollTokenExpired(device)) {
+      device = await prisma.device.update({
+        where: { id: device.id },
+        data: { enrollToken: randomToken(24), enrollTokenExpiresAt: newEnrollTokenExpiry() },
+        select: { id: true, enrollToken: true, enrolled: true, enrollTokenExpiresAt: true },
+      });
+    }
 
     // The origin the parent is using is exactly what the agent should call home to.
     const origin = new URL(req.url).origin;

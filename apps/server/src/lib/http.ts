@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "./prisma";
+import { isEnrollTokenExpired } from "./enroll-token";
 
 export function json(data: unknown, init?: ResponseInit): Response {
   return Response.json(data, init);
@@ -38,6 +39,9 @@ export async function getDeviceFromRequest(req: NextRequest) {
     where: { enrollToken: token },
     include: { child: true },
   });
+  // A never-enrolled token past its deadline is dead everywhere, not just on
+  // /enroll — otherwise a leaked unused token could still reach sync directly.
+  if (device && isEnrollTokenExpired(device)) return null;
   return device;
 }
 

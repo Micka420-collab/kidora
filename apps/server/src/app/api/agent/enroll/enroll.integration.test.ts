@@ -13,6 +13,7 @@ const TOKEN = "enroll-int-token";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 let prisma: any;
 let POST: (req: NextRequest) => Promise<Response>;
+let getDeviceFromRequest: (req: NextRequest) => Promise<any>;
 let deviceId: string;
 let childId: string;
 
@@ -29,6 +30,7 @@ beforeAll(async () => {
   execSync("npx prisma migrate deploy", { env: { ...process.env, DATABASE_URL: TEST_DB }, stdio: "ignore" });
   ({ prisma } = await import("@/lib/prisma"));
   ({ POST } = await import("./route"));
+  ({ getDeviceFromRequest } = await import("@/lib/http"));
 
   const parent = await prisma.parent.create({ data: { name: "P", email: "enroll@int.dev", passwordHash: "x" } });
   const child = await prisma.child.create({ data: { parentId: parent.id, name: "Kid" } });
@@ -85,5 +87,52 @@ describe("/agent/enroll (integration)", () => {
   it("rejects a malformed body with 422", async () => {
     const res = await POST(enrollReq({ deviceInfo: {} })); // no enrollToken
     expect(res.status).toBe(422);
+  });
+
+  it("rejects an expired never-used token with 401, everywhere (enroll AND sync auth)", async () => {
+    const expired = await prisma.device.create({
+      data: {
+        childId,
+        name: "Vieux ZIP",
+        platform: "windows",
+        enrollToken: "expired-int-token",
+        enrolled: false,
+        enrollTokenExpiresAt: new Date(Date.now() - 60_000),
+      },
+    });
+
+    const res = await POST(enrollReq({ enrollToken: "expired-int-token", deviceInfo: {} }));
+    expect(res.status).toBe(401);
+    const after = await prisma.device.findUnique({ where: { id: expired.id } });
+    expect(after.enrolled).toBe(false);
+
+    // The dead token can't skip /enroll and talk to sync/screenshot directly.
+    const authed = await getDeviceFromRequest(
+      new NextRequest("http://localhost/api/agent/sync", {
+        method: "POST",
+        headers: { authorization: "Bearer expired-int-token" },
+      }),
+    );
+    expect(authed).toBeNull();
+  });
+
+  it("a live deadline lets the device enroll and is cleared by enrollment", async () => {
+    await prisma.device.create({
+      data: {
+        childId,
+        name: "ZIP frais",
+        platform: "windows",
+        enrollToken: "fresh-int-token",
+        enrolled: false,
+        enrollTokenExpiresAt: new Date(Date.now() + 3_600_000),
+      },
+    });
+    const res = await POST(enrollReq({ enrollToken: "fresh-int-token", deviceInfo: {} }));
+    expect(res.status).toBe(200);
+    const after = await prisma.device.findUnique({ where: { enrollToken: "fresh-int-token" } });
+    expect(after.enrolled).toBe(true);
+    // Cleared: the token is now the device's long-lived credential and the
+    // stale deadline must never lock an active device out.
+    expect(after.enrollTokenExpiresAt).toBeNull();
   });
 });

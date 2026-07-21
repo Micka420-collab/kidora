@@ -185,6 +185,7 @@ model Device {
   model        String?
   enrollToken  String    @unique // used by agent to authenticate
   enrolled     Boolean   @default(false)
+  enrollTokenExpiresAt DateTime? // never-used token dies after this; cleared on first enroll (NULL = no expiry)
   lastSeen     DateTime?
   agentVersion String?
   battery      Int? // 0-100
