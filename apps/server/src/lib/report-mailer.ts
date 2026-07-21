@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import { buildChildReport } from "./report";
 import { sendMail, isMailConfigured } from "./mailer";
 import { renderWeeklyEmail, hasActivity, type ReportItem } from "./report-email";
-import { decrypt } from "./crypto";
+import { tryDecrypt } from "./crypto";
 import { summarizeWeekWithLLM } from "./openrouter";
 import { buildAiSummaryInput } from "./ai-summary-input";
 
@@ -101,10 +101,12 @@ export async function sendWeeklyReports(opts: { days?: number; dryRun?: boolean 
       // AI enabled — uses their own OpenRouter key, aggregate stats only, and
       // only for real sends (not dry runs) and children with activity.
       if (parent.aiEnabled && parent.aiApiKey && parent.aiModel) {
-        const key = decrypt(parent.aiApiKey);
-        for (const it of items) {
+        // Fail-closed: an undecryptable key (DATA_ENC_KEY rotated) must not go
+        // to OpenRouter as ciphertext — send the email without AI summaries.
+        const key = tryDecrypt(parent.aiApiKey);
+        for (const it of key ? items : []) {
           if (!hasActivity(it.report)) continue;
-          const s = await summarizeWeekWithLLM(key, parent.aiModel, buildAiSummaryInput(it.childName, it.report, days));
+          const s = await summarizeWeekWithLLM(key!, parent.aiModel, buildAiSummaryInput(it.childName, it.report, days));
           if (s) it.aiSummary = s;
         }
       }

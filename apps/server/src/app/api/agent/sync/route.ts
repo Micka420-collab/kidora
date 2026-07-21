@@ -13,7 +13,7 @@ import { safeDate, capAlerts } from "@/lib/ingest";
 import { clampTzOffset } from "@/lib/localdate";
 import { rateLimit } from "@/lib/ratelimit";
 import { combinedRisk, type AiRiskCtx } from "@/lib/openrouter";
-import { decrypt } from "@/lib/crypto";
+import { tryDecrypt } from "@/lib/crypto";
 import { signedPolicyFields } from "@/lib/policy-sign";
 import { AGENT_BUNDLE_VERSION } from "@/lib/agent-bundle.generated";
 
@@ -188,10 +188,18 @@ export async function POST(req: NextRequest) {
       select: { aiEnabled: true, aiModel: true, aiApiKey: true },
     });
     if (p?.aiEnabled && p.aiApiKey && p.aiModel) {
-      // Shared 7s wall-clock deadline caps total LLM latency across BOTH risk
-      // loops (messages + searches), keeping the sync well under maxDuration even
-      // if OpenRouter is slow — remaining texts fall back to the heuristic.
-      aiCtx = { apiKey: decrypt(p.aiApiKey), model: p.aiModel, budget: { n: 5 }, deadline: Date.now() + 7000 };
+      // Fail-closed on the key: after a DATA_ENC_KEY rotation decrypt() would
+      // hand back the ciphertext, which then went to OpenRouter as a broken
+      // Authorization header — every call 401'd into the heuristic silently.
+      const apiKey = tryDecrypt(p.aiApiKey);
+      if (apiKey) {
+        // Shared 7s wall-clock deadline caps total LLM latency across BOTH risk
+        // loops (messages + searches), keeping the sync well under maxDuration even
+        // if OpenRouter is slow — remaining texts fall back to the heuristic.
+        aiCtx = { apiKey, model: p.aiModel, budget: { n: 5 }, deadline: Date.now() + 7000 };
+      } else {
+        console.error(JSON.stringify({ level: "error", msg: "ai_key_unreadable", parentId, hint: "DATA_ENC_KEY rotated? Parent must re-enter the key.", ts: new Date().toISOString() }));
+      }
     }
   }
 

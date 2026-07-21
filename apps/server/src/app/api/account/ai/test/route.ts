@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
-import { decrypt } from "@/lib/crypto";
+import { tryDecrypt } from "@/lib/crypto";
 import { testOpenRouter } from "@/lib/openrouter";
 import { rateLimit } from "@/lib/ratelimit";
 
@@ -30,7 +30,13 @@ export async function POST(req: NextRequest) {
     let apiKey = parsed.data.apiKey?.trim();
     if (!apiKey) {
       const row = await prisma.parent.findUnique({ where: { id: parent.id }, select: { aiApiKey: true } });
-      apiKey = row?.aiApiKey ? decrypt(row.aiApiKey) : "";
+      if (row?.aiApiKey) {
+        // Fail-closed: never send an undecryptable blob to OpenRouter — tell
+        // the parent exactly what to do instead.
+        const stored = tryDecrypt(row.aiApiKey);
+        if (stored === null) return apiError("Clé enregistrée illisible (clé de chiffrement changée ?). Re-saisissez votre clé API.", 400);
+        apiKey = stored;
+      }
     }
     if (!apiKey) return apiError("Aucune clé API OpenRouter fournie.", 400);
 

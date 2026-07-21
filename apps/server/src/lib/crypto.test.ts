@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { encrypt, decrypt, isEncrypted, hasStrongDataKey } from "./crypto";
+import { encrypt, decrypt, isEncrypted, hasStrongDataKey, tryDecrypt } from "./crypto";
 
 describe("crypto (AES-256-GCM at rest)", () => {
   it("round-trips a value", () => {
@@ -31,6 +31,35 @@ describe("crypto (AES-256-GCM at rest)", () => {
     for (const s of ["", "Léa 🧒 café — naïve", "a".repeat(5000)]) {
       expect(decrypt(encrypt(s))).toBe(s);
     }
+  });
+});
+
+describe("tryDecrypt (fail-closed for secrets)", () => {
+  const original = process.env.DATA_ENC_KEY;
+  afterEach(() => {
+    if (original === undefined) delete process.env.DATA_ENC_KEY;
+    else process.env.DATA_ENC_KEY = original;
+  });
+
+  it("round-trips like decrypt for a healthy key", () => {
+    expect(tryDecrypt(encrypt("sk-or-abc123"))).toBe("sk-or-abc123");
+  });
+
+  it("passes legacy plaintext through unchanged", () => {
+    expect(tryDecrypt("sk-or-plaintext")).toBe("sk-or-plaintext");
+  });
+
+  it("returns null after a DATA_ENC_KEY rotation — never the ciphertext", () => {
+    process.env.DATA_ENC_KEY = "a".repeat(64);
+    const enc = encrypt("sk-or-secret");
+    process.env.DATA_ENC_KEY = "b".repeat(64); // rotated
+    expect(decrypt(enc)).toBe(enc); // legacy decrypt hands back the blob…
+    expect(tryDecrypt(enc)).toBeNull(); // …tryDecrypt refuses to
+  });
+
+  it("returns null for a tampered blob", () => {
+    const enc = encrypt("secret");
+    expect(tryDecrypt(enc.slice(0, -4) + "AAAA")).toBeNull();
   });
 });
 
