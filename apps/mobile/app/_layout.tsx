@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTheme } from "@/theme";
 import "../src/location-task"; // registers the background location task at startup
+import "../src/geofence-task"; // registers the native geofencing task at startup
 
 export default function RootLayout() {
   const { c, isDark } = useTheme();

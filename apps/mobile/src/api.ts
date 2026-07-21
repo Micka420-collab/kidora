@@ -262,7 +262,12 @@ export const childAgent = {
   async sync(payload: object) {
     const token = await storage.get("enrollToken");
     if (!token) throw new Error("Appareil non enrôlé");
-    return req<{ policy: Policy; commands: Command[]; pendingTimeRequest?: { minutes: number } | null }>("/api/agent/sync", {
+    return req<{
+      policy: Policy;
+      commands: Command[];
+      pendingTimeRequest?: { minutes: number } | null;
+      geofences?: DeviceGeofence[];
+    }>("/api/agent/sync", {
       method: "POST",
       body: payload,
       headers: { Authorization: `Bearer ${token}` },
@@ -313,6 +318,9 @@ export type WebVisit = { id: string; domain: string; url: string | null; title: 
 export type Screenshot = { id: string; dataUrl: string; createdAt: string };
 export type LocationPing = { id: string; lat: number; lng: number; accuracy: number | null; address: string | null; ts: string };
 export type Geofence = { id: string; name: string; lat: number; lng: number; radius: number; notifyOnEnter: boolean; notifyOnExit: boolean };
+// Geometry-only geofence the child device registers as an OS boundary (the
+// notify-on-enter/exit decision stays server-side).
+export type DeviceGeofence = { id: string; name: string; lat: number; lng: number; radius: number };
 export type ActivityEvent = { id: string; type: string; title: string | null; detail: string | null; category: string | null; blocked: boolean; ts: string; device?: { name: string; platform: string } | null };
 // Raw screen-time rule as stored (dailyLimits/bedtimes are JSON strings).
 export type ScreenTimeRuleRaw = { enabled: boolean; dailyLimits: string; bedtimes: string };
