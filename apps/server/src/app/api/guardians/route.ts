@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, withGuard } from "@/lib/guard";
 import { audit } from "@/lib/audit";
+import { rateLimit, clientIp } from "@/lib/ratelimit";
 
 // GET — co-parents who can access MY owned children
 export async function GET() {
@@ -35,6 +36,17 @@ const addSchema = z.object({ email: z.string().email() });
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
+    // This route returns 404 vs 200 depending on whether the email belongs to a
+    // Kidora account — a necessary hint for the invite flow, but an account-
+    // enumeration oracle if unbounded. Rate-limit it so it can't be used to
+    // probe the user base at scale (keyed by inviter + IP).
+    const rl = await rateLimit(`guardian-add:${parent.id}:${clientIp(req)}`, 10, 60 * 60_000);
+    if (!rl.ok) {
+      return Response.json(
+        { error: "Trop de tentatives. Réessayez plus tard." },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
     const parsed = addSchema.safeParse(await readJson(req));
     if (!parsed.success) return apiError("Email invalide", 422);
     const email = parsed.data.email.toLowerCase();
