@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { domainsForCategories, webDecision, normalizeDomain } from "./domains.js";
+import { domainsForCategories, webDecision, normalizeDomain, categorizeDomain } from "./domains.js";
 
 // Helper mirroring agent.js buildWeb's normalization.
 function web({ blocked = [], allowed = [], categories = [], blockUnknown = false, safeSearch = false } = {}) {
@@ -25,6 +25,26 @@ test("domainsForCategories accepts a Set and returns [] for empty input", () => 
   assert.deepEqual(domainsForCategories([]), []);
   assert.deepEqual(domainsForCategories(new Set()), []);
   assert.ok(domainsForCategories(new Set(["video"])).includes("youtube.com"));
+});
+
+test("adult 'sex' signal does not match inside ordinary words (no false block)", () => {
+  // Regression: "/sex/" matched the "ssex" in these legitimate hosts, so the
+  // default-on adult filter sinkholed real universities / councils.
+  for (const d of ["sussex.ac.uk", "essex.gov.uk", "middlesex.edu", "wessex.org.uk"]) {
+    assert.equal(categorizeDomain(d), "unknown", `${d} must not be 'adult'`);
+  }
+  const w = web({ categories: ["adult"] });
+  assert.equal(webDecision("sussex.ac.uk", w).action, "allow");
+  assert.equal(webDecision("essex.gov.uk", w).action, "allow");
+});
+
+test("adult signal still catches genuine adult hosts", () => {
+  for (const d of ["sex.com", "sexcam.net", "xvideos.com", "pornhub.com", "some-porn-tube.xyz"]) {
+    assert.equal(categorizeDomain(d), "adult", `${d} must be 'adult'`);
+  }
+  const w = web({ categories: ["adult"] });
+  assert.equal(webDecision("sex.com", w).action, "block");
+  assert.equal(webDecision("xvideos.com", w).action, "block");
 });
 
 test("webDecision blocks a domain in a blocked category (incl. subdomains)", () => {

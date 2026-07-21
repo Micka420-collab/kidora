@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   // Screenshots are large; cap uploads per device (a leaked token can't fill
   // storage). Legitimate captures are on-demand and infrequent.
-  const rl = rateLimit(`agent-shot:${device.id}`, 12, 60_000);
+  const rl = await rateLimit(`agent-shot:${device.id}`, 12, 60_000);
   if (!rl.ok) return apiError("Trop de requêtes", 429);
 
   const parsed = schema.safeParse(await readJson(req));

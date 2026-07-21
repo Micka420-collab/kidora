@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
     // Each test spends the parent's OpenRouter quota — throttle it.
-    const rl = rateLimit(`aitest:${parent.id}`, 10, 5 * 60_000);
+    const rl = await rateLimit(`aitest:${parent.id}`, 10, 5 * 60_000);
     if (!rl.ok) {
       return Response.json(
         { error: "Trop de tests. Réessayez plus tard." },

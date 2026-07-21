@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { json, apiError } from "@/lib/http";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { retentionDays, cutoffDate, purgeOldTelemetry, DEFAULT_RETENTION_DAYS } from "@/lib/retention";
+import { purgeExpiredRateLimits } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ export async function GET(req: NextRequest) {
   const cutoff = cutoffDate(days);
   const results = await purgeOldTelemetry(prisma, cutoff, { dryRun });
   const total = results.reduce((a, r) => a + r.deleted, 0);
+  // Also drop expired rate-limit windows & stale lockout rows (tiny table,
+  // but it only ever grows without this).
+  const rateLimits = dryRun ? { rateLimits: 0, loginFailures: 0 } : await purgeExpiredRateLimits();
 
   return json({
     ok: true,
@@ -41,5 +45,6 @@ export async function GET(req: NextRequest) {
     cutoff: cutoff.toISOString(),
     total,
     tables: results,
+    rateLimits,
   });
 }

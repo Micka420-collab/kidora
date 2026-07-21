@@ -12,7 +12,7 @@ import { siteUrl } from "@/lib/site";
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
-    const rl = rateLimit(`resendverify:${parent.id}:${clientIp(req)}`, 5, 60 * 60_000);
+    const rl = await rateLimit(`resendverify:${parent.id}:${clientIp(req)}`, 5, 60 * 60_000);
     if (!rl.ok) {
       return Response.json(
         { error: "Trop de demandes. Réessayez plus tard." },
