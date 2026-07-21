@@ -172,7 +172,7 @@ export default function AppsTab() {
                   <Seg active={r.action === "block"} color="red" onClick={() => setAction(r, "block")}><Ban size={14} /> {t.apps.block}</Seg>
                 </div>
 
-                <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r)}><Trash2 size={16} /></button>
+                <button className="text-slate-400 hover:text-red-500" onClick={() => remove(r)} aria-label={`Supprimer ${r.appName}`}><Trash2 size={16} /></button>
               </div>
             );
           })}

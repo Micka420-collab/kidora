@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { randomToken } from "@/lib/password";
+import { newEnrollTokenExpiry } from "@/lib/enroll-token";
 import { sortDevicesByActivity } from "@/lib/devices-sort";
 import { isDeviceOnline } from "@/lib/device-status";
 
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         platform: parsed.data.platform,
         model: parsed.data.model,
         enrollToken: randomToken(24),
+        enrollTokenExpiresAt: newEnrollTokenExpiry(),
       },
     });
     return json({ device });

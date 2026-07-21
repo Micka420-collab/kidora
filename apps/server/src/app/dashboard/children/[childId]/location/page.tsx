@@ -149,7 +149,7 @@ export default function LocationTab() {
                   <span className="font-medium">📍 {f.name}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-muted">{t.radius} {f.radius} m</span>
-                    <button className="text-slate-400 hover:text-red-500" onClick={() => removeGeofence(f.id)}><Trash2 size={15} /></button>
+                    <button className="text-slate-400 hover:text-red-500" onClick={() => removeGeofence(f.id)} aria-label={`Supprimer la zone ${f.name}`}><Trash2 size={15} /></button>
                   </div>
                 </li>
               ))}

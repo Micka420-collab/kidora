@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentParent } from "@/lib/auth";
 import { accessibleChildWhere, accessibleAlertWhere } from "@/lib/guard";
@@ -27,7 +28,12 @@ function overviewWindows() {
 }
 
 export default async function OverviewPage() {
-  const parent = (await getCurrentParent())!;
+  // The layout also guards this, but the page and layout render concurrently, so
+  // without our own check this component can deref a null parent (parent.id
+  // below) before the layout's redirect lands — throwing a caught-but-logged SSR
+  // error on every unauthenticated /dashboard hit. Guard here too.
+  const parent = await getCurrentParent();
+  if (!parent) redirect("/login");
   const locale = await getLocale();
   const tt = getDict(locale);
   const kids = await prisma.child.findMany({

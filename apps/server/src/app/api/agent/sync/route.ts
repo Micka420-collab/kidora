@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
 
   // Cap sync volume per device so a leaked enroll token can't flood the DB.
   // Normal cadence is ~2/min; 40/min leaves ample headroom for retries.
-  const rl = rateLimit(`agent-sync:${device.id}`, 40, 60_000);
+  const rl = await rateLimit(`agent-sync:${device.id}`, 40, 60_000);
   if (!rl.ok) return apiError("Trop de requêtes", 429);
 
   const parsed = syncSchema.safeParse(await readJson(req));

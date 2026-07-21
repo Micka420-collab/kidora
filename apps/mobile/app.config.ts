@@ -60,11 +60,13 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     "expo-secure-store",
-    // Low minSdk so the app runs on virtually any active Android device.
+    // minSdk 24 (Android 7.0) is RN 0.76's hard floor — react-android:0.76.5
+    // declares minSdk 24, so a lower value fails the release manifest merger.
+    // API 24 still covers ~97% of active Android devices.
     // kotlinVersion 1.9.25: expo-modules-core (SDK 52) ships Compose Compiler
     // 1.5.15 which requires exactly Kotlin 1.9.25 — RN 0.76's default 1.9.24
     // fails :expo-modules-core:compileReleaseKotlin on EAS.
-    ["expo-build-properties", { android: { minSdkVersion: 23, compileSdkVersion: 35, targetSdkVersion: 35, kotlinVersion: "1.9.25" } }],
+    ["expo-build-properties", { android: { minSdkVersion: 24, compileSdkVersion: 35, targetSdkVersion: 35, kotlinVersion: "1.9.25" } }],
     ...(isChild
       ? [["expo-location", { locationAlwaysAndWhenInUsePermission: "Kidora partage la position de l'enfant avec ses parents." }] as [string, Record<string, unknown>]]
       : []),

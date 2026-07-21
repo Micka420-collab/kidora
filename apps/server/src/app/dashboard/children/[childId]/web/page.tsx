@@ -200,7 +200,7 @@ export default function WebTab() {
                   <span className={`badge ${r.action === "block" ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"}`}>
                     {r.action === "block" ? t.blocked : t.allowed}
                   </span>
-                  <button className="text-slate-400 hover:text-red-500" onClick={() => removeRule(r)}><Trash2 size={16} /></button>
+                  <button className="text-slate-400 hover:text-red-500" onClick={() => removeRule(r)} aria-label={`Supprimer ${r.value}`}><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}
@@ -223,7 +223,7 @@ export default function WebTab() {
             {keywords.map((k) => (
               <span key={k.id} className="badge bg-slate-100 text-slate-700">
                 {k.term}
-                <button className="text-slate-400 hover:text-red-500" onClick={() => removeKeyword(k.id)}><Trash2 size={12} /></button>
+                <button className="text-slate-400 hover:text-red-500" onClick={() => removeKeyword(k.id)} aria-label={`Supprimer le mot-clé ${k.term}`}><Trash2 size={12} /></button>
               </span>
             ))}
           </div>
@@ -282,6 +282,9 @@ function Switch({ icon, title, desc, checked, onChange }: { icon: React.ReactNod
       </div>
       <button
         onClick={() => onChange(!checked)}
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
         className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-brand-600" : "bg-slate-300"}`}
       >
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${checked ? "left-[22px]" : "left-0.5"}`} />

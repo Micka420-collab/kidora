@@ -70,6 +70,9 @@ export default function ScreenTimeTab() {
         </div>
         <button
           onClick={() => setSt({ ...st, enabled: !st.enabled })}
+          role="switch"
+          aria-checked={st.enabled}
+          aria-label={t.limits}
           className={`relative h-6 w-11 rounded-full transition ${st.enabled ? "bg-brand-600" : "bg-slate-300"}`}
         >
           <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${st.enabled ? "left-[22px]" : "left-0.5"}`} />
@@ -130,7 +133,7 @@ export default function ScreenTimeTab() {
                   <input type="time" className="input w-auto py-1.5 text-sm" value={b.start} onChange={(e) => updateBed(i, { start: e.target.value })} />
                   <span className="text-muted">→</span>
                   <input type="time" className="input w-auto py-1.5 text-sm" value={b.end} onChange={(e) => updateBed(i, { end: e.target.value })} />
-                  <button className="ml-auto text-slate-400 hover:text-red-500" onClick={() => setSt({ ...st, bedtimes: st.bedtimes.filter((_, j) => j !== i) })}>
+                  <button className="ml-auto text-slate-400 hover:text-red-500" onClick={() => setSt({ ...st, bedtimes: st.bedtimes.filter((_, j) => j !== i) })} aria-label="Supprimer cette plage de coucher">
                     <Trash2 size={16} />
                   </button>
                 </div>

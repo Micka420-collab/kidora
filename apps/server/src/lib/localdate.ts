@@ -14,6 +14,13 @@ export function localDateStringDaysAgo(nowMs: number, daysAgo: number, tzOffsetM
   return localDateString(nowMs - daysAgo * 86_400_000, tzOffsetMinutes);
 }
 
+/** UTC epoch ms at 00:00 local time of the given "YYYY-MM-DD" day (tz offset in
+ *  minutes to ADD to UTC). Inverse of `localDateString`: for any ms `t` that maps
+ *  to day D, `startOfLocalDayMs(D, tz) <= t < startOfLocalDayMs(D, tz) + 86400000`. */
+export function startOfLocalDayMs(dateStr: string, tzOffsetMinutes = 0): number {
+  return Date.parse(`${dateStr}T00:00:00.000Z`) - tzOffsetMinutes * 60_000;
+}
+
 /** Clamp a timezone offset (minutes) to ±14h; non-finite → 0 (UTC). */
 export function clampTzOffset(raw: unknown): number {
   const n = typeof raw === "number" ? raw : Number(raw);

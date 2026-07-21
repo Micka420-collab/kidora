@@ -185,6 +185,7 @@ model Device {
   model        String?
   enrollToken  String    @unique // used by agent to authenticate
   enrolled     Boolean   @default(false)
+  enrollTokenExpiresAt DateTime? // never-used token dies after this; cleared on first enroll (NULL = no expiry)
   lastSeen     DateTime?
   agentVersion String?
   battery      Int? // 0-100
@@ -439,4 +440,27 @@ model TimeGrant {
   child Child @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@index([childId, date])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rate limiting (shared store — see src/lib/ratelimit.ts)
+// ─────────────────────────────────────────────────────────────
+
+// One row per rate-limit key: fixed-window counter shared across instances.
+model RateLimit {
+  key     String @id
+  count   Int
+  resetAt BigInt // epoch ms when the current window ends
+
+  @@index([resetAt])
+}
+
+// Failed-login tracking driving the progressive lockout (key = email|ip).
+model LoginFailure {
+  key         String @id
+  count       Int
+  lastAt      BigInt // epoch ms of the most recent failure
+  lockedUntil BigInt @default(0)
+
+  @@index([lastAt])
 }

@@ -18,7 +18,7 @@ const GENERIC = {
 
 // POST /api/auth/forgot { email } — start a password reset (emails a link if SMTP is set up).
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(`forgot:${clientIp(req)}`, 5, 60 * 60_000);
+  const rl = await rateLimit(`forgot:${clientIp(req)}`, 5, 60 * 60_000);
   if (!rl.ok) {
     return Response.json(
       { error: "Trop de demandes. Réessayez plus tard." },
