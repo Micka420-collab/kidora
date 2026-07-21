@@ -93,7 +93,7 @@ export function DashboardShell({
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-white">K</span>
             Kidora
           </Link>
-          <button className="md:hidden" onClick={() => setOpen(false)}><X size={20} /></button>
+          <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Fermer le menu"><X size={20} /></button>
         </div>
 
         <nav className="space-y-1">
@@ -165,7 +165,7 @@ export function DashboardShell({
       {/* Main */}
       <div className="flex-1 md:ml-0">
         <header className="sticky top-0 z-20 flex items-center gap-3 border-b bg-white/80 px-5 py-3 backdrop-blur md:hidden">
-          <button onClick={() => setOpen(true)}><Menu size={22} /></button>
+          <button onClick={() => setOpen(true)} aria-label="Ouvrir le menu"><Menu size={22} /></button>
           <span className="font-extrabold">Kidora</span>
         </header>
         <main className="mx-auto max-w-6xl p-5 md:p-8">{children}</main>

@@ -234,8 +234,8 @@ node agent.js --token ${justAdded.enrollToken} --server ${winServer}`}
                     <div className="flex items-center gap-1">
                       <input className="input py-1 text-sm" value={editName} onChange={(e) => setEditName(e.target.value)} autoFocus
                         onKeyDown={(e) => { if (e.key === "Enter") renameDevice(d.id); if (e.key === "Escape") setEditId(null); }} />
-                      <button className="text-emerald-600" onClick={() => renameDevice(d.id)}><Check size={16} /></button>
-                      <button className="text-slate-400" onClick={() => setEditId(null)}><X size={16} /></button>
+                      <button className="text-emerald-600" onClick={() => renameDevice(d.id)} aria-label="Valider le nom"><Check size={16} /></button>
+                      <button className="text-slate-400" onClick={() => setEditId(null)} aria-label="Annuler"><X size={16} /></button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5">
