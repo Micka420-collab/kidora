@@ -58,7 +58,7 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <ChangeEmailCard current={parent.email} />
+      <ChangeEmailCard current={parent.email} pending={parent.pendingEmail} />
 
       <TwoFactorCard />
 
