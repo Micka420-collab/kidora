@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import QRCode from "qrcode";
 import { api } from "@/lib/client";
 import { relativeTime } from "@/lib/format";
+import { enrollTokenExpiredClient as tokenExpired } from "@/lib/enroll-token";
 import { useT } from "@/components/i18n-provider";
 import { ErrorCard } from "@/components/error-card";
 import { Loader2, Monitor, Smartphone, Plus, Copy, Check, Circle, Lock, MessageSquare, Send, Camera, Pencil, Trash2, X } from "lucide-react";
@@ -16,6 +17,7 @@ type Device = {
   model: string | null;
   enrollToken: string;
   enrolled: boolean;
+  enrollTokenExpiresAt: string | null;
   online: boolean;
   battery: number | null;
   lastSeen: string | null;
@@ -100,6 +102,14 @@ export default function DevicesTab() {
     await sendCommand(deviceId, "message", { text: msgText.trim() });
     setMsgText("");
     setMsgFor(null);
+  }
+
+  // Never-enrolled tokens die after their TTL; the server refuses them and the
+  // parent regenerates from here (re-opens the pairing panel with the new one).
+  async function regenToken(id: string) {
+    const res = await api.post<{ device: Device }>(`/api/children/${childId}/devices/${id}/enroll-token`, {});
+    setJustAdded(res.device);
+    load();
   }
 
   async function renameDevice(id: string) {
@@ -243,7 +253,15 @@ node agent.js --token ${justAdded.enrollToken} --server ${winServer}`}
                 <Stat label={t.batteryLabel} value={d.battery != null ? `${d.battery}%` : "—"} />
                 <Stat label={t.seenLabel} value={relativeTime(d.lastSeen)} />
               </div>
-              {!d.enrolled && (
+              {!d.enrolled && tokenExpired(d) && (
+                <div className="mt-3 rounded-lg bg-red-50 p-2 text-xs text-red-700">
+                  {t.tokenExpired}
+                  <button className="mt-2 block font-semibold text-brand-600 hover:underline" onClick={() => regenToken(d.id)}>
+                    {t.tokenRegen}
+                  </button>
+                </div>
+              )}
+              {!d.enrolled && !tokenExpired(d) && (
                 <div className="mt-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
                   {t.waiting} <code>{d.enrollToken.slice(0, 12)}…</code>
                   {d.platform === "windows" && (

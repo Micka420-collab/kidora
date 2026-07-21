@@ -5,6 +5,7 @@ import { json, readJson, apiError } from "@/lib/http";
 import { buildPolicy } from "@/lib/policy";
 import { rateLimit, clientIp } from "@/lib/ratelimit";
 import { signedPolicyFields } from "@/lib/policy-sign";
+import { isEnrollTokenExpired } from "@/lib/enroll-token";
 
 const schema = z.object({
   enrollToken: z.string().min(1),
@@ -31,11 +32,14 @@ export async function POST(req: NextRequest) {
     include: { child: true },
   });
   if (!device) return apiError("Jeton d'enrôlement invalide", 401);
+  if (isEnrollTokenExpired(device))
+    return apiError("Jeton d'enrôlement expiré — régénérez-le depuis le tableau de bord.", 401);
 
   const updated = await prisma.device.update({
     where: { id: device.id },
     data: {
       enrolled: true,
+      enrollTokenExpiresAt: null, // token becomes the device's long-lived credential
       online: true,
       lastSeen: new Date(),
       model: parsed.data.deviceInfo?.model ?? device.model,
