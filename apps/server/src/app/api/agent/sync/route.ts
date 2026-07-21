@@ -486,11 +486,13 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 6. command results
+  // 6. command results — scoped to THIS device (or legacy unassigned rows):
+  // without the deviceId filter, any device of the child could mark a sibling
+  // device's still-pending command "done", cancelling it before delivery.
   if (body.commandResults?.length) {
     for (const r of body.commandResults) {
       await prisma.command.updateMany({
-        where: { id: r.id, childId },
+        where: { id: r.id, childId, OR: [{ deviceId: device.id }, { deviceId: null }] },
         data: { status: r.status, result: r.result },
       });
     }

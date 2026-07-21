@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { json, readJson } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { clampPauseMinutes } from "@/lib/pause";
+import { buildCommandRows } from "@/lib/commands";
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -36,13 +37,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       select: { paused: true, pausedUntil: true },
     });
 
-    // queue a command for the agent to apply instantly
-    await prisma.command.create({
-      data: {
+    // Queue a command for the agents to apply instantly — fanned out to EVERY
+    // device: a single null-device row is consumed by whichever device syncs
+    // first, leaving the child's other devices paused/locked forever.
+    const deviceIds = (await prisma.device.findMany({ where: { childId }, select: { id: true } })).map((d) => d.id);
+    await prisma.command.createMany({
+      data: buildCommandRows({
         childId,
         type: pausing ? "pause" : "resume",
         payload: JSON.stringify({ reason: "manual", until: data.pausedUntil?.toISOString() ?? null }),
-      },
+        deviceIds,
+      }),
     });
 
     return json({ paused: updated.paused, pausedUntil: updated.pausedUntil });

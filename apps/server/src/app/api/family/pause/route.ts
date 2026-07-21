@@ -4,6 +4,7 @@ import { json, readJson } from "@/lib/http";
 import { requireParent, withGuard, accessibleChildWhere } from "@/lib/guard";
 import { audit } from "@/lib/audit";
 import { clampPauseMinutes } from "@/lib/pause";
+import { buildCommandRows } from "@/lib/commands";
 
 // POST /api/family/pause — pause/resume ALL accessible children at once.
 //   { paused: boolean }      → indefinite pause / resume
@@ -33,12 +34,16 @@ export async function POST(req: NextRequest) {
     if (ids.length === 0) return json({ paused: data.paused, pausedUntil: data.pausedUntil, count: 0 });
 
     await prisma.child.updateMany({ where: { id: { in: ids } }, data });
+    // Fan the pause/resume out to every device of every child — one null-device
+    // row per child is consumed by a single device, leaving siblings locked.
+    const devices = await prisma.device.findMany({ where: { childId: { in: ids } }, select: { id: true, childId: true } });
+    const byChild = new Map<string, string[]>(ids.map((id) => [id, []]));
+    for (const d of devices) byChild.get(d.childId)?.push(d.id);
+    const payload = JSON.stringify({ reason: "family", until: data.pausedUntil?.toISOString() ?? null });
     await prisma.command.createMany({
-      data: ids.map((childId) => ({
-        childId,
-        type: pausing ? "pause" : "resume",
-        payload: JSON.stringify({ reason: "family", until: data.pausedUntil?.toISOString() ?? null }),
-      })),
+      data: ids.flatMap((childId) =>
+        buildCommandRows({ childId, type: pausing ? "pause" : "resume", payload, deviceIds: byChild.get(childId) ?? [] }),
+      ),
     });
     await audit(parent.id, pausing ? "family.pause" : "family.resume", `${ids.length} enfant(s)`);
     return json({ paused: data.paused, pausedUntil: data.pausedUntil, count: ids.length });
