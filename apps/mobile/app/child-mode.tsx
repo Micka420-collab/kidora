@@ -10,12 +10,16 @@ import * as storage from "@/storage";
 import * as sosQueue from "@/sos-queue";
 import * as AppUsage from "../modules/app-usage";
 import * as AppBlocker from "../modules/app-blocker";
+import * as DnsFilter from "../modules/dns-filter";
 import { startBackgroundLocation, stopBackgroundLocation } from "@/location-task";
 
 type KidsPolicy = {
   paused?: boolean;
   appRules?: unknown[];
   screenTime?: { enabled?: boolean; dailyLimits?: Record<string, number>; bonusMinutesToday?: number; bedtimes?: { days: string[]; start: string; end: string }[] };
+  webFilter?: { safeSearch?: boolean; blockUnknown?: boolean; blockedCategories?: string[] };
+  blockedDomains?: string[];
+  allowedDomains?: string[];
 };
 
 /** Package names to block right now: outright "block" rules, plus "limit" rules
@@ -66,6 +70,7 @@ export default function ChildMode() {
   const [paused, setPaused] = useState(false);
   const [needsUsagePerm, setNeedsUsagePerm] = useState(false);
   const [needsBlockerPerm, setNeedsBlockerPerm] = useState(false);
+  const [needsWebFilterPerm, setNeedsWebFilterPerm] = useState(false);
   const [usedTodaySec, setUsedTodaySec] = useState<number | null>(null);
   const [limitMin, setLimitMin] = useState(0); // today's screen-time limit (+ bonus), 0 = none
   const [bedtime, setBedtime] = useState(false);
@@ -151,6 +156,9 @@ export default function ChildMode() {
             perAppSec: prevUsage.current,
             totalSec: usageDate.current ? Object.values(prevUsage.current).reduce((a, b) => a + b, 0) : null,
           });
+          // Re-assert the DNS web filter from the cached policy on a cold start
+          // (the native policy also persists; this covers a fresh install-offline).
+          DnsFilter.apply(pol).catch(() => undefined);
           const st = pol.screenTime;
           const dayKey = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][new Date().getDay()];
           const baseMin = st?.enabled ? (st.dailyLimits?.[dayKey] ?? 0) : 0;
@@ -310,6 +318,20 @@ export default function ChildMode() {
         const needsBlock = res.policy.paused || !!res.policy.screenTime?.enabled ||
           rules.some((r) => r?.action === "block" || r?.action === "limit");
         AppBlocker.isEnabled().then((on) => { if (mounted.current) setNeedsBlockerPerm(needsBlock && !on); }).catch(() => undefined);
+      }
+      // Native DNS web filter (Android VpnService): push the policy, then start it
+      // if filtering is needed and consent is already granted; surface a button to
+      // grant the one-time VPN consent when it isn't (start() must be user-driven).
+      if (DnsFilter.isAvailable) {
+        DnsFilter.apply(res.policy).catch(() => undefined);
+        const cfg = DnsFilter.webFilterConfigFromPolicy(res.policy);
+        if (DnsFilter.webFilterNeeded(cfg)) {
+          Promise.all([DnsFilter.isRunning(), DnsFilter.needsConsent()])
+            .then(([on, consent]) => { if (mounted.current) setNeedsWebFilterPerm(!on && consent); })
+            .catch(() => undefined);
+        } else if (mounted.current) {
+          setNeedsWebFilterPerm(false);
+        }
       }
       // today's screen-time allowance (daily limit for this weekday + bonus granted)
       const st = res.policy.screenTime;
@@ -701,6 +723,17 @@ export default function ChildMode() {
         {needsBlockerPerm && (
           <Pressable style={s.permBtn} onPress={() => AppBlocker.openSettings()} accessibilityRole="button" accessibilityLabel="Activer le blocage des applications">
             <Text style={s.permText}>Activer le blocage des applications (Accessibilité)</Text>
+          </Pressable>
+        )}
+
+        {needsWebFilterPerm && (
+          <Pressable
+            style={s.permBtn}
+            onPress={() => DnsFilter.start().then((on) => { if (mounted.current && on) setNeedsWebFilterPerm(false); }).catch(() => undefined)}
+            accessibilityRole="button"
+            accessibilityLabel="Activer le filtrage web"
+          >
+            <Text style={s.permText}>Activer le filtrage web (VPN local)</Text>
           </Pressable>
         )}
 
