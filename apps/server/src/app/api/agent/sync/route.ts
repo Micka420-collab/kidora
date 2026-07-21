@@ -508,16 +508,28 @@ export async function POST(req: NextRequest) {
 
   // 6b. time request from the child
   if (body.timeRequest) {
-    await prisma.timeRequest.create({
-      data: { childId, minutes: body.timeRequest.minutes, reason: body.timeRequest.reason },
+    // Unlike events/usage this had no idempotence: a retried sync (lost
+    // response) duplicated the request, the parent approved both identical
+    // entries, and the child got DOUBLE the minutes. Same-minutes pending
+    // request → this is a retry, don't recreate. Also cap pending requests
+    // per child so a device can't flood the parent's alert feed.
+    const pending = await prisma.timeRequest.findMany({
+      where: { childId, status: "pending" },
+      select: { minutes: true },
     });
-    alerts.push({
-      parentId,
-      childId,
-      type: "time_request", // distinct & actionable — not muted with "limit_reached"
-      severity: "info",
-      message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
-    });
+    const isRetry = pending.some((p) => p.minutes === body.timeRequest!.minutes);
+    if (!isRetry && pending.length < 3) {
+      await prisma.timeRequest.create({
+        data: { childId, minutes: body.timeRequest.minutes, reason: body.timeRequest.reason },
+      });
+      alerts.push({
+        parentId,
+        childId,
+        type: "time_request", // distinct & actionable — not muted with "limit_reached"
+        severity: "info",
+        message: `${device.child.name} demande ${body.timeRequest.minutes} min de plus${body.timeRequest.reason ? ` : « ${body.timeRequest.reason} »` : ""}`,
+      });
+    }
   }
 
   // 6b-bis. SOS / panic from the child
