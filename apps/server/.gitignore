@@ -13,6 +13,13 @@
 # testing
 /coverage
 
+# playwright e2e
+/test-results/
+/playwright-report/
+/playwright/.cache/
+e2e-test.db
+prisma/e2e-test.db
+
 # next.js
 /.next/
 /out/
