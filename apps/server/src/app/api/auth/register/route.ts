@@ -18,7 +18,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  const rl = rateLimit(`register:${ip}`, 5, 60 * 60_000); // 5/hour per IP
+  const rl = await rateLimit(`register:${ip}`, 5, 60 * 60_000); // 5/hour per IP
   if (!rl.ok) {
     return Response.json(
       { error: "Trop de créations de compte. Réessayez plus tard." },
