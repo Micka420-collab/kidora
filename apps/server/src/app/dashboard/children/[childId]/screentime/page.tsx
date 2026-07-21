@@ -47,7 +47,9 @@ export default function ScreenTimeTab() {
     if (!st) return;
     setSaving(true);
     try {
-      await api.put(`/api/children/${childId}/screentime`, st);
+      // A bedtime with no day checked would be read by the engine as EVERY day
+      // — drop them on save instead (the mobile app does the same).
+      await api.put(`/api/children/${childId}/screentime`, { ...st, bedtimes: st.bedtimes.filter((b) => b.days.length > 0) });
       setSaved(true);
       toast(t.saved, "success");
       setTimeout(() => setSaved(false), 2000);
@@ -96,10 +98,13 @@ export default function ScreenTimeTab() {
                   setSt({ ...st, dailyLimits: { ...st.dailyLimits, [d.key]: Number(e.target.value) } })
                 }
               />
-              <div className="mt-1 text-[10px] text-muted">{formatMinutes(st.dailyLimits[d.key] ?? 0)}</div>
+              <div className="mt-1 text-[10px] text-muted">
+                {(st.dailyLimits[d.key] ?? 0) > 0 ? formatMinutes(st.dailyLimits[d.key] ?? 0) : t.unlimited}
+              </div>
             </div>
           ))}
         </div>
+        <p className="mt-2 text-xs text-muted">{t.zeroHint}</p>
         <div className="mt-3 flex gap-2">
           {[60, 90, 120, 180].map((m) => (
             <button
@@ -151,6 +156,9 @@ export default function ScreenTimeTab() {
                     );
                   })}
                 </div>
+                {b.days.length === 0 && (
+                  <p className="mt-2 rounded-md bg-amber-50 px-2 py-1 text-xs text-amber-700">{t.noDaysBedtime}</p>
+                )}
               </div>
             ))}
           </div>

@@ -16,15 +16,22 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   });
 }
 
+// Real clock values only: the old \d{2}:\d{2} accepted 24:00 / 99:99, which the
+// schedule math silently read as an OVERNIGHT window shifted to the wrong day.
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const putSchema = z.object({
   enabled: z.boolean().optional(),
   dailyLimits: z.record(z.string(), z.number().int().min(0).max(1440)).optional(),
   bedtimes: z
     .array(
       z.object({
-        days: z.array(z.string()),
-        start: z.string().regex(/^\d{2}:\d{2}$/),
-        end: z.string().regex(/^\d{2}:\d{2}$/),
+        // Never store an empty days list: the engine reads [] as EVERY day, so
+        // "uncheck all to disable" silently armed the window 7/7. Clients drop
+        // day-less windows instead (the mobile app already did).
+        days: z.array(z.string()).min(1),
+        start: z.string().regex(HHMM),
+        end: z.string().regex(HHMM),
       }),
     )
     .optional(),

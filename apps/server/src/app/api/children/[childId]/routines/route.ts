@@ -19,13 +19,18 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   });
 }
 
+// Real clock values only (24:00/99:99 used to flip the window overnight onto
+// the wrong day); days must be explicit — [] is read as EVERY day by the
+// engine, so an "unchecked all" routine silently blocked 7/7.
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const upsert = z.object({
   id: z.string().optional(),
   name: z.string().min(1).max(60),
   enabled: z.boolean().optional(),
-  days: z.array(z.string()),
-  start: z.string().regex(/^\d{2}:\d{2}$/),
-  end: z.string().regex(/^\d{2}:\d{2}$/),
+  days: z.array(z.string()).min(1),
+  start: z.string().regex(HHMM),
+  end: z.string().regex(HHMM),
   blockedAppIds: z.array(z.string()),
 });
 
