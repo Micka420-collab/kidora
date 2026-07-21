@@ -441,3 +441,26 @@ model TimeGrant {
 
   @@index([childId, date])
 }
+
+// ─────────────────────────────────────────────────────────────
+// Rate limiting (shared store — see src/lib/ratelimit.ts)
+// ─────────────────────────────────────────────────────────────
+
+// One row per rate-limit key: fixed-window counter shared across instances.
+model RateLimit {
+  key     String @id
+  count   Int
+  resetAt BigInt // epoch ms when the current window ends
+
+  @@index([resetAt])
+}
+
+// Failed-login tracking driving the progressive lockout (key = email|ip).
+model LoginFailure {
+  key         String @id
+  count       Int
+  lastAt      BigInt // epoch ms of the most recent failure
+  lockedUntil BigInt @default(0)
+
+  @@index([lastAt])
+}

@@ -21,7 +21,7 @@ const schema = z.object({
 // POST /api/agent/enroll — first contact from a device agent.
 export async function POST(req: NextRequest) {
   // Limit enrollment attempts per IP to deter enroll-token brute force.
-  const rl = rateLimit(`enroll:${clientIp(req)}`, 20, 60_000);
+  const rl = await rateLimit(`enroll:${clientIp(req)}`, 20, 60_000);
   if (!rl.ok) return apiError("Trop de tentatives d'enrôlement.", 429);
 
   const parsed = schema.safeParse(await readJson(req));

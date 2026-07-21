@@ -20,7 +20,7 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   return withGuard(async () => {
     const parent = await requireParent();
-    const rl = rateLimit(`emailchange:${parent.id}:${clientIp(req)}`, 10, 15 * 60_000);
+    const rl = await rateLimit(`emailchange:${parent.id}:${clientIp(req)}`, 10, 15 * 60_000);
     if (!rl.ok) {
       return Response.json(
         { error: "Trop de tentatives. Réessayez plus tard." },

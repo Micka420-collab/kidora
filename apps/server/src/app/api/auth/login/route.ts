@@ -18,7 +18,7 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = clientIp(req);
-  const rl = rateLimit(`login:${ip}`, 10, 5 * 60_000);
+  const rl = await rateLimit(`login:${ip}`, 10, 5 * 60_000);
   if (!rl.ok) {
     return Response.json(
       { error: "Trop de tentatives. Réessayez plus tard." },
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const lockKey = `${email.toLowerCase()}|${ip}`;
 
   // Progressive lockout after repeated failures (brute-force protection).
-  const lock = loginLockStatus(lockKey);
+  const lock = await loginLockStatus(lockKey);
   if (lock.locked) {
     return Response.json(
       { error: `Trop de tentatives échouées. Compte temporairement verrouillé (${Math.ceil(lock.retryAfter / 60)} min).` },
@@ -47,13 +47,13 @@ export async function POST(req: NextRequest) {
   });
   if (!parent) {
     await dummyVerify(password); // equalize timing so a missing account isn't faster
-    recordLoginFailure(lockKey);
+    await recordLoginFailure(lockKey);
     return apiError("Email ou mot de passe incorrect", 401);
   }
 
   const ok = await verifyPassword(password, parent.passwordHash);
   if (!ok) {
-    recordLoginFailure(lockKey);
+    await recordLoginFailure(lockKey);
     return apiError("Email ou mot de passe incorrect", 401);
   }
 
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       const prevCodes = parent.totpBackupCodes;
       const remaining = consumeBackupCode(code, parseBackupHashes(prevCodes));
       if (remaining === null) {
-        recordLoginFailure(lockKey);
+        await recordLoginFailure(lockKey);
         return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
       }
       // Compare-and-swap: only consume if the stored codes are still exactly what
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  clearLoginFailures(lockKey);
+  await clearLoginFailures(lockKey);
   const token = await signSession({ parentId: parent.id, email: parent.email, tokenVersion: parent.tokenVersion });
   await setSessionCookie(token);
   await audit(parent.id, "login", undefined, ip);
