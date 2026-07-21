@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <!-- Android 14+ requires a typed foreground service; a DNS filter is a VPN. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+  <application>
+    <!-- DNS-filtering VPN. The system binds it via BIND_VPN_SERVICE (only the OS
+         can), so exported is required. It is started only after the user grants
+         the one-time VpnService consent dialog. -->
+    <service
+      android:name="app.kidora.dnsfilter.DnsVpnService"
+      android:label="Kidora"
+      android:permission="android.permission.BIND_VPN_SERVICE"
+      android:foregroundServiceType="specialUse"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.net.VpnService" />
+      </intent-filter>
+      <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="Parental-control web filtering (on-device DNS)" />
+    </service>
+  </application>
+</manifest>

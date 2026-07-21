@@ -1,0 +1,9 @@
+{
+  "platforms": ["android", "ios"],
+  "android": {
+    "modules": ["app.kidora.dnsfilter.DnsFilterModule"]
+  },
+  "ios": {
+    "modules": ["DnsFilterModule"]
+  }
+}
