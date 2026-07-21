@@ -26,8 +26,13 @@ const DOMAIN_CATEGORY = {
 };
 
 // Substring signals catch new/unknown domains in sensitive categories.
+// NOTE: keep in sync with the server's mirror (apps/server/src/lib/categories.ts).
+// "sex" is anchored with \b so it doesn't match INSIDE ordinary words — without it
+// the default-on "adult" filter sinkholes legitimate sites like sussex.ac.uk,
+// essex.gov.uk or middlesex.edu ("...ssex"). Leading \b only (not \b...\b) so
+// compound hosts like "sexcam"/"sex.com" still match.
 const SENSITIVE_SIGNALS = [
-  { match: /porn|xxx|sex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
+  { match: /porn|xxx|\bsex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
   { match: /casino|bet365|pokerstars|gambl|betting|roulette|1xbet|stake\.com/i, category: "gambling" },
   { match: /tinder|grindr|badoo|bumble|adultfriend|ashleymadison/i, category: "dating" },
   { match: /\b(cocaine|cannabis|weed-shop|buy-drugs)\b/i, category: "drugs" },
