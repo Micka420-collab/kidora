@@ -29,8 +29,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (parsed.data.commandId) {
+    // Scoped to THIS device (or legacy unassigned rows) — a device must not be
+    // able to complete/cancel a command addressed to a sibling device.
     await prisma.command.updateMany({
-      where: { id: parsed.data.commandId, childId: device.childId },
+      where: { id: parsed.data.commandId, childId: device.childId, OR: [{ deviceId: device.id }, { deviceId: null }] },
       data: { status: "done", result: shot.id },
     });
   }

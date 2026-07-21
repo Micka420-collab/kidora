@@ -73,6 +73,23 @@ describe("/agent/sync (integration)", () => {
     expect(alerts.every((a: any) => a.severity !== "warning")).toBe(true);
   });
 
+  it("refuses to ack a command addressed to a SIBLING device (stays pending)", async () => {
+    const sibling = await prisma.device.findUnique({ where: { enrollToken: RL_TOKEN } });
+    const cmd = await prisma.command.create({
+      data: { childId, deviceId: sibling.id, type: "lock", payload: "{}", status: "pending" },
+    });
+
+    // The other device (TOKEN) tries to mark the sibling's command done before
+    // it was ever delivered — e.g. a child using their own device's token to
+    // cancel the parent's lock on the family PC.
+    const res = await POST(syncReq({ deliverCommands: false, commandResults: [{ id: cmd.id, status: "done" }] }));
+    expect(res.status).toBe(200);
+
+    const after = await prisma.command.findUnique({ where: { id: cmd.id } });
+    expect(after.status).toBe("pending"); // untouched — still delivered to the right device later
+    await prisma.command.delete({ where: { id: cmd.id } });
+  });
+
   it("delivers a pending command and marks it delivered", async () => {
     const cmd = await prisma.command.create({
       data: { childId, type: "lock", payload: "{}", status: "pending" },

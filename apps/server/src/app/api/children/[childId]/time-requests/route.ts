@@ -5,6 +5,14 @@ import { json, readJson, apiError } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
 import { audit } from "@/lib/audit";
 import { localDateString } from "@/lib/localdate";
+import { buildCommandRows } from "@/lib/commands";
+
+// "resume" must reach EVERY device of the child — a single null-device command
+// is consumed by whichever device syncs first, leaving the others locked.
+async function resumeCommandRows(childId: string) {
+  const deviceIds = (await prisma.device.findMany({ where: { childId }, select: { id: true } })).map((d) => d.id);
+  return buildCommandRows({ childId, type: "resume", payload: "{}", deviceIds });
+}
 
 type Ctx = { params: Promise<{ childId: string }> };
 
@@ -45,8 +53,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     await prisma.timeGrant.create({
       data: { childId, date: today(child.tzOffsetMinutes), minutes: parsed.data.minutes, source: "parent" },
     });
-    // lift a manual pause/limit lock implicitly by resuming
-    await prisma.command.create({ data: { childId, type: "resume", payload: "{}" } });
+    // lift a manual pause/limit lock implicitly by resuming (on every device)
+    await prisma.command.createMany({ data: await resumeCommandRows(childId) });
     await audit(parent.id, "time.grant", `+${parsed.data.minutes} min`);
     return json({ ok: true, granted: parsed.data.minutes });
   });
@@ -87,7 +95,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         prisma.timeGrant.create({
           data: { childId, date: today(child.tzOffsetMinutes), minutes: reqRow.minutes, source: "request" },
         }),
-        prisma.command.create({ data: { childId, type: "resume", payload: "{}" } }),
+        prisma.command.createMany({ data: await resumeCommandRows(childId) }),
       ]);
     } else {
       await prisma.timeRequest.updateMany({
