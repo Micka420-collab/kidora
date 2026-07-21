@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { localDateStringDaysAgo, clampTzOffset } from "./localdate";
+import { localDateStringDaysAgo, startOfLocalDayMs, clampTzOffset } from "./localdate";
 
 /**
  * Resolve the timezone offset (minutes to add to UTC) for a report. Prefer the
@@ -45,8 +45,12 @@ export function dateStr(daysAgo: number, tzOffsetMinutes = 0, nowMs = Date.now()
  */
 export async function buildChildReport(childId: string, days: number, tzOffsetMinutes = 0): Promise<ChildReport> {
   const dates = Array.from({ length: days }, (_, i) => dateStr(days - 1 - i, tzOffsetMinutes));
-  const since = new Date();
-  since.setDate(since.getDate() - days);
+  // Bound visits & alerts to the SAME window as the usage trend: from local
+  // midnight of the first day shown (dates[0]) to now. The old `now - days*24h`
+  // started at the current wall-clock time `days` ago, so a report requested at
+  // 20:00 pulled in ~an extra day of visits/alerts vs the `days` civil days of
+  // screen-time — "12 alerts this week" could include alerts 7-8 days old.
+  const since = new Date(startOfLocalDayMs(dates[0], tzOffsetMinutes));
 
   const [usage, visits, alerts] = await Promise.all([
     prisma.appUsage.findMany({ where: { childId, date: { in: dates } } }),
