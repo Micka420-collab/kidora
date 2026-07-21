@@ -44,34 +44,69 @@ export async function POST(req: NextRequest) {
     const taken = await prisma.parent.findUnique({ where: { email } });
     if (taken) return apiError("Cet email est déjà utilisé", 409);
 
-    // Switching to a new mailbox re-opens verification: the new address must be
-    // confirmed before it's trusted (alerts, weekly reports, password-reset all
-    // go there). Otherwise a typo — or a hostile change — leaves the account
-    // "verified" on an address the parent doesn't control. With no SMTP there's
-    // no verification path, so it stays auto-verified (matches registration).
+    // Double opt-in: the ACTIVE address must not switch before the new mailbox
+    // is confirmed — otherwise a typo (or a hostile change) locks the parent
+    // out of login/password-reset, and an unconfirmed address squats the
+    // unique email slot. The request parks in `pendingEmail`; /verify-email
+    // applies the switch. With no SMTP there's no verification path, so the
+    // switch stays immediate (matches registration behaviour).
     const mailOn = isMailConfigured();
-    const verifyToken = mailOn ? randomToken(32) : null;
-    await prisma.parent.update({
-      where: { id: parent.id },
-      data: {
-        email,
-        emailVerified: !mailOn,
-        emailVerifyToken: verifyToken,
-        emailVerifyTokenExpiry: mailOn ? new Date(Date.now() + 24 * 3600_000) : null,
-      },
-    });
-    if (verifyToken) {
+    if (mailOn) {
+      const verifyToken = randomToken(32);
+      await prisma.parent.update({
+        where: { id: parent.id },
+        data: {
+          pendingEmail: email,
+          emailVerifyToken: verifyToken,
+          emailVerifyTokenExpiry: new Date(Date.now() + 24 * 3600_000),
+        },
+      });
       const link = `${siteUrl()}/api/auth/verify-email?token=${verifyToken}`;
       await sendMail({
         to: email,
         subject: "Confirmez votre nouvelle adresse email — Kidora",
-        html: `<p>Bonjour ${esc(row.name)},</p><p>Confirmez votre nouvelle adresse email en cliquant sur ce lien :</p><p><a href="${esc(link)}">${esc(link)}</a></p>`,
+        html: `<p>Bonjour ${esc(row.name)},</p><p>Confirmez votre nouvelle adresse email en cliquant sur ce lien :</p><p><a href="${esc(link)}">${esc(link)}</a></p><p>Votre adresse actuelle reste active tant que la nouvelle n'est pas confirmée.</p>`,
         text: `Confirmez votre nouvelle adresse email Kidora : ${link}`,
       }).catch(() => {});
+      // Heads-up to the CURRENT mailbox so a hijacked session can't silently
+      // migrate the account (best-effort).
+      await sendMail({
+        to: row.email,
+        subject: "Changement d'adresse email demandé — Kidora",
+        html: `<p>Bonjour ${esc(row.name)},</p><p>Un changement de votre adresse email vers <b>${esc(email)}</b> a été demandé. Si ce n'est pas vous, changez votre mot de passe immédiatement.</p>`,
+        text: `Un changement de votre adresse email Kidora vers ${email} a été demandé. Si ce n'est pas vous, changez votre mot de passe immédiatement.`,
+      }).catch(() => {});
+      await audit(parent.id, "account.email_change_requested", email);
+      return json({ ok: true, email: row.email, pendingEmail: email, verificationRequired: true });
     }
+
+    await prisma.parent.update({
+      where: { id: parent.id },
+      data: { email, emailVerified: true, pendingEmail: null, emailVerifyToken: null, emailVerifyTokenExpiry: null },
+    });
     // Refresh the session cookie so its email claim stays in sync.
     await setSessionCookie(await signSession({ parentId: parent.id, email, tokenVersion: parent.tokenVersion }));
     await audit(parent.id, "account.email_change", email);
-    return json({ ok: true, email, verificationRequired: mailOn });
+    return json({ ok: true, email, verificationRequired: false });
+  });
+}
+
+// DELETE /api/account/email — cancel a pending (unconfirmed) email change.
+export async function DELETE() {
+  return withGuard(async () => {
+    const parent = await requireParent();
+    const row = await prisma.parent.findUnique({
+      where: { id: parent.id },
+      select: { pendingEmail: true },
+    });
+    // No pending change: leave any verification token alone — it may belong to
+    // the registration/current-address verification flow.
+    if (!row?.pendingEmail) return json({ ok: true });
+    await prisma.parent.update({
+      where: { id: parent.id },
+      data: { pendingEmail: null, emailVerifyToken: null, emailVerifyTokenExpiry: null },
+    });
+    await audit(parent.id, "account.email_change_cancelled", row.pendingEmail);
+    return json({ ok: true });
   });
 }

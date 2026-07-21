@@ -22,11 +22,14 @@ export async function POST(req: NextRequest) {
 
     const row = await prisma.parent.findUnique({
       where: { id: parent.id },
-      select: { email: true, name: true, emailVerified: true },
+      select: { email: true, name: true, emailVerified: true, pendingEmail: true },
     });
-    if (!row || row.emailVerified) return json({ ok: true, alreadyVerified: true });
+    // A pending email CHANGE re-sends to the pending mailbox even though the
+    // current address is verified; otherwise nothing to do once verified.
+    if (!row || (row.emailVerified && !row.pendingEmail)) return json({ ok: true, alreadyVerified: true });
     if (!isMailConfigured()) return apiError("L'envoi d'email n'est pas configuré sur ce serveur.", 400);
 
+    const target = row.pendingEmail ?? row.email;
     const token = randomToken(32);
     await prisma.parent.update({
       where: { id: parent.id },
@@ -34,8 +37,10 @@ export async function POST(req: NextRequest) {
     });
     const link = `${siteUrl()}/api/auth/verify-email?token=${token}`;
     await sendMail({
-      to: row.email,
-      subject: "Confirmez votre adresse email — Kidora",
+      to: target,
+      subject: row.pendingEmail
+        ? "Confirmez votre nouvelle adresse email — Kidora"
+        : "Confirmez votre adresse email — Kidora",
       html: `<p>Bonjour ${esc(row.name)},</p><p>Confirmez votre adresse email en cliquant sur ce lien :</p><p><a href="${esc(link)}">${esc(link)}</a></p>`,
       text: `Confirmez votre email Kidora : ${link}`,
     }).catch(() => {});
