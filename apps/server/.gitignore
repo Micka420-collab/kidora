@@ -37,6 +37,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# generated VAPID keypair (contains the PRIVATE push key — never commit)
+.vapid.json
+# self-host backups
+/backups/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
