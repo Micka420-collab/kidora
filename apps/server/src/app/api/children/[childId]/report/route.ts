@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { json, clampLimit } from "@/lib/http";
 import { requireParent, requireOwnedChild, withGuard } from "@/lib/guard";
-import { buildChildReport, dateStr } from "@/lib/report";
+import { buildChildReport, dateStr, resolveReportTz } from "@/lib/report";
 import { hourHistogram } from "@/lib/hourly";
 
 type Ctx = { params: Promise<{ childId: string }> };
@@ -12,15 +12,16 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   return withGuard(async () => {
     const parent = await requireParent();
     const { childId } = await ctx.params;
-    await requireOwnedChild(parent.id, childId);
+    const child = await requireOwnedChild(parent.id, childId);
 
     const url = new URL(req.url);
     // clampLimit guards NaN/negative/oversized (?days=abc no longer 500s).
     const days = clampLimit(url.searchParams.get("days"), 7, 31);
-    // Timezone offset (minutes to add to UTC) so the by-hour histogram reflects
-    // the family's local time, not the server's. Clamped to ±14h; NaN → 0 (UTC).
-    const tzRaw = Number(url.searchParams.get("tz"));
-    const tzOffset = Number.isFinite(tzRaw) ? Math.min(840, Math.max(-840, Math.trunc(tzRaw))) : 0;
+    // Timezone offset (minutes to add to UTC) so day-bucketing & the by-hour
+    // histogram reflect the family's local time. Falls back to the child's own
+    // reported offset when the caller omits `tz` (the mobile app does), so a
+    // non-UTC family's "today" isn't silently computed in UTC.
+    const tzOffset = resolveReportTz(url.searchParams.get("tz"), child.tzOffsetMinutes);
     const report = await buildChildReport(childId, days, tzOffset);
 
     // Total screen time over the *previous* equal-length window, for a delta;
