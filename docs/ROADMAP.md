@@ -1,5 +1,22 @@
 # Roadmap Kidora
 
+## 🌙 Nuit de finalisation & durcissement (2026-07-21 → 22, run autonome)
+
+**La roadmap est intégralement livrée sur `main`** : les 14 PRs de la nuit du 13/07 (anti-brute-force en DB, VpnService DNS, géofences natives, tests jest-expo, E2E Playwright, 6 fixes sécurité/rapports, README) ont été fusionnées dans l'ordre validé par une intégration locale complète (serveur 423 tests + lint + build, agent 103, mobile tsc + jest + dns-filter — tout vert avant merge).
+
+Puis **8 nouveaux correctifs**, chacun issu d'une revue adversariale multi-agents, testé (intégration sur vraie DB) et fusionné CI verte :
+
+- [x] **Expiration des jetons d'enrôlement jamais utilisés** (#325) : TTL `ENROLL_TOKEN_TTL_HOURS` (72 h) refusé à l'enrôlement ET à l'auth sync ; effacé au premier enrôlement (aucun appareil actif coupé) ; régénération dashboard + ZIP re-téléchargé = jeton frais (un vieux ZIP fuité reste mort).
+- [x] **Changement d'email en double opt-in** (#326) : `pendingEmail` — l'adresse active ne bascule qu'à la confirmation de la nouvelle boîte (anti-squat/lockout) ; alerte à l'ancienne boîte ; annulation ; course sur contrainte unique gérée.
+- [x] **Crons fiables** (#328) : rapports hebdo — claim atomique anti double-envoi/double-facturation LLM, échec SMTP loggé et claim relâché (retry) ; offline-check — claim+alerte en une transaction (plus d'outage jamais notifié), pushes attendus avant le freeze serverless.
+- [x] **Commandes broadcast fan-out** (#329) : pause/resume/octroi atteignent TOUS les appareils (fini l'enfant multi-appareils coincé verrouillé) ; ack scopé à l'appareil émetteur (un téléphone ne peut plus annuler le verrouillage du PC familial).
+- [x] **Clé AI fail-closed** (#330) : `tryDecrypt` — après rotation de `DATA_ENC_KEY`, plus d'envoi du ciphertext à OpenRouter ni de dégradation silencieuse ; bandeau « re-saisissez votre clé » dans les Réglages.
+- [x] **Sémantique temps d'écran** (#331) : « 0 min » affiché **Illimité** (fini l'inversion parent), refus API des fenêtres sans jour (`[]` = 7 j/7 silencieux) et des heures invalides (24:00/99:99 → fenêtre décalée d'un jour).
+- [x] **Ingestion agent durcie** (#332) : timeRequest idempotent (retry ≠ doublon → plus de double octroi) + cap de 3 pending ; screenshots validés (magic bytes PNG/JPEG) et rétention **par appareil** (plus d'éviction des captures d'un appareil frère).
+- [x] **Dependabot trié** : server-minor ×17 (#327), setup-node 7 (#324), checkout 7 (#2), @types/bcryptjs (#11) fusionnés ; bumps Expo SDK 57 / React 19 fermés (incompatibles pin SDK 52) ; majors toolchain (TS 7, eslint 10, @types/node 26) laissées à l'arbitrage.
+
+Reste hors-code : vérification sur appareil physique (VPN/géofences via build EAS — compte Expo/`EXPO_TOKEN` à fournir), entitlement Apple pour iOS.
+
 ## 🛡️ Suite « clé en main & inviolable » (2026-07-02, run autonome)
 
 Branche `feat/offline-turnkey-suite`. Chaque feature testée + vérifiée, build de
