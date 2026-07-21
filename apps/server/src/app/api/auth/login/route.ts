@@ -67,12 +67,24 @@ export async function POST(req: NextRequest) {
       // ok
     } else {
       // Fall back to a recovery code; consume it so it can't be reused.
-      const remaining = consumeBackupCode(code, parseBackupHashes(parent.totpBackupCodes));
+      const prevCodes = parent.totpBackupCodes;
+      const remaining = consumeBackupCode(code, parseBackupHashes(prevCodes));
       if (remaining === null) {
         recordLoginFailure(lockKey);
         return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
       }
-      await prisma.parent.update({ where: { id: parent.id }, data: { totpBackupCodes: JSON.stringify(remaining) } });
+      // Compare-and-swap: only consume if the stored codes are still exactly what
+      // we read. Two concurrent logins with the SAME one-time code would both pass
+      // the check above (read-modify-write race); guarding the write on the prior
+      // value lets exactly one win, so a recovery code can never be spent twice.
+      const consumed = await prisma.parent.updateMany({
+        where: { id: parent.id, totpBackupCodes: prevCodes },
+        data: { totpBackupCodes: JSON.stringify(remaining) },
+      });
+      if (consumed.count !== 1) {
+        recordLoginFailure(lockKey);
+        return Response.json({ twoFactor: true, error: "Code de vérification invalide." }, { status: 401 });
+      }
     }
   }
 
