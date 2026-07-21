@@ -11,7 +11,7 @@ const TEST_DB = "file:./test-offline-check.db";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const mocks = vi.hoisted(() => ({
-  push: vi.fn(async () => {}),
+  push: vi.fn(async (..._args: any[]) => { void _args; }),
 }));
 
 vi.mock("@/lib/push", () => ({
