@@ -12,7 +12,8 @@
     "build:child:apk": "eas build -p android --profile child-apk --non-interactive",
     "build:parent:apk": "eas build -p android --profile parent-apk --non-interactive",
     "build:apks": "npm run build:parent:apk && npm run build:child:apk",
-    "release:apks": "node scripts/release-apks.mjs"
+    "release:apks": "node scripts/release-apks.mjs",
+    "test": "jest"
   },
   "dependencies": {
     "expo": "^52.0.0",
@@ -34,8 +35,12 @@
     "react-native-screens": "~4.4.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/react": "~18.3.12",
     "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "jest-expo": "~52.0.6",
+    "react-test-renderer": "18.3.1",
     "typescript": "~5.3.3"
   },
   "private": true
