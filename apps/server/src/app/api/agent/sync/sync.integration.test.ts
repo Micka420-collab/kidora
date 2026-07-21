@@ -73,6 +73,24 @@ describe("/agent/sync (integration)", () => {
     expect(alerts.every((a: any) => a.severity !== "warning")).toBe(true);
   });
 
+  it("dedupes a retried timeRequest and caps pending requests per child", async () => {
+    await prisma.timeRequest.deleteMany({ where: { childId } });
+    await prisma.alert.deleteMany({ where: { childId, type: "time_request" } });
+
+    // Retry after a lost response: same minutes re-sent → ONE row, ONE alert
+    // (the parent used to see two identical entries and approve both).
+    await POST(syncReq({ timeRequest: { minutes: 60 } }));
+    await POST(syncReq({ timeRequest: { minutes: 60 } }));
+    expect(await prisma.timeRequest.count({ where: { childId, status: "pending" } })).toBe(1);
+    expect(await prisma.alert.count({ where: { childId, type: "time_request" } })).toBe(1);
+
+    // Different asks still go through — up to the pending cap of 3.
+    await POST(syncReq({ timeRequest: { minutes: 30 } }));
+    await POST(syncReq({ timeRequest: { minutes: 15 } }));
+    await POST(syncReq({ timeRequest: { minutes: 5 } })); // 4th pending → capped
+    expect(await prisma.timeRequest.count({ where: { childId, status: "pending" } })).toBe(3);
+  });
+
   it("refuses to ack a command addressed to a SIBLING device (stays pending)", async () => {
     const sibling = await prisma.device.findUnique({ where: { enrollToken: RL_TOKEN } });
     const cmd = await prisma.command.create({

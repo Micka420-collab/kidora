@@ -24,8 +24,17 @@ export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await readJson(req));
   if (!parsed.success) return apiError("Image invalide", 422);
 
+  // The prefix regex alone let a device token upload megabytes of arbitrary
+  // junk after the comma. Require the payload to actually decode to a
+  // PNG/JPEG (magic bytes) matching the declared MIME.
+  const dataUrl = parsed.data.dataUrl;
+  const img = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const isPng = img.length > 8 && img[0] === 0x89 && img[1] === 0x50 && img[2] === 0x4e && img[3] === 0x47;
+  const isJpeg = img.length > 3 && img[0] === 0xff && img[1] === 0xd8 && img[2] === 0xff;
+  if (!(dataUrl.startsWith("data:image/png") ? isPng : isJpeg)) return apiError("Image invalide", 422);
+
   const shot = await prisma.screenshot.create({
-    data: { childId: device.childId, deviceId: device.id, dataUrl: encrypt(parsed.data.dataUrl) },
+    data: { childId: device.childId, deviceId: device.id, dataUrl: encrypt(dataUrl) },
   });
 
   if (parsed.data.commandId) {
@@ -37,9 +46,11 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // keep only the 20 most recent per child
+  // Keep only the 20 most recent PER DEVICE — the per-child cap let one
+  // device's uploads evict the captures the parent requested from a SIBLING
+  // device (surveillance-evasion primitive for a child with a device token).
   const old = await prisma.screenshot.findMany({
-    where: { childId: device.childId },
+    where: { deviceId: device.id },
     orderBy: { createdAt: "desc" },
     skip: 20,
     select: { id: true },
