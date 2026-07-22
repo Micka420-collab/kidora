@@ -54,14 +54,23 @@ export class TrustedClock {
    * can't re-open a passed bedtime or un-expire a reached limit).
    */
   trustedNow() {
-    let t;
     if (this._anchorServerMs != null) {
-      t = this._anchorServerMs + (monoMs() - this._anchorMono);
-    } else {
-      t = Date.now() + this._offset;
+      // Anchored: server instant + monotonic elapsed — immune to wall-clock
+      // edits, and safe to raise the persistent floor from.
+      let t = this._anchorServerMs + (monoMs() - this._anchorMono);
+      if (t < this._maxTrusted) t = this._maxTrusted; // monotonic floor
+      this._bump(t);
+      return t;
     }
-    if (t < this._maxTrusted) t = this._maxTrusted; // monotonic floor
-    this._bump(t);
+    // Pre-anchor (before this session's first sync): all we have is the wall
+    // clock, corrected by the last known offset. Apply the persisted floor so a
+    // rewind still can't move trusted time backward, but NEVER raise the floor
+    // from this untrusted value — otherwise a forward jump before the first
+    // anchor (child sets the clock to 2030 at boot) would freeze `_maxTrusted`
+    // there permanently, surviving reboots AND the server's later correction,
+    // defeating the whole anti-tamper design (screen-time day never rolls).
+    let t = Date.now() + this._offset;
+    if (t < this._maxTrusted) t = this._maxTrusted;
     return t;
   }
 
