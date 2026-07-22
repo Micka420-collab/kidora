@@ -17,7 +17,14 @@ function normalize(s: string): string {
   return (s || "")
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, ""); // strip accents
+    .replace(/[̀-ͯ]/g, "") // strip accents
+    // Collapse ALL Unicode whitespace (incl. U+00A0 nbsp, thin/figure spaces,
+    // doubles) to a single ASCII space, so a multi-word signal written with a
+    // literal space still matches text that uses them. Without this, a page
+    // title like "Je veux mourir" (nbsp is everywhere in web typography)
+    // slips past the critical self-harm pattern and raises no alert.
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 type Pattern = { category: string; label: string; weight: number; re: RegExp };

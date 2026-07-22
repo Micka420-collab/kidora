@@ -14,6 +14,16 @@ describe("analyzeRisk", () => {
     expect(r.level === "high" || r.level === "critical").toBe(true);
   });
 
+  it("still flags self-harm when words are joined by nbsp / doubled spaces", () => {
+    // Regression: normalize() didn't collapse Unicode whitespace, so a title
+    // like "je veux mourir" written with U+00A0 raised no alert at all.
+    for (const sep of [" ", " ", "  "]) {
+      const r = analyzeRisk(`je${sep}veux${sep}mourir`);
+      expect(r.topCategory).toBe("automutilation");
+      expect(["high", "critical"]).toContain(r.level);
+    }
+  });
+
   it("escalates combined grooming signals to high/critical", () => {
     const one = analyzeRisk("tu as quel âge ?");
     const many = analyzeRisk("tu as quel âge ? n'en parle pas à tes parents, c'est notre secret, envoie-moi une photo");
