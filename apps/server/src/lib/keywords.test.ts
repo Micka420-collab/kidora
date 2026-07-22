@@ -25,6 +25,23 @@ describe("scanText", () => {
     expect(scanText("")).toHaveLength(0);
   });
 
+  it("matches a multi-word term across a non-breaking / doubled space", () => {
+    // Regression: normalize() didn't collapse Unicode whitespace, so a page
+    // title using U+00A0 (nbsp, everywhere in web typography) slipped past the
+    // critical self-harm term.   = nbsp,   = narrow nbsp.
+    for (const sep of [" ", " ", "  ", "\t"]) {
+      const hits = scanText(`comment${sep}me${sep}suicider ce soir`);
+      expect(hits.some((h) => h.severity === "critical" && h.category === "automutilation")).toBe(true);
+    }
+  });
+
+  it("flags proana / promia written as a single token (search-alert gap)", () => {
+    for (const t of ["proana", "promia", "pro ana"]) {
+      const hits = scanText(`recherche ${t} tips`);
+      expect(hits.some((h) => h.severity === "critical" && h.category === "automutilation")).toBe(true);
+    }
+  });
+
   it("does not duplicate the same keyword", () => {
     const hits = scanText("porn porn porn");
     const pornHits = hits.filter((h) => h.keyword === "porn");

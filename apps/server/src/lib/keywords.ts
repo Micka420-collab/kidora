@@ -13,7 +13,7 @@ const BUILTIN: { category: string; severity: "warning" | "critical"; terms: stri
   {
     category: "automutilation",
     severity: "critical",
-    terms: ["suicide", "me suicider", "self harm", "automutilation", "scarification", "comment mourir", "pro ana", "pro mia"],
+    terms: ["suicide", "me suicider", "self harm", "automutilation", "scarification", "comment mourir", "pro ana", "pro mia", "proana", "promia"],
   },
   {
     category: "violence",
@@ -46,7 +46,14 @@ function normalize(s: string): string {
   return s
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, ""); // strip accents for robust matching
+    .replace(/[̀-ͯ]/g, "") // strip accents for robust matching
+    // Collapse ALL Unicode whitespace to a single ASCII space. JS \s matches
+    // U+00A0 (nbsp — pervasive in web typography), thin/figure spaces and
+    // doubles, so a multi-word term written with a literal space still matches
+    // text that uses them. Without this, "je veux mourir" slips past the
+    // critical self-harm term "me suicider"/"comment mourir" etc.
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Short acronym/token terms that must match as *whole words*, otherwise they
