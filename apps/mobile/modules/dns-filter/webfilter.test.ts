@@ -27,6 +27,18 @@ test("categorizeDomain: exact host, registrable domain, and keyword signals", ()
   assert.equal(categorizeDomain("randomblog.example"), "unknown");
 });
 
+test("adult 'sex' signal is word-boundary anchored — parity with the server", () => {
+  // Regression: mobile used /sex/ (no \b), so it mis-flagged these legitimate
+  // hosts as adult and DNS-sinkholed them on the phone while the server did not.
+  for (const d of ["sussex.ac.uk", "essex.gov.uk", "middlesex.edu", "wessex.org.uk"]) {
+    assert.equal(categorizeDomain(d), "unknown", `${d} must not be 'adult'`);
+  }
+  // Genuine adult hosts still match.
+  for (const d of ["sex.com", "sexcam.net", "xvideos.com"]) {
+    assert.equal(categorizeDomain(d), "adult", `${d} must be 'adult'`);
+  }
+});
+
 test("webDecision: allowlist wins over everything", () => {
   const d = webDecision("tiktok.com", { blockedCategories: ["social"], allowedDomains: ["tiktok.com"] });
   assert.deepEqual(d, { action: "allow", reason: "allowlist" });

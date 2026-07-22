@@ -31,7 +31,9 @@ object DomainRules {
   private data class Signal(val regex: Regex, val category: String)
 
   private val SENSITIVE_SIGNALS = listOf(
-    Signal(Regex("porn|xxx|sex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn", RegexOption.IGNORE_CASE), "adult"),
+    // `\bsex` (word boundary) mirrors the server so sussex/essex/middlesex are
+    // not mis-flagged as adult; keep in sync with lib/categories.ts + webfilter.ts.
+    Signal(Regex("porn|xxx|\\bsex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn", RegexOption.IGNORE_CASE), "adult"),
     Signal(Regex("casino|bet365|pokerstars|gambl|betting|roulette|1xbet|stake\\.com", RegexOption.IGNORE_CASE), "gambling"),
     Signal(Regex("tinder|grindr|badoo|bumble|adultfriend|ashleymadison", RegexOption.IGNORE_CASE), "dating"),
     Signal(Regex("\\b(cocaine|cannabis|weed-shop|buy-drugs)\\b", RegexOption.IGNORE_CASE), "drugs"),
