@@ -59,3 +59,48 @@ test("invalid server time is ignored (no throw, no false tamper)", () => {
   assert.equal(r.tampered, false);
   assert.ok(Number.isFinite(c.trustedNow()));
 });
+
+test("a forward wall-clock jump BEFORE the first server anchor does not poison the floor", () => {
+  // Regression: the pre-anchor branch used to _bump the monotonic floor from the
+  // wall clock. A child setting the clock far into the future at boot (before the
+  // first sync) would freeze trusted time there forever — surviving reboots and
+  // the server's later correction, so the screen-time day never rolls again.
+  const realNow = Date.now;
+  try {
+    const future = Date.parse("2030-01-01T00:00:00.000Z");
+    Date.now = () => future; // child jumped the wall clock to 2030 at boot
+    const c = new TrustedClock(); // fresh install, never synced
+    c.trustedNow(); // sensor tick reads the tampered wall clock
+    c.trustedNow();
+    // The floor must NOT have been raised to 2030.
+    assert.ok(c.snapshot().maxTrustedMs < future, "wall clock must not raise the persisted floor pre-anchor");
+
+    // Now the child restores the real time and the agent finally syncs.
+    Date.now = realNow;
+    const serverMs = Date.parse("2026-07-02T12:00:00.000Z");
+    c.onServerTime(serverMs);
+    const t = c.trustedNow();
+    // Trusted time follows the server, NOT the poisoned 2030 floor.
+    assert.ok(Math.abs(t - serverMs) < 2000, `expected ~${serverMs} after anchor, got ${t}`);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test("a forward jump pre-anchor still can't survive a reboot to freeze the day", () => {
+  const realNow = Date.now;
+  try {
+    const future = Date.parse("2030-01-01T00:00:00.000Z");
+    Date.now = () => future;
+    const c = new TrustedClock();
+    c.trustedNow();
+    const snap = c.snapshot(); // persisted across reboot
+    Date.now = realNow;
+    // Reboot: fresh clock from the snapshot, real wall clock, then a sync.
+    const c2 = new TrustedClock(snap);
+    c2.onServerTime(Date.parse("2026-07-02T12:00:00.000Z"));
+    assert.ok(c2.trustedNow() < future, "the 2030 wall jump must not persist across reboot");
+  } finally {
+    Date.now = realNow;
+  }
+});
