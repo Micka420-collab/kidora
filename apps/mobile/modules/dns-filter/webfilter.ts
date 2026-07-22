@@ -30,8 +30,11 @@ const DOMAIN_CATEGORY: Record<string, string> = {
 };
 
 // Substring signals catch new/unknown domains in sensitive categories.
+// `sex` is anchored on a word boundary (\bsex) — mirrors the server
+// (lib/categories.ts) so legitimate hosts like sussex.ac.uk / essex.gov.uk /
+// middlesex.edu are NOT mis-flagged as adult on the phone.
 const SENSITIVE_SIGNALS: { match: RegExp; category: string }[] = [
-  { match: /porn|xxx|sex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
+  { match: /porn|xxx|\bsex|hentai|nude|escort|camgirl|onlyfans|brazzers|xvideos|xnxx|redtube|youporn/i, category: "adult" },
   { match: /casino|bet365|pokerstars|gambl|betting|roulette|1xbet|stake\.com/i, category: "gambling" },
   { match: /tinder|grindr|badoo|bumble|adultfriend|ashleymadison/i, category: "dating" },
   { match: /\b(cocaine|cannabis|weed-shop|buy-drugs)\b/i, category: "drugs" },
