@@ -14,7 +14,9 @@ Windows · Linux · Android · iPhone, pilotés depuis un tableau de bord unique
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-7-2d3748?logo=prisma)
 [![CI](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml/badge.svg)](https://github.com/Micka420-collab/kidora/actions/workflows/ci.yml)
-![Tests](https://img.shields.io/badge/tests-485%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-577%20passing-brightgreen)
+![Expo SDK](https://img.shields.io/badge/Expo-SDK%2052-000020?logo=expo)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 </div>
@@ -217,12 +219,20 @@ npx expo start              # Expo Go (compagnon + localisation) ; EAS pour l'en
 ## 🧪 Qualité
 ```bash
 cd apps/server
-npm test          # 384 tests (Vitest, dont tests d'intégration du moteur de politique)
+npm test          # 469 tests (Vitest, dont tests d'intégration du moteur de politique)
 npm run build     # build de production (Turbopack)
 
 cd ../agent-windows
-npm test          # 101 tests (node:test — tracker, enforcement, DNS, guardian…)
+npm test          # 108 tests (node:test — tracker, horloge de confiance, enforcement, DNS…)
+
+cd ../mobile
+npm test          # 26 tests (jest-expo — schedule, thème, file SOS)
 ```
+
+**577 tests** au total, rejoués en CI sur chaque PR (jobs serveur + mobile). Chaque
+correctif de sécurité arrive avec son test de régression : idempotence des crons,
+révocation de session, horloge anti-triche, fail-closed du chiffrement, filtrage
+web… (voir [`CHANGELOG.md`](CHANGELOG.md)).
 
 ## 🧱 Stack
 **Next.js 16** (App Router, Turbopack) · **React 19** · **Tailwind CSS v4** · **Prisma 7** (SQLite → PostgreSQL) · **jose** + **bcryptjs** · **web-push** · Agent : **Node.js**, zéro dépendance native (PowerShell sous Windows, outils système sous Linux) · Mobile : **Expo SDK 52 / React Native 0.76** (+ modules natifs Android : UsageStats, AccessibilityService).
@@ -239,7 +249,8 @@ le schéma Postgres (Neon) est créé automatiquement au build (`vercel-build` �
 (serveur + PostgreSQL). Détails & import manuel : [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## 📚 Documentation
-- [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Déploiement](docs/DEPLOYMENT.md) · [Roadmap](docs/ROADMAP.md)
+- [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Déploiement](docs/DEPLOYMENT.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md)
+- Contribuer : [CONTRIBUTING](CONTRIBUTING.md) · Sécurité : [SECURITY](SECURITY.md)
 
 ## ⚖️ Usage légal
 Kidora est destiné au **contrôle parental d'enfants mineurs par leurs représentants légaux**.
