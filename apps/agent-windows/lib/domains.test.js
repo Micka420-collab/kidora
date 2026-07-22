@@ -65,3 +65,27 @@ test("webDecision: whitelist mode does NOT sinkhole the agent's own server (self
 test("webDecision allows normal traffic when nothing matches", () => {
   assert.equal(webDecision("wikipedia.org", web()).action, "allow");
 });
+
+test("an explicit block on a SafeSearch domain BLOCKS it (block precedes SafeSearch)", () => {
+  // Regression: SafeSearch was evaluated before the blocklist, so a parent who
+  // blocked youtube.com but left SafeSearch on had it resolved (redirected)
+  // instead of blocked — the explicit block silently downgraded.
+  const w = web({ blocked: ["youtube.com"], safeSearch: true });
+  assert.equal(webDecision("youtube.com", w).action, "block");
+  assert.equal(webDecision("m.youtube.com", w).action, "block");
+});
+
+test("blocking the 'video' category also beats SafeSearch on youtube", () => {
+  const w = web({ categories: ["video"], safeSearch: true });
+  const d = webDecision("youtube.com", w);
+  assert.equal(d.action, "block");
+  assert.equal(d.reason, "category:video");
+});
+
+test("SafeSearch still redirects a non-blocked search domain", () => {
+  // google.com isn't blocked → SafeSearch redirect still applies.
+  const w = web({ safeSearch: true });
+  const d = webDecision("google.com", w);
+  assert.equal(d.action, "safesearch");
+  assert.ok(d.target && d.target !== "google.com");
+});
