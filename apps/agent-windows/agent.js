@@ -406,6 +406,7 @@ async function main() {
 
       // execute commands (exactly-once: a redelivered command is re-acked but
       // not run again, so no duplicate message popups / repeat screenshots)
+      let ranCommand = false;
       for (const cmd of res.commands || []) {
         if (cmd.id && cmdLog.has(cmd.id)) {
           pendingCmdResults.push({ id: cmd.id, status: "done" });
@@ -414,7 +415,14 @@ async function main() {
         const result = await handleCommand(cmd, enforcer, api);
         pendingCmdResults.push(result);
         if (result.status === "done") cmdLog.remember(cmd.id);
+        ranCommand = true;
       }
+      // Persist AGAIN after running commands: persistState() above ran before
+      // this loop, so a crash before the next sync/heartbeat would lose the
+      // just-remembered command ids — the server would redeliver and the agent
+      // would re-run them (double screenshot upload / repeated "message from
+      // parents" popup). Flushing the dedup log now closes that window.
+      if (ranCommand) persistState();
 
       // Check for a newer agent version (non-blocking; stages on success).
       checkForUpdate(res).catch(() => {});

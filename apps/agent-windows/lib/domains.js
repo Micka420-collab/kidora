@@ -115,21 +115,24 @@ export function webDecision(host, web) {
   // Explicit allow always wins.
   if (suffixMatch(domain, web.allowedDomains)) return { action: "allow", reason: "allowlist" };
 
-  // Forced SafeSearch redirect for search/video domains.
-  if (web.safeSearch) {
-    const target = SAFESEARCH_MAP[domain] || SAFESEARCH_MAP[registrableDomain(domain)];
-    if (target && target !== domain) return { action: "safesearch", reason: "safesearch", target };
-  }
-
-  // Explicit / category-expanded blocklist.
+  // A BLOCK must take precedence over the SafeSearch redirect: a parent who
+  // both blocks youtube.com (or the `video` category) AND leaves SafeSearch on
+  // otherwise had the domain resolved (redirected to the restricted host)
+  // instead of blocked — an explicit block silently downgraded to a restriction.
   if (suffixMatch(domain, web.blockedDomains)) return { action: "block", reason: "blocklist" };
 
-  // Category-level decision.
   const cat = categorizeDomain(domain);
   if (web.blockedCategories && web.blockedCategories.has(cat)) {
     return { action: "block", reason: `category:${cat}` };
   }
   if (web.blockUnknown && cat === "unknown") return { action: "block", reason: "unknown" };
+
+  // Forced SafeSearch redirect for search/video domains — only once we know the
+  // domain isn't explicitly or categorically blocked.
+  if (web.safeSearch) {
+    const target = SAFESEARCH_MAP[domain] || SAFESEARCH_MAP[registrableDomain(domain)];
+    if (target && target !== domain) return { action: "safesearch", reason: "safesearch", target };
+  }
 
   return { action: "allow", reason: "ok" };
 }
