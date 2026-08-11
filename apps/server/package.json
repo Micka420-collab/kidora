@@ -50,7 +50,7 @@
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^3.0.0",
-    "@types/node": "^20",
+    "@types/node": "^26",
     "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.4",
     "@types/qrcode": "^1.5.6",
